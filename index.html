@@ -614,7 +614,7 @@ const LUT=(()=>{
   }
   return lut;
 })();
-function sgSetup(c){
+function sgSetup(c,keepImage){
   const cv=$('sgramCv');
   SG.W=cv.width; SG.H=cv.height;
   SG.padL=Math.round(26*c.dpr); SG.axH=Math.round(13*c.dpr);
@@ -632,7 +632,7 @@ function sgSetup(c){
   }
   const g=c.g;
   g.save();g.setTransform(1,0,0,1,0,0);
-  g.fillStyle='#000080';g.fillRect(0,0,SG.W,SG.H);
+  if(!keepImage){g.fillStyle='#000080';g.fillRect(0,0,SG.W,SG.H);}
   g.fillStyle='#EAF1FA';g.fillRect(0,0,SG.padL,SG.H);
   g.fillStyle='#8fa3c4';g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
   for(const f of dynTicks(fmin,fmax,7)){
@@ -647,7 +647,13 @@ function sgSetup(c){
 }
 function drawSgram(){
   const c=CV.sgramCv; if(!c)return;
-  if(!SG.init||SG.W!==$('sgramCv').width||SG.fsc!==S.fscale||SG.fmin!==Math.max(F_LOW(),S.fview.min)||SG.fmax!==Math.min(S.fview.max,nyq()))sgSetup(c);
+  const cv=$('sgramCv');
+  const nfmin=Math.max(F_LOW(),S.fview.min), nfmax=Math.min(S.fview.max,nyq());
+  const near=(a,b)=>Math.abs(a-b)<1e-6*Math.max(1,Math.abs(b));
+  const sizeChanged=!SG.init||SG.W!==cv.width||SG.H!==cv.height;
+  const viewChanged=SG.fsc!==S.fscale||!near(SG.fmin,nfmin)||!near(SG.fmax,nfmax);
+  if(sizeChanged)sgSetup(c,false);
+  else if(viewChanged)sgSetup(c,true);        // l'image continue de défiler, seuls axe et carte changent
   if(!S.running||S.paused||!S.binHz||!SG.map)return;
   const now=performance.now();
   if(now-SG.last<S.colMs)return;
@@ -696,12 +702,16 @@ function clampView(Vmin,span){
   const HI=TF(nyq()), LOW=S.fscale==='lin'?0:TF(20);
   span=Math.max(SPAN_MIN(),Math.min(HI-LOW,span));
   Vmin=Math.max(LOW,Math.min(HI-span,Vmin));
-  S.fview.min=TFi(Vmin); S.fview.max=TFi(Vmin+span);
+  const nmin=TFi(Vmin), nmax=TFi(Vmin+span);
+  const eps=1e-7;
+  if(Math.abs(nmin-S.fview.min)<eps*Math.max(1,nmin) && Math.abs(nmax-S.fview.max)<eps*Math.max(1,nmax))return false;
+  S.fview.min=nmin; S.fview.max=nmax;
+  return true;
 }
 function resetView(){
   S.fview.min=S.fscale==='lin'?0:20;
   S.fview.max=Math.min(20000,nyq());
-  S.cursor=null; SG.init=false; drawActive();
+  S.cursor=null; drawActive();
 }
 function attachZoomPan(id,opts){
   const cv=$(id), padL=26;
@@ -730,16 +740,14 @@ function attachZoomPan(id,opts){
       const u1=uOf(e.touches[0].clientX,g),u2=uOf(e.touches[1].clientX,g);
       if(Math.abs(u1-u2)<0.02)return;
       const span=(anchors.L1-anchors.L2)/(u1-u2);
-      clampView(anchors.L1-u1*span,span);
-      opts.onChange&&opts.onChange();
+      if(clampView(anchors.L1-u1*span,span))opts.onChange&&opts.onChange();
     }else if(mode==='pan'&&e.touches.length===1){
       const dx=e.touches[0].clientX-sx;
-      if(Math.abs(dx)>6)moved=true;
+      if(Math.abs(dx)>10)moved=true;
       if(!moved)return;
       sx=e.touches[0].clientX;
       const V0=TF(Math.max(F_LOW(),S.fview.min)),V1=TF(S.fview.max),span=V1-V0;
-      clampView(V0-dx/Math.max(1,g.w-padL-4)*span,span);
-      opts.onChange&&opts.onChange();
+      if(clampView(V0-dx/Math.max(1,g.w-padL-4)*span,span))opts.onChange&&opts.onChange();
     }
   },{passive:false});
   cv.addEventListener('touchend',()=>{
@@ -756,8 +764,7 @@ function attachZoomPan(id,opts){
     const g=geo(), u=Math.max(0,Math.min(1,uOf(e.clientX,g)));
     const V0=TF(Math.max(F_LOW(),S.fview.min)),V1=TF(S.fview.max),span=V1-V0;
     const k=e.deltaY>0?1.15:1/1.15, ns=span*k;
-    clampView(vAt(u)-u*ns,ns);
-    opts.onChange&&opts.onChange();
+    if(clampView(vAt(u)-u*ns,ns))opts.onChange&&opts.onChange();
   },{passive:false});
   cv.addEventListener('click',e=>{
     if(!opts.onTap)return;
@@ -769,7 +776,7 @@ attachZoomPan('specCv',{
   onChange:()=>{if(!S.running)drawSpectrum();},
   onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();}
 });
-attachZoomPan('sgramCv',{onChange:()=>{SG.init=false;}});
+attachZoomPan('sgramCv',{onChange:()=>{if(!S.running||S.paused)drawSgram();}});
 
 /* ================= UI ================= */
 function ui(){
