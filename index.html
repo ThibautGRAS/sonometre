@@ -653,7 +653,25 @@ function drawSgram(){
   const sizeChanged=!SG.init||SG.W!==cv.width||SG.H!==cv.height;
   const viewChanged=SG.fsc!==S.fscale||!near(SG.fmin,nfmin)||!near(SG.fmax,nfmax);
   if(sizeChanged)sgSetup(c,false);
-  else if(viewChanged)sgSetup(c,true);        // l'image continue de défiler, seuls axe et carte changent
+  else if(viewChanged){
+    if(SG.fsc!==S.fscale)sgSetup(c,false);    // log↔lin : non affine, on repart à zéro
+    else{
+      /* zoom/pan : remapper l'image existante (affine en espace transformé) */
+      const Hu=SG.H-SG.axH, Wp=SG.W-SG.padL;
+      const V0o=TF(SG.fmin),V1o=TF(SG.fmax),V0n=TF(nfmin),V1n=TF(nfmax);
+      if(!SG.tmp)SG.tmp=document.createElement('canvas');
+      SG.tmp.width=Wp;SG.tmp.height=Hu;
+      SG.tmp.getContext('2d').drawImage(cv,SG.padL,0,Wp,Hu,0,0,Wp,Hu);
+      const g=c.g;
+      g.save();g.setTransform(1,0,0,1,0,0);
+      g.fillStyle='#000080';g.fillRect(SG.padL,0,Wp,Hu);
+      const k=(V1o-V0o)/(V1n-V0n), yTop=(V1n-V1o)/(V1n-V0n)*Hu;
+      g.imageSmoothingEnabled=false;
+      g.drawImage(SG.tmp,0,0,Wp,Hu,SG.padL,yTop,Wp,Hu*k);
+      g.restore();
+      sgSetup(c,true);                         // reconstruit axe + carte, garde l'image remappée
+    }
+  }
   if(!S.running||S.paused||!S.binHz||!SG.map)return;
   const now=performance.now();
   if(now-SG.last<S.colMs)return;
@@ -713,70 +731,87 @@ function resetView(){
   S.fview.max=Math.min(20000,nyq());
   S.cursor=null; drawActive();
 }
-function attachZoomPan(id,opts){
-  const cv=$(id), padL=26;
-  let mode=null,sx=0,moved=false,anchors=null,lastTap=0;
-  const geo=()=>{const r=cv.getBoundingClientRect();return{left:r.left,w:r.width};};
-  const uOf=(cx,g)=>((cx-g.left)-padL)/Math.max(1,g.w-padL-4);
-  const vAt=u=>{const V0=TF(Math.max(F_LOW(),S.fview.min)),V1=TF(S.fview.max);return V0+u*(V1-V0);};
+function attachZoomPan(id,axis,opts){
+  const cv=$(id), padL=26, axH=13;
+  const uOf=(t,r)=>axis==='x'
+    ? ((t.clientX-r.left)-padL)/Math.max(1,r.width-padL-4)
+    : (t.clientY-r.top)/Math.max(1,r.height-axH);
+  const Vof=u=>{const V0=TF(Math.max(F_LOW(),S.fview.min)),V1=TF(S.fview.max);
+    return axis==='x'?V0+u*(V1-V0):V1-u*(V1-V0);};
+  const spanCur=()=>TF(S.fview.max)-TF(Math.max(F_LOW(),S.fview.min));
+  const apply=(Vmin,span)=>{if(span>0&&clampView(Vmin,span))opts.onChange&&opts.onChange();};
+  const two=e=>[...e.touches].sort((a,b)=>a.identifier-b.identifier);
+  let mode=null,anchV=0,anchors=null,moved=false,sX=0,sY=0,lastTap=0;
+
   cv.addEventListener('touchstart',e=>{
     e.preventDefault();
-    const g=geo();
-    if(e.touches.length===2){
-      const u1=uOf(e.touches[0].clientX,g),u2=uOf(e.touches[1].clientX,g);
-      anchors={u1,u2,L1:vAt(u1),L2:vAt(u2)};
+    const r=cv.getBoundingClientRect();
+    if(e.touches.length>=2){
+      const t=two(e), u1=uOf(t[0],r), u2=uOf(t[1],r);
+      anchors={u1,u2,V1:Vof(u1),V2:Vof(u2)};
       mode='pinch';
-    }else if(e.touches.length===1){
-      sx=e.touches[0].clientX;moved=false;mode='pan';
+    }else{
+      const t=e.touches[0], u=uOf(t,r);
+      sX=t.clientX; sY=t.clientY; moved=false;
+      anchV=Vof(Math.max(0,Math.min(1,u)));
+      mode='pan';
       const now=Date.now();
       if(now-lastTap<300){resetView();mode=null;lastTap=0;return;}
       lastTap=now;
     }
   },{passive:false});
+
   cv.addEventListener('touchmove',e=>{
     e.preventDefault();
-    const g=geo();
-    if(mode==='pinch'&&e.touches.length===2){
-      const u1=uOf(e.touches[0].clientX,g),u2=uOf(e.touches[1].clientX,g);
+    const r=cv.getBoundingClientRect();
+    if(mode==='pinch'&&e.touches.length>=2){
+      const t=two(e), u1=uOf(t[0],r), u2=uOf(t[1],r);
       if(Math.abs(u1-u2)<0.02)return;
-      const span=(anchors.L1-anchors.L2)/(u1-u2);
-      if(clampView(anchors.L1-u1*span,span))opts.onChange&&opts.onChange();
+      const span=(anchors.V1-anchors.V2)/(axis==='x'?(u1-u2):(u2-u1));
+      if(!(span>0))return;                    // doigts croisés : ignorer
+      const Vmin=axis==='x'?anchors.V1-u1*span:anchors.V1-(1-u1)*span;
+      apply(Vmin,span);
     }else if(mode==='pan'&&e.touches.length===1){
-      const dx=e.touches[0].clientX-sx;
-      if(Math.abs(dx)>10)moved=true;
+      const t=e.touches[0];
+      if(Math.hypot(t.clientX-sX,t.clientY-sY)>10)moved=true;
       if(!moved)return;
-      sx=e.touches[0].clientX;
-      const V0=TF(Math.max(F_LOW(),S.fview.min)),V1=TF(S.fview.max),span=V1-V0;
-      if(clampView(V0-dx/Math.max(1,g.w-padL-4)*span,span))opts.onChange&&opts.onChange();
+      const u=Math.max(0,Math.min(1,uOf(t,r)));
+      const span=spanCur();
+      const Vmin=axis==='x'?anchV-u*span:anchV-(1-u)*span;
+      apply(Vmin,span);
     }
   },{passive:false});
+
   cv.addEventListener('touchend',()=>{
-    const g=geo();
     if(mode==='pan'&&!moved&&opts.onTap){
-      const u=uOf(sx,g);
-      if(u>=0&&u<=1)opts.onTap(TFi(vAt(u)),u);
+      const u=(anchV-TF(Math.max(F_LOW(),S.fview.min)))/spanCur();
+      opts.onTap(TFi(anchV),axis==='x'?u:1-u);
     }
     mode=null;anchors=null;
   });
+
   /* souris : molette = zoom centré, clic = curseur */
   cv.addEventListener('wheel',e=>{
     e.preventDefault();
-    const g=geo(), u=Math.max(0,Math.min(1,uOf(e.clientX,g)));
-    const V0=TF(Math.max(F_LOW(),S.fview.min)),V1=TF(S.fview.max),span=V1-V0;
-    const k=e.deltaY>0?1.15:1/1.15, ns=span*k;
-    if(clampView(vAt(u)-u*ns,ns))opts.onChange&&opts.onChange();
+    const r=cv.getBoundingClientRect(), u=Math.max(0,Math.min(1,uOf(e,r)));
+    const span=spanCur(), Vc=Vof(u);
+    const ns=span*(e.deltaY>0?1.15:1/1.15);
+    apply(axis==='x'?Vc-u*ns:Vc-(1-u)*ns,ns);
   },{passive:false});
   cv.addEventListener('click',e=>{
     if(!opts.onTap)return;
-    const g=geo(), u=uOf(e.clientX,g);
-    if(u>=0&&u<=1)opts.onTap(TFi(vAt(u)),u);
+    const r=cv.getBoundingClientRect(), u=uOf(e,r);
+    if(u>=0&&u<=1)opts.onTap(TFi(Vof(u)),u);
   });
 }
-attachZoomPan('specCv',{
+/* neutraliser les gestes natifs iOS (zoom page) sur toute l'app */
+['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+
+attachZoomPan('specCv','x',{
   onChange:()=>{if(!S.running)drawSpectrum();},
   onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();}
 });
-attachZoomPan('sgramCv',{onChange:()=>{if(!S.running||S.paused)drawSgram();}});
+attachZoomPan('sgramCv','y',{onChange:()=>{if(!S.running||S.paused)drawSgram();}});
 
 /* ================= UI ================= */
 function ui(){
