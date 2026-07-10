@@ -25,19 +25,40 @@
   html,body{height:100%}
   body{
     font-family:var(--font);
-    background:linear-gradient(165deg,var(--navy-deep) 0%,var(--navy) 55%,#032a6b 100%);
+    background:radial-gradient(120% 100% at 50% 0%, #0A1830 0%, #050B18 70%);
     color:#fff;
     display:flex;justify-content:center;
     min-height:100dvh;
-    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    padding:calc(env(safe-area-inset-top) + 8px) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 8px) env(safe-area-inset-left);
   }
-  .device{width:100%;max-width:520px;padding:12px 14px 28px;display:flex;flex-direction:column;gap:12px}
+  .device{
+    width:calc(100% - 12px);max-width:540px;margin:0 auto;height:fit-content;
+    padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px;
+    background:linear-gradient(180deg,#0C2760 0%,var(--navy) 32%,#001640 100%);
+    border-radius:26px;
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow:0 24px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.12), inset 0 -2px 6px rgba(0,0,0,.35);
+  }
+
+  /* grille micro */
+  .grille{
+    height:36px;border-radius:10px;position:relative;overflow:hidden;
+    background:
+      radial-gradient(circle at 2.5px 2.5px, rgba(255,255,255,.20) 1.3px, transparent 1.8px) 0 0/9px 9px,
+      linear-gradient(180deg,#0A2A66,#04153A);
+    border:1px solid var(--line);
+    box-shadow:inset 0 3px 8px rgba(0,0,0,.55);
+  }
+  .grille::after{content:"MIC · CH1";position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:8px;letter-spacing:.28em;color:#3d5688;font-weight:700}
+  #micGlow{position:absolute;inset:0;background:radial-gradient(60% 120% at 50% 50%, rgba(239,51,70,.55), transparent 70%);opacity:0;transition:opacity 120ms linear}
 
   /* ---------- entête instrument ---------- */
-  header{display:flex;align-items:baseline;justify-content:space-between;padding:4px 2px}
-  header .brand{font-size:13px;letter-spacing:.22em;font-weight:700}
+  header{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 0}
+  header .brand{font-size:13px;letter-spacing:.22em;font-weight:700;display:flex;align-items:center;gap:8px}
   header .brand b{color:var(--red)}
-  header .model{font-size:11px;color:var(--lcd-dim);letter-spacing:.12em}
+  header .model{font-size:10px;color:var(--lcd-dim);letter-spacing:.12em}
+  .led{width:7px;height:7px;border-radius:50%;background:#31446e;box-shadow:0 0 0 2px rgba(255,255,255,.06);display:inline-block}
+  .led.on{background:var(--green);box-shadow:0 0 8px rgba(61,220,151,.8)}
 
   /* ---------- afficheur principal ---------- */
   .display{
@@ -101,16 +122,26 @@
   .toggle.on .switch{background:var(--green)}
   .toggle.on .switch::after{left:23px}
 
-  /* ---------- transport ---------- */
-  .transport{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
-  .transport button{
-    border:0;border-radius:12px;padding:16px 8px;font-family:var(--font);font-size:15px;font-weight:700;
-    letter-spacing:.06em;cursor:pointer;color:#fff;
-  }
+  /* ---------- navigation par écrans ---------- */
+  .view{display:none;flex-direction:column;gap:12px;animation:fadein .18s ease}
+  .view.active{display:flex}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .dock{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.30);border:1px solid var(--line);border-radius:14px;padding:8px 8px 8px 14px}
+  .dock .mini{flex:1;font-family:var(--mono);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+  .dock .mini small{font-family:var(--font);font-size:10px;color:var(--lcd-dim);margin-left:6px;letter-spacing:.08em;font-weight:700}
+  .dock button{border:0;border-radius:10px;height:46px;padding:0 18px;font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:.04em;color:#fff;cursor:pointer}
   #btnStart{background:var(--red);box-shadow:0 4px 14px rgba(239,51,70,.4)}
   #btnStart.running{background:#8a1220}
   #btnPause{background:rgba(255,255,255,.12);border:1px solid var(--line)}
-  #btnReset{background:rgba(255,255,255,.12);border:1px solid var(--line)}
+  #btnPause:disabled{opacity:.4}
+
+  .tabbar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:rgba(0,0,0,.30);border:1px solid var(--line);border-radius:14px;padding:4px}
+  .tabbar button{border:0;background:transparent;color:#8FA3C4;font-family:var(--font);font-size:11px;font-weight:700;letter-spacing:.04em;padding:12px 2px;border-radius:10px;cursor:pointer}
+  .tabbar button.on{background:var(--lcd);color:var(--navy);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+
+  .transport{display:grid;grid-template-columns:1fr;gap:10px}
+  #btnReset{border:0;border-radius:12px;padding:14px 8px;font-family:var(--font);font-size:14px;font-weight:700;color:#fff;cursor:pointer;background:rgba(255,255,255,.12);border:1px solid var(--line)}
   #btnExport{width:100%;margin-top:10px;background:transparent;border:1px dashed var(--line);color:var(--lcd-dim);border-radius:10px;padding:11px;font-size:12px;font-weight:700;letter-spacing:.08em;cursor:pointer}
 
   .note{font-size:10px;color:#5d76a5;line-height:1.5;padding:0 4px}
@@ -123,11 +154,14 @@
 <div class="device">
 
   <header>
-    <div class="brand">CET<b>I</b>M &nbsp;SONOMÈTRE</div>
+    <div class="brand"><span class="led" id="led"></span>CET<b>I</b>M &nbsp;SONOMÈTRE</div>
     <div class="model">SLM-3744 · micro interne</div>
   </header>
 
-  <!-- Afficheur -->
+  <div class="grille"><div id="micGlow"></div></div>
+
+  <!-- ÉCRAN 1 · NIVEAU -->
+  <div class="view active" id="view-niveau">
   <section class="display">
     <div class="row-top">
       <span id="modeBadge" class="badge">PRÊT</span>
@@ -149,22 +183,44 @@
       <span id="tTotal">∞</span>
     </div>
   </section>
+  </div>
 
   <div id="err"></div>
 
-  <!-- Spectre -->
+  <!-- ÉCRAN 2 · SPECTRE -->
+  <div class="view" id="view-spectre">
   <section class="screen">
     <h2>SPECTRE <span class="hint" id="specHint">tiers d'octave · pondéré A</span></h2>
-    <canvas id="specCv" height="220"></canvas>
+    <canvas id="specCv" height="340"></canvas>
   </section>
+  <div class="panel">
+    <div class="ctl-group" style="margin:0">
+      <div class="ctl-label">ANALYSE SPECTRALE</div>
+      <div class="seg" id="segMode">
+        <button data-v="toct" class="on">Tiers d'octave</button><button data-v="fft">Bandes fines (FFT)</button>
+      </div>
+    </div>
+  </div>
+  </div>
 
-  <!-- Historique -->
+  <!-- ÉCRAN 3 · ÉVOLUTION -->
+  <div class="view" id="view-histo">
   <section class="screen">
     <h2>ÉVOLUTION TEMPORELLE <span class="hint">niveau + Leq glissant</span></h2>
-    <canvas id="histCv" height="150"></canvas>
+    <canvas id="histCv" height="300"></canvas>
   </section>
+  <div class="panel">
+    <div class="ctl-group" style="margin:0">
+      <div class="ctl-label">DURÉE DE MESURE</div>
+      <div class="seg" id="segDur">
+        <button data-v="0" class="on">∞</button><button data-v="30">30 s</button><button data-v="60">1 min</button><button data-v="300">5 min</button><button data-v="900">15 min</button>
+      </div>
+    </div>
+  </div>
+  </div>
 
-  <!-- Commandes -->
+  <!-- ÉCRAN 4 · RÉGLAGES -->
+  <div class="view" id="view-reglages">
   <section class="panel">
     <div class="two-cols ctl-group">
       <div>
@@ -178,20 +234,6 @@
         <div class="seg" id="segT">
           <button data-v="F" class="on">Fast</button><button data-v="S">Slow</button>
         </div>
-      </div>
-    </div>
-
-    <div class="ctl-group">
-      <div class="ctl-label">ANALYSE SPECTRALE</div>
-      <div class="seg" id="segMode">
-        <button data-v="toct" class="on">Tiers d'octave</button><button data-v="fft">Bandes fines (FFT)</button>
-      </div>
-    </div>
-
-    <div class="ctl-group">
-      <div class="ctl-label">DURÉE DE MESURE</div>
-      <div class="seg" id="segDur">
-        <button data-v="0" class="on">∞</button><button data-v="30">30 s</button><button data-v="60">1 min</button><button data-v="300">5 min</button><button data-v="900">15 min</button>
       </div>
     </div>
 
@@ -215,9 +257,7 @@
     </div>
 
     <div class="transport">
-      <button id="btnStart">▶ DÉMARRER</button>
-      <button id="btnPause" disabled>Pause</button>
-      <button id="btnReset">Réinit.</button>
+      <button id="btnReset">Réinitialiser la mesure</button>
     </div>
     <button id="btnExport">EXPORTER CSV (historique + spectre Leq)</button>
   </section>
@@ -228,13 +268,29 @@
     référence 94 dB @ 1 kHz (calibreur acoustique) et vérifier la linéarité. La compensation iPhone est une courbe moyenne
     publiée pour micros MEMS d'iPhone récents, non traçable.
   </p>
+  </div>
+
+  <!-- Dock persistant : mini-niveau + transport -->
+  <div class="dock">
+    <div class="mini"><span id="miniVal">--.-</span> dB<small id="miniLbl">LAF</small></div>
+    <button id="btnPause" disabled>Pause</button>
+    <button id="btnStart">▶ DÉMARRER</button>
+  </div>
+
+  <!-- Barre d'onglets -->
+  <nav class="tabbar" id="tabbar">
+    <button data-view="niveau" class="on">Niveau</button>
+    <button data-view="spectre">Spectre</button>
+    <button data-view="histo">Évolution</button>
+    <button data-view="reglages">Réglages</button>
+  </nav>
 </div>
 
 <script>
 "use strict";
 /* ================= État ================= */
 const S = {
-  running:false, paused:false,
+  running:false, paused:false, view:'niveau',
   weight:'A', time:'F', mode:'toct', duration:0,
   offset:90.0, comp:false,
   ctx:null, analyser:null, stream:null, raf:0,
@@ -244,6 +300,7 @@ const S = {
   // tiers d'octave
   bands:[], bandBins:[],           // centres nominaux + index de bins
   bandPowF:null, bandPowS:null,    // puissances lissées F/S par bande (pondération courante)
+  bandPeak:null,                   // peak-hold par bande (dB)
   bandEnergy:null,                 // énergie cumulée par bande (Leq bande, pondération courante)
   // niveaux globaux
   pF:{A:0,C:0,Z:0}, pS:{A:0,C:0,Z:0},
@@ -308,6 +365,7 @@ async function initAudio(){
   S.bandPowF=new Float32Array(S.bands.length);
   S.bandPowS=new Float32Array(S.bands.length);
   S.bandEnergy=new Float64Array(S.bands.length);
+  S.bandPeak=new Float32Array(S.bands.length).fill(-99);
 }
 
 function resetMeasure(){
@@ -317,6 +375,7 @@ function resetMeasure(){
   S.elapsed=0; S.hist=[]; S.histLast=0; S.peakHold=0;
   if(S.bandEnergy) S.bandEnergy.fill(0);
   if(S.bandPowF) S.bandPowF.fill(0);
+  if(S.bandPeak) S.bandPeak.fill(-99);
   if(S.bandPowS) S.bandPowS.fill(0);
   drawAll(true);
   ui();
@@ -371,6 +430,8 @@ function loop(ts){
     S.bandPowF[b]=aF*S.bandPowF[b]+(1-aF)*bp[b];
     S.bandPowS[b]=aS*S.bandPowS[b]+(1-aS)*bp[b];
     S.bandEnergy[b]+=bp[b]*dt;
+    const Lb=lvl(S.time==='F'?S.bandPowF[b]:S.bandPowS[b]);
+    if(Lb>S.bandPeak[b])S.bandPeak[b]=Lb; else S.bandPeak[b]-=dt*3;
   }
 
   // niveau affiché
@@ -399,6 +460,8 @@ const lvl=p=>p>0?10*Math.log10(p)+S.offset:-99;
 function fmt(v){return (v<=-90||!isFinite(v))?'--.-':v.toFixed(1);}
 function updateDisplay(L){
   document.getElementById('mainVal').textContent=fmt(L);
+  document.getElementById('miniVal').textContent=fmt(L);
+  document.getElementById('micGlow').style.opacity=Math.max(0,Math.min(.9,(L-45)/60));
   document.getElementById('vLAeq').textContent=fmt(S.eqT>0?lvl(S.eq.A/S.eqT):-99);
   document.getElementById('vLCeq').textContent=fmt(S.eqT>0?lvl(S.eq.C/S.eqT):-99);
   document.getElementById('vLZeq').textContent=fmt(S.eqT>0?lvl(S.eq.Z/S.eqT):-99);
@@ -444,6 +507,8 @@ function drawSpectrum(){
       grad.addColorStop(1,'rgba(20,60,140,.25)');
       g.fillStyle=grad;
       g.fillRect(x+1,y,Math.max(1,bw-2),Math.max(0,y0-y));
+      const Lp=S.bandPeak?S.bandPeak[b]:-99;
+      if(Lp>DBMIN){g.fillStyle='rgba(255,255,255,.85)';g.fillRect(x+1,y2(Lp,h,6)-1,Math.max(1,bw-2),2);}
       if([31.5,63,125,250,500,1000,2000,4000,8000,16000].includes(S.bands[b])){
         g.fillStyle='#5d76a5';
         const t=S.bands[b]>=1000?(S.bands[b]/1000)+'k':S.bands[b];
@@ -497,7 +562,10 @@ function drawHistory(){
   g.textAlign='left';g.fillStyle='rgba(77,141,255,.9)';g.fillText('L'+S.weight+(S.time==='F'?'F':'S'),padL+4,14);
   g.fillStyle='#EF3346';g.fillText('L'+S.weight+'eq',padL+44,14);
 }
-function draw(){drawSpectrum();drawHistory();}
+function draw(){
+  if(S.view==='spectre')drawSpectrum();
+  else if(S.view==='histo')drawHistory();
+}
 function drawAll(clear){draw();if(clear)updateDisplay(-99);}
 
 /* ================= Contrôles ================= */
@@ -523,6 +591,8 @@ document.getElementById('tglComp').onclick=function(){S.comp=!S.comp;this.classL
 function ui(){
   const wl='L'+S.weight+(S.time==='F'?'F':'S');
   document.getElementById('mainLabel').innerHTML=wl+' — NIVEAU INSTANTANÉ';
+  document.getElementById('miniLbl').textContent=wl;
+  document.getElementById('led').classList.toggle('on',S.running&&!S.paused);
   document.getElementById('cfgLine').textContent=S.weight+' · '+(S.time==='F'?'Fast':'Slow')+' · '+(S.mode==='toct'?"1/3 oct.":"FFT");
   document.getElementById('specHint').textContent=(S.mode==='toct'?"tiers d'octave":"bandes fines "+(S.binHz?S.binHz.toFixed(1)+' Hz':''))+' · pondéré '+S.weight;
   document.getElementById('tTotal').textContent=S.duration>0?(S.duration>=60?(S.duration/60)+':00':'00:'+S.duration):'∞';
@@ -559,6 +629,8 @@ function stopMeasure(auto){
   btnPause.disabled=true;btnPause.textContent='Pause';
   const badge=document.getElementById('modeBadge');
   badge.textContent=auto?'TERMINÉ · Leq figé':'ARRÊTÉ';badge.className='badge';
+  document.getElementById('led').classList.remove('on');
+  document.getElementById('micGlow').style.opacity=0;
 }
 btnPause.onclick=()=>{
   if(!S.running)return;
@@ -582,6 +654,15 @@ document.getElementById('btnExport').onclick=()=>{
   a.download='sonometre_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
   a.click();
 };
+
+/* navigation par écrans */
+document.getElementById('tabbar').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  S.view=b.dataset.view;
+  document.querySelectorAll('#tabbar button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+S.view));
+  requestAnimationFrame(()=>draw());
+});
 
 /* init */
 window.addEventListener('resize',()=>drawAll(false));
