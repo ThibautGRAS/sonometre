@@ -175,6 +175,7 @@
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
       <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas></div>
+      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
         <div class="valtable">
@@ -183,7 +184,7 @@
           <div class="cell"><div class="k">LZeq</div><div class="v" id="vLZeq">--.-</div></div>
           <div class="cell"><div class="k">LAFmax</div><div class="v red" id="vMax">--.-</div></div>
           <div class="cell"><div class="k">LAFmin</div><div class="v" id="vMin">--.-</div></div>
-          <div class="cell"><div class="k">OFFSET CAL. / COMP</div><div class="v" id="vCal" style="font-size:16px">90.0 dB · off</div></div>
+          <div class="cell"><div class="k">OFFSET CAL. / COMP</div><div class="v" id="vCal" style="font-size:16px">120.0 dB · off</div></div>
         </div>
       </div>
     </div>
@@ -224,9 +225,9 @@
 /* ================= État ================= */
 const S = {
   running:false, paused:false, screen:'spec',           // spec | hist | val
-  weight:'A', time:'F', mode:'toct', duration:0, offset:90.0, comp:false,
+  weight:'A', time:'F', mode:'toct', duration:0, offset:120.0, comp:false,
   ctx:null, analyser:null, stream:null, raf:0, wake:null,
-  fftDb:null, freqs:null, binHz:0,
+  fftDb:null, td:null, K:0, freqs:null, binHz:0,
   wA:null, wC:null, compGain:null,
   bands:[], bandBins:[],
   bandPowF:null, bandPowS:null, bandPeak:null, bandEnergy:null,
@@ -234,7 +235,7 @@ const S = {
   eq:{A:0,C:0,Z:0}, eqT:0,
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
-  scale:{spec:{lo:30,hi:90}, hist:{lo:30,hi:90}}
+  scale:{spec:{lo:30,hi:90}, hist:{lo:30,hi:90}, sgram:{lo:0,hi:60}}
 };
 const NOMS=[20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000];
 const DURS=[0,30,60,300,900], DURL=['∞','30 s','1 min','5 min','15 min'];
@@ -272,6 +273,8 @@ async function initAudio(){
   src.connect(an); S.analyser=an;
   const n=an.frequencyBinCount;
   S.fftDb=new Float32Array(n);
+  S.td=new Float32Array(an.fftSize);
+  S.K=0;
   S.binHz=S.ctx.sampleRate/an.fftSize;
   S.freqs=new Float32Array(n); S.wA=new Float32Array(n); S.wC=new Float32Array(n); S.compGain=new Float32Array(n);
   for(let i=0;i<n;i++){
@@ -338,6 +341,17 @@ function loop(ts){
     bp[b]=s;
   }
 
+  /* Correction de Parseval : la somme des bins FFT (fenêtre Blackman de l'AnalyserNode)
+     n'est pas normalisée en puissance. On la recale sur le RMS temporel exact pour que
+     le niveau Z corresponde au vrai dBFS RMS (pleine échelle sinus = offset − 3 dB). */
+  S.analyser.getFloatTimeDomainData(S.td);
+  let Pt=0; for(let i=0;i<S.td.length;i++)Pt+=S.td[i]*S.td[i];
+  Pt/=S.td.length;
+  if(pZ>0&&Pt>0&&isFinite(Pt)){const k=Pt/pZ; S.K=S.K?0.9*S.K+0.1*k:k;}
+  const K=S.K||1;
+  pA*=K; pC*=K; pZ*=K;
+  for(let b=0;b<nb;b++)bp[b]*=K;
+
   const aF=Math.exp(-dt/0.125), aS=Math.exp(-dt/1.0);
   for(const k of ['A','C','Z']){
     const p=k==='A'?pA:k==='C'?pC:pZ;
@@ -394,11 +408,14 @@ function sizeCanvas(id){
   const cv=$(id), r=cv.parentElement.getBoundingClientRect();
   if(r.width<10||r.height<10)return;
   const dpr=Math.min(2,window.devicePixelRatio||1);
-  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+  const W=Math.round(r.width*dpr), H=Math.round(r.height*dpr);
+  if(cv.width===W&&cv.height===H)return;          // inchangé : ne pas effacer
+  cv.width=W; cv.height=H;
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
-  CV[id]={g,w:r.width,h:r.height};
+  CV[id]={g,w:r.width,h:r.height,dpr};
+  if(id==='sgramCv')SG.init=false;                // le spectrogramme doit se réinitialiser
 }
-function sizeAll(){sizeCanvas('specCv');sizeCanvas('histCv');drawActive(true);}
+function sizeAll(){sizeCanvas('specCv');sizeCanvas('histCv');sizeCanvas('sgramCv');drawActive(true);}
 window.addEventListener('resize',()=>setTimeout(sizeAll,60));
 window.addEventListener('orientationchange',()=>setTimeout(sizeAll,250));
 
@@ -508,8 +525,97 @@ function drawHistory(){
   $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
 }
 
+/* ===== Spectrogramme couleur ===== */
+const SG={init:false,map:null,last:0,W:0,H:0,padL:0,axH:0};
+/* colormap turbo-like : navy → bleu → vert → jaune → orange → rouge */
+const LUT=(()=>{
+  const stops=[[0,3,18,58],[.25,28,79,160],[.5,47,191,131],[.7,245,211,60],[.85,232,138,26],[1,239,51,70]];
+  const lut=new Uint8Array(256*3);
+  for(let i=0;i<256;i++){
+    const t=i/255; let a=stops[0],b=stops[stops.length-1];
+    for(let s=1;s<stops.length;s++)if(t<=stops[s][0]){a=stops[s-1];b=stops[s];break;}
+    const u=(t-a[0])/Math.max(1e-9,b[0]-a[0]);
+    for(let c=0;c<3;c++)lut[i*3+c]=Math.round(a[c+1]+u*(b[c+1]-a[c+1]));
+  }
+  return lut;
+})();
+function sgSetup(c){
+  const cv=$('sgramCv');
+  SG.W=cv.width; SG.H=cv.height;
+  SG.padL=Math.round(26*c.dpr); SG.axH=Math.round(13*c.dpr);
+  const Hu=SG.H-SG.axH;                      // hauteur utile
+  const fmin=20, fmax=Math.min(20000,S.ctx?S.ctx.sampleRate/2:20000);
+  SG.map=[];                                  // ligne de pixels → plage de bins FFT
+  if(S.binHz){
+    let prev=Math.round(fmax/S.binHz);
+    for(let r=0;r<Hu;r++){
+      const f=fmax*Math.pow(fmin/fmax,(r+1)/Hu);
+      const i1=prev, i0=Math.max(1,Math.round(f/S.binHz));
+      SG.map.push([Math.min(i0,i1),Math.max(i0,i1)]);
+      prev=i0;
+    }
+  }
+  const g=c.g;
+  g.save();g.setTransform(1,0,0,1,0,0);
+  g.fillStyle='#03123A';g.fillRect(0,0,SG.W,SG.H);
+  // axe fréquence à gauche
+  g.fillStyle='#EAF1FA';g.fillRect(0,0,SG.padL,SG.H);
+  g.fillStyle='#8fa3c4';g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
+  for(const f of [63,250,1000,4000,16000]){
+    if(f>fmax)continue;
+    const y=(Math.log(fmax/f)/Math.log(fmax/fmin))*Hu;
+    g.fillText(f>=1000?(f/1000)+'k':f,SG.padL-3*c.dpr,y+3*c.dpr);
+  }
+  // axe temps (bas)
+  g.fillStyle='#EAF1FA';g.fillRect(SG.padL,SG.H-SG.axH,SG.W-SG.padL,SG.axH);
+  g.fillStyle='#8fa3c4';g.textAlign='center';
+  g.fillText('→ temps (défilement)', SG.padL+(SG.W-SG.padL)/2, SG.H-4*c.dpr);
+  g.restore();
+  SG.init=true;
+}
+function drawSgram(){
+  const c=CV.sgramCv; if(!c)return;
+  if(!SG.init||SG.W!==$('sgramCv').width)sgSetup(c);
+  if(!S.running||S.paused||!S.binHz||!SG.map)return;
+  const now=performance.now();
+  if(now-SG.last<50)return;                  // 20 colonnes/s
+  SG.last=now;
+  const g=c.g, W=SG.W, H=SG.H, padL=SG.padL, Hu=H-SG.axH;
+  const sc=S.scale.sgram, K=S.K||1;
+  const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
+  // niveaux de la colonne + bornes
+  const col=new Float32Array(Hu);
+  let dLo=Infinity,dHi=-Infinity;
+  for(let r=0;r<Hu;r++){
+    const [i0,i1]=SG.map[r]; let pm=0;
+    for(let i=i0;i<=i1;i++){
+      let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
+      if(S.comp)p*=S.compGain[i];
+      if(wSel)p*=wSel[i];
+      if(p>pm)pm=p;
+    }
+    const L=lvl(pm*K); col[r]=L;
+    if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
+  }
+  autoRange(sc,dLo,dHi);
+  g.save();g.setTransform(1,0,0,1,0,0);
+  // défilement d'1 px vers la gauche (zone utile uniquement)
+  g.drawImage($('sgramCv'), padL+1,0, W-padL-1,Hu, padL,0, W-padL-1,Hu);
+  // nouvelle colonne à droite
+  const img=g.createImageData(1,Hu), d=img.data;
+  for(let r=0;r<Hu;r++){
+    const t=Math.max(0,Math.min(1,(col[r]-sc.lo)/(sc.hi-sc.lo)));
+    const i=Math.round(t*255)*3;
+    d[r*4]=LUT[i]; d[r*4+1]=LUT[i+1]; d[r*4+2]=LUT[i+2]; d[r*4+3]=255;
+  }
+  g.putImageData(img,W-1,0);
+  g.restore();
+  $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
+}
+
 function drawActive(force){
   if(S.screen==='spec')drawSpectrum();
+  else if(S.screen==='sgram')drawSgram();
   else if(S.screen==='hist')drawHistory();
 }
 
@@ -520,8 +626,9 @@ function ui(){
   $('cfgLine').textContent=S.weight+'·'+S.time+'·'+(S.mode==='toct'?'1/3':'FFT')+(S.comp?'·comp':'');
   $('gTitle').textContent=S.screen==='spec'
     ? 'SPECTRE · '+(S.mode==='toct'?"TIERS D'OCTAVE":'BANDES FINES')+' · POND. '+S.weight
+    : S.screen==='sgram' ? 'SPECTROGRAMME · POND. '+S.weight
     : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq' : 'VALEURS DE LA MESURE';
-  $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='hist'?'Évolution':'Valeurs';
+  $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':'Valeurs';
   $('kWV').textContent=S.weight;
   $('kTV').textContent=S.time==='F'?'Fast':'Slow';
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':'FFT';
@@ -532,18 +639,34 @@ function ui(){
   const badge=$('modeBadge');
   if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
   else if(S.paused){badge.textContent='PAUSE';badge.className='badge';}
-  ['paneSpec','paneHist','paneVal'].forEach(id=>$(id).classList.remove('on'));
-  $(S.screen==='spec'?'paneSpec':S.screen==='hist'?'paneHist':'paneVal').classList.add('on');
+  ['paneSpec','paneSgram','paneHist','paneVal'].forEach(id=>$(id).classList.remove('on'));
+  $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':'paneVal').classList.add('on');
 }
 
 /* ================= Touches ================= */
-$('kScreen').onclick=()=>{S.screen=S.screen==='spec'?'hist':S.screen==='hist'?'val':'spec';ui();requestAnimationFrame(()=>{sizeAll();});};
+$('kScreen').onclick=()=>{
+  S.screen=S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':'spec';
+  ui();requestAnimationFrame(()=>{sizeAll();});
+};
 $('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();drawActive();};
 $('kT').onclick=()=>{S.time=S.time==='F'?'S':'F';ui();drawActive();};
 $('kMode').onclick=()=>{S.mode=S.mode==='toct'?'fft':'toct';ui();drawActive();};
 $('kDur').onclick=()=>{S.duration=DURS[(DURS.indexOf(S.duration)+1)%DURS.length];ui();updateNumbers(-99);};
-$('kCalM').onclick=()=>{S.offset=Math.round((S.offset-0.5)*2)/2;ui();};
-$('kCalP').onclick=()=>{S.offset=Math.round((S.offset+0.5)*2)/2;ui();};
+
+/* CAL : appui simple = ±0.5 dB, appui maintenu = répétition (réglage rapide) */
+let calFlashT;
+function calFlash(){
+  const b=$('modeBadge');b.textContent='CAL '+S.offset.toFixed(1);b.className='badge';
+  clearTimeout(calFlashT);
+  calFlashT=setTimeout(()=>{ui();if(!S.running){b.textContent='PRÊT';b.className='badge';}},1200);
+}
+function holdKey(el,fn){
+  let t,iv;
+  el.addEventListener('pointerdown',e=>{e.preventDefault();fn();t=setTimeout(()=>{iv=setInterval(fn,110);},400);});
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>el.addEventListener(ev,()=>{clearTimeout(t);clearInterval(iv);}));
+}
+holdKey($('kCalM'),()=>{S.offset=Math.round((S.offset-0.5)*2)/2;ui();calFlash();});
+holdKey($('kCalP'),()=>{S.offset=Math.round((S.offset+0.5)*2)/2;ui();calFlash();});
 $('kComp').onclick=()=>{S.comp=!S.comp;ui();};
 $('kReset').onclick=()=>{if(S.running)stopMeasure(false);resetMeasure();$('modeBadge').textContent='PRÊT';$('modeBadge').className='badge';};
 
