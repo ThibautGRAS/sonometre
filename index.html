@@ -35,12 +35,38 @@
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block}
   .led.on{background:var(--green);box-shadow:0 0 8px rgba(47,191,131,.9)}
 
+  /* ---------- éléments physiques du boîtier ---------- */
+  .screw{position:absolute;width:10px;height:10px;border-radius:50%;z-index:6;
+    background:radial-gradient(circle at 35% 30%, #5a6b8f, #1b2a4d 70%);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.08)}
+  .screw::after{content:"";position:absolute;left:2px;right:2px;top:4px;height:1.6px;background:rgba(0,0,0,.65);transform:rotate(38deg)}
+  .screw.tl{top:calc(env(safe-area-inset-top) + 8px);left:6px}
+  .screw.tr{top:calc(env(safe-area-inset-top) + 8px);right:6px}
+  .screw.bl{bottom:calc(env(safe-area-inset-bottom) + 6px);left:6px}
+  .screw.br{bottom:calc(env(safe-area-inset-bottom) + 6px);right:6px}
+
+  .miccap{flex:0 0 auto;display:flex;justify-content:center;margin:0 0 5px}
+  .miccap i{
+    width:92px;height:15px;border-radius:0 0 14px 14px;border:1px solid var(--line);border-top:0;
+    background:
+      radial-gradient(circle at 2px 2px, rgba(255,255,255,.25) 1px, transparent 1.4px) 0 0/6px 6px,
+      linear-gradient(180deg,#0E3070,#04153A);
+    box-shadow:inset 0 -3px 7px rgba(0,0,0,.55);
+  }
+
+  .bezel{
+    flex:1 1 auto;min-height:0;display:flex;position:relative;
+    background:linear-gradient(180deg,#02102E,#03153A);border-radius:18px;padding:7px;
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.65), 0 1px 0 rgba(255,255,255,.07);
+  }
+  .bezel::after{content:"";position:absolute;inset:7px;border-radius:12px;pointer-events:none;z-index:3;
+    background:linear-gradient(112deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,.03) 16%,transparent 28%)}
+
   /* ---------- ÉCRAN LCD FIXE ---------- */
   .lcd{
-    flex:1 1 auto;min-height:0;                          /* prend tout l'espace restant, taille stable */
+    flex:1 1 auto;min-height:0;min-width:0;
     background:linear-gradient(180deg,#F4F8FE 0%,var(--lcd-bg) 100%);
-    border-radius:14px;color:var(--lcd-ink);
-    box-shadow:inset 0 3px 10px rgba(0,30,80,.22), 0 1px 0 rgba(255,255,255,.15);
+    border-radius:11px;color:var(--lcd-ink);
     display:flex;flex-direction:column;
     padding:10px 12px 8px;overflow:hidden;
   }
@@ -51,7 +77,9 @@
   @keyframes blink{50%{opacity:.2}}
 
   .mainrow{display:flex;align-items:baseline;justify-content:center;gap:8px;flex:0 0 auto;margin-top:2px}
-  .mainrow .num{font-family:var(--mono);font-size:clamp(44px,13vw,64px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .numwrap{position:relative;font-family:var(--mono);font-size:clamp(44px,13vw,64px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;white-space:pre}
+  .numwrap .ghost{color:rgba(11,27,60,.07);user-select:none}
+  .numwrap .num{position:absolute;inset:0;text-align:right}
   .mainrow .unit{font-size:14px;font-weight:700;color:var(--lcd-dim)}
   .mainrow .lbl{font-size:12px;font-weight:700;color:var(--lcd-dim);letter-spacing:.1em}
 
@@ -63,6 +91,7 @@
   /* zone graphique fixe : les 3 affichages sont superposés, un seul visible */
   .graphzone{flex:1 1 auto;min-height:0;position:relative;margin-top:6px;border-top:1px solid var(--lcd-grid);padding-top:6px}
   .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--lcd-dim);z-index:2}
+  .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
   .gpane.on{display:block}
   canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -105,20 +134,27 @@
   .key-start.running{background:linear-gradient(180deg,#5f6b85 0%,#3c4a6e 45%,#232c44 100%);box-shadow:0 3px 0 #10182b, inset 0 1px 0 rgba(255,255,255,.15)}
   .key-start .kv{font-size:16px;letter-spacing:.08em}
 
+  .plate{flex:0 0 auto;text-align:center;font-size:8px;letter-spacing:.3em;color:#3d5688;padding-top:8px;font-weight:700}
+
   #err{display:none;position:absolute;left:12px;right:12px;top:12px;z-index:9;background:#B21226;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5)}
   @media (prefers-reduced-motion:reduce){.badge.rec::before{animation:none}}
 </style>
 </head>
 <body>
 
+  <div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+
   <header>
     <div class="brand"><span class="led" id="led"></span>CET<b>I</b>M SONOMÈTRE</div>
     <div class="model">SLM-3744 · MICRO INTERNE</div>
   </header>
 
+  <div class="miccap"><i></i></div>
+
   <div id="err"></div>
 
   <!-- ================= ÉCRAN LCD (taille fixe, jamais de scroll) ================= -->
+  <div class="bezel">
   <div class="lcd">
     <div class="statusline">
       <span id="modeBadge" class="badge">PRÊT</span>
@@ -127,8 +163,8 @@
     </div>
 
     <div class="mainrow">
-      <span class="num" id="mainVal">--.-</span>
-      <span class="unit">dB</span>
+      <span class="numwrap"><span class="ghost">888.8</span><span class="num" id="mainVal">--.-</span></span>
+      <span class="unit" id="unitLbl">dB(A)</span>
       <span class="lbl" id="mainLbl">LAF</span>
     </div>
 
@@ -137,6 +173,7 @@
 
     <div class="graphzone">
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
+      <div class="gscale" id="gScale"></div>
       <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
@@ -156,6 +193,7 @@
       <div class="progress"><div class="p" id="tProg"></div></div>
       <span>LCeq <b id="sLCeq">--.-</b></span>
     </div>
+  </div>
   </div>
 
   <!-- ================= CLAVIER ================= -->
@@ -179,6 +217,8 @@
     </div>
   </div>
 
+  <div class="plate">IEC 61672 · INDICATIF — CETIM ACOUSTIQUE</div>
+
 <script>
 "use strict";
 /* ================= État ================= */
@@ -193,7 +233,8 @@ const S = {
   pF:{A:0,C:0,Z:0}, pS:{A:0,C:0,Z:0},
   eq:{A:0,C:0,Z:0}, eqT:0,
   lafMax:-Infinity, lafMin:Infinity,
-  elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0
+  elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
+  scale:{spec:{lo:30,hi:90}, hist:{lo:30,hi:90}}
 };
 const NOMS=[20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000];
 const DURS=[0,30,60,300,900], DURL=['∞','30 s','1 min','5 min','15 min'];
@@ -333,7 +374,7 @@ function loop(ts){
 /* ================= Chiffres ================= */
 function fmt(v){return (v<=-90||!isFinite(v))?'--.-':v.toFixed(1);}
 function updateNumbers(L){
-  $('mainVal').textContent=fmt(L);
+  $('mainVal').textContent=fmt(L).padStart(5,' ');
   const laeq=S.eqT>0?lvl(S.eq.A/S.eqT):-99, lceq=S.eqT>0?lvl(S.eq.C/S.eqT):-99;
   $('sLAeq').textContent=fmt(laeq); $('sLCeq').textContent=fmt(lceq);
   $('vLAeq').textContent=fmt(laeq); $('vLCeq').textContent=fmt(lceq);
@@ -361,28 +402,48 @@ function sizeAll(){sizeCanvas('specCv');sizeCanvas('histCv');drawActive(true);}
 window.addEventListener('resize',()=>setTimeout(sizeAll,60));
 window.addEventListener('orientationchange',()=>setTimeout(sizeAll,250));
 
-const DBMIN=20, DBMAX=110;
-const y2=(L,h)=>(1-Math.max(0,Math.min(1,(L-DBMIN)/(DBMAX-DBMIN))))*(h-16)+2;
+/* ===== échelle auto : expansion rapide, contraction très lente (anti-scintillement) ===== */
+function autoRange(sc,dLo,dHi){
+  if(!isFinite(dLo)||!isFinite(dHi)||dHi<=-90)return sc;
+  let tLo=Math.floor((dLo-4)/5)*5, tHi=Math.ceil((dHi+4)/5)*5;
+  if(tHi-tLo<40){const c=(tHi+tLo)/2; tLo=Math.round((c-20)/5)*5; tHi=tLo+40;}
+  tLo=Math.max(-10,tLo); tHi=Math.min(140,tHi);
+  sc.lo+=(tLo-sc.lo)*(tLo<sc.lo?0.25:0.006);   // descend vite si dépassement, remonte très lentement
+  sc.hi+=(tHi-sc.hi)*(tHi>sc.hi?0.25:0.006);
+  return sc;
+}
+const y2=(L,h,sc)=>(1-Math.max(0,Math.min(1,(L-sc.lo)/(sc.hi-sc.lo))))*(h-16)+2;
+function grid(g,w,h,sc,padL,step){
+  g.strokeStyle='#DCE6F4';g.fillStyle='#8fa3c4';g.font='8px Arial';g.textAlign='right';g.lineWidth=1;
+  const d0=Math.ceil(sc.lo/step)*step;
+  for(let d=d0;d<=sc.hi;d+=step){const y=y2(d,h,sc);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText(Math.round(d),padL-3,y+3);}
+}
 
 function drawSpectrum(){
   const c=CV.specCv; if(!c)return;
   const {g,w,h}=c;
   g.fillStyle='#F4F8FE';g.fillRect(0,0,w,h);
-  const padL=24;
-  g.strokeStyle='#DCE6F4';g.fillStyle='#8fa3c4';g.font='8px Arial';g.textAlign='right';g.lineWidth=1;
-  for(let d=DBMIN;d<=DBMAX;d+=10){const y=y2(d,h);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText(d,padL-3,y+3);}
-  if(!S.bands.length)return;
+  const padL=26, sc=S.scale.spec;
+  if(!S.bands.length){grid(g,w,h,sc,padL,10);return;}
 
   if(S.mode==='toct'){
-    const nb=S.bands.length, bw=(w-padL-4)/nb;
-    const pw=S.time==='F'?S.bandPowF:S.bandPowS;
+    const nb=S.bands.length, pw=S.time==='F'?S.bandPowF:S.bandPowS;
+    // bornes des données (barres + peak-hold)
+    let dLo=Infinity,dHi=-Infinity;
+    for(let b=0;b<nb;b++){
+      const L=lvl(pw[b]); if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
+      if(S.bandPeak[b]>dHi)dHi=S.bandPeak[b];
+    }
+    autoRange(sc,dLo,dHi);
+    grid(g,w,h,sc,padL,10);
+    const bw=(w-padL-4)/nb;
     g.textAlign='center';
     for(let b=0;b<nb;b++){
-      const L=lvl(pw[b]), x=padL+b*bw, y=y2(L,h), y0=y2(DBMIN,h);
+      const L=lvl(pw[b]), x=padL+b*bw, y=y2(L,h,sc), y0=y2(sc.lo,h,sc);
       g.fillStyle=L>85?'#EF3346':L>70?'#E88A1A':'#1C4FA0';
       g.fillRect(x+1,y,Math.max(1,bw-2),Math.max(0,y0-y));
       const Lp=S.bandPeak[b];
-      if(Lp>DBMIN){g.fillStyle='#0B1B3C';g.fillRect(x+1,y2(Lp,h)-1,Math.max(1,bw-2),2);}
+      if(Lp>sc.lo){g.fillStyle='#0B1B3C';g.fillRect(x+1,y2(Lp,h,sc)-1,Math.max(1,bw-2),2);}
       if([31.5,125,500,2000,8000].includes(S.bands[b])){
         g.fillStyle='#8fa3c4';
         g.fillText(S.bands[b]>=1000?(S.bands[b]/1000)+'k':S.bands[b],x+bw/2,h-4);
@@ -391,46 +452,60 @@ function drawSpectrum(){
   }else{
     const fmin=20,fmax=Math.min(20000,S.ctx?S.ctx.sampleRate/2:20000);
     const x2=f=>padL+(Math.log(f/fmin)/Math.log(fmax/fmin))*(w-padL-4);
-    g.strokeStyle='#DCE6F4';g.fillStyle='#8fa3c4';g.font='8px Arial';g.textAlign='center';
-    for(const f of [63,250,1000,4000,16000]){
-      const x=x2(f);g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();
-      g.fillText(f>=1000?(f/1000)+'k':f,x,h-4);
-    }
     const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
-    g.beginPath();g.strokeStyle='#1C4FA0';g.lineWidth=1.3;
-    let st=false;
+    // bornes des données sur la ligne FFT
+    let dLo=Infinity,dHi=-Infinity;
+    const pts=[];
     for(let i=1;i<S.fftDb.length;i++){
       const f=S.freqs[i]; if(f<fmin)continue; if(f>fmax)break;
       let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
       if(S.comp)p*=S.compGain[i];
       if(wSel)p*=wSel[i];
-      const x=x2(f), y=y2(lvl(p),h);
-      if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);
+      const L=lvl(p); pts.push([x2(f),L]);
+      if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
     }
+    autoRange(sc,dLo,dHi);
+    grid(g,w,h,sc,padL,10);
+    g.strokeStyle='#DCE6F4';g.fillStyle='#8fa3c4';g.font='8px Arial';g.textAlign='center';
+    for(const f of [63,250,1000,4000,16000]){
+      const x=x2(f);g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();
+      g.fillText(f>=1000?(f/1000)+'k':f,x,h-4);
+    }
+    g.beginPath();g.strokeStyle='#1C4FA0';g.lineWidth=1.3;
+    pts.forEach((pt,i)=>{const y=y2(pt[1],h,sc); i?g.lineTo(pt[0],y):g.moveTo(pt[0],y);});
     g.stroke();
   }
+  $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
 }
 
 function drawHistory(){
   const c=CV.histCv; if(!c)return;
   const {g,w,h}=c;
   g.fillStyle='#F4F8FE';g.fillRect(0,0,w,h);
-  const padL=24;
-  g.strokeStyle='#DCE6F4';g.fillStyle='#8fa3c4';g.font='8px Arial';g.textAlign='right';g.lineWidth=1;
-  for(let d=DBMIN;d<=DBMAX;d+=20){const y=y2(d,h);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText(d,padL-3,y+3);}
-  if(S.hist.length<2)return;
+  const padL=26, sc=S.scale.hist;
+  if(S.hist.length<2){grid(g,w,h,sc,padL,10);return;}
   const span=S.duration>0?S.duration:Math.max(30,S.elapsed);
   const t1=S.hist[S.hist.length-1].t, t0=Math.max(0,t1-span);
+  // bornes des données visibles
+  let dLo=Infinity,dHi=-Infinity;
+  for(const pt of S.hist){
+    if(pt.t<t0)continue;
+    if(pt.L>-90){if(pt.L<dLo)dLo=pt.L; if(pt.L>dHi)dHi=pt.L;}
+    if(pt.Leq>-90){if(pt.Leq<dLo)dLo=pt.Leq; if(pt.Leq>dHi)dHi=pt.Leq;}
+  }
+  autoRange(sc,dLo,dHi);
+  grid(g,w,h,sc,padL,10);
   const x2=t=>padL+((t-t0)/Math.max(1e-6,span))*(w-padL-4);
   g.beginPath();g.strokeStyle='#1C4FA0';g.lineWidth=1.1;let st=false;
-  for(const pt of S.hist){if(pt.t<t0)continue;const x=x2(pt.t),y=y2(pt.L,h);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
+  for(const pt of S.hist){if(pt.t<t0)continue;const x=x2(pt.t),y=y2(pt.L,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
   g.stroke();
   g.beginPath();g.strokeStyle='#EF3346';g.lineWidth=2;st=false;
-  for(const pt of S.hist){if(pt.t<t0)continue;const x=x2(pt.t),y=y2(pt.Leq,h);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
+  for(const pt of S.hist){if(pt.t<t0)continue;const x=x2(pt.t),y=y2(pt.Leq,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
   g.stroke();
   g.textAlign='left';g.font='9px Arial';
   g.fillStyle='#1C4FA0';g.fillText('L'+S.weight+S.time,padL+4,10);
   g.fillStyle='#EF3346';g.fillText('L'+S.weight+'eq',padL+40,10);
+  $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
 }
 
 function drawActive(force){
@@ -441,6 +516,7 @@ function drawActive(force){
 /* ================= UI ================= */
 function ui(){
   $('mainLbl').textContent='L'+S.weight+S.time;
+  $('unitLbl').textContent='dB('+S.weight+')';
   $('cfgLine').textContent=S.weight+'·'+S.time+'·'+(S.mode==='toct'?'1/3':'FFT')+(S.comp?'·comp':'');
   $('gTitle').textContent=S.screen==='spec'
     ? 'SPECTRE · '+(S.mode==='toct'?"TIERS D'OCTAVE":'BANDES FINES')+' · POND. '+S.weight
