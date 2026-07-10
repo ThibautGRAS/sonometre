@@ -94,7 +94,7 @@
   .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
   .gpane.on{display:block}
-  canvas{position:absolute;inset:0;width:100%;height:100%}
+  canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 
   /* écran VALEURS */
   #paneVal{overflow:hidden}
@@ -103,6 +103,13 @@
   .valtable .k{font-size:10px;letter-spacing:.06em;color:var(--lcd-dim);font-weight:700}
   .valtable .v{font-family:var(--mono);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
   .valtable .v.red{color:var(--red)}
+
+  /* écran MODE EXPERT */
+  .menu{height:100%;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+  .mrow{display:flex;justify-content:space-between;align-items:center;background:rgba(0,30,80,.06);border-radius:8px;padding:9px 10px;font-size:12px;font-weight:700;cursor:pointer}
+  .mrow:active{background:rgba(0,30,80,.14)}
+  .mrow b{font-family:var(--mono);color:var(--navy);font-size:12px;font-variant-numeric:tabular-nums}
+  .mnote{font-size:8.5px;color:#8fa3c4;text-align:center;margin-top:auto;padding:2px 6px;line-height:1.4}
 
   .bottomstrip{display:flex;justify-content:space-between;align-items:center;flex:0 0 auto;margin-top:6px;padding-top:5px;border-top:1px solid var(--lcd-grid);font-family:var(--mono);font-size:11px;color:var(--lcd-dim)}
   .bottomstrip b{color:var(--lcd-ink);font-weight:700}
@@ -187,6 +194,16 @@
           <div class="cell"><div class="k">OFFSET CAL. / COMP</div><div class="v" id="vCal" style="font-size:16px">120.0 dB · off</div></div>
         </div>
       </div>
+      <div class="gpane" id="paneMenu">
+        <div class="menu">
+          <div class="mrow" id="mFscale"><span>Échelle fréquence</span><b>LOG</b></div>
+          <div class="mrow" id="mFft"><span>Taille FFT · résolution</span><b>16384 · 2.9 Hz</b></div>
+          <div class="mrow" id="mSmooth"><span>Lissage spectral natif</span><b>0.00</b></div>
+          <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
+          <div class="mrow" id="mDbScale"><span>Échelle dB graphiques</span><b>Auto</b></div>
+          <div class="mnote">Fenêtre Blackman (AnalyserNode, fixe) · Recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · Toucher une ligne pour changer la valeur</div>
+        </div>
+      </div>
     </div>
 
     <div class="bottomstrip">
@@ -200,7 +217,7 @@
   <!-- ================= CLAVIER ================= -->
   <div class="keypad">
     <div class="krow">
-      <button class="key" id="kScreen"><span class="kf">ÉCRAN</span><span class="kv" id="kScreenV">Spectre</span></button>
+      <button class="key" id="kScreen"><span class="kf">ÉCRAN · LONG=EXPERT</span><span class="kv" id="kScreenV">Spectre</span></button>
       <button class="key" id="kW"><span class="kf">POND.</span><span class="kv" id="kWV">A</span></button>
       <button class="key" id="kT"><span class="kf">TEMPS</span><span class="kv" id="kTV">Fast</span></button>
       <button class="key" id="kMode"><span class="kf">ANALYSE</span><span class="kv" id="kModeV">1/3 oct</span></button>
@@ -235,6 +252,8 @@ const S = {
   eq:{A:0,C:0,Z:0}, eqT:0,
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
+  fview:{min:20,max:20000}, cursor:null,
+  fscale:'log', fftN:16384, nSmooth:0, colMs:50, dbAuto:true,
   scale:{spec:{lo:30,hi:90}, hist:{lo:30,hi:90}, sgram:{lo:0,hi:60}}
 };
 const NOMS=[20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000];
@@ -262,15 +281,9 @@ function compAt(f){
 }
 
 /* ================= Audio ================= */
-async function initAudio(){
-  S.ctx=new (window.AudioContext||window.webkitAudioContext)();
-  S.stream=await navigator.mediaDevices.getUserMedia({audio:{
-    echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1
-  }});
-  const src=S.ctx.createMediaStreamSource(S.stream);
-  const an=S.ctx.createAnalyser();
-  an.fftSize=16384; an.smoothingTimeConstant=0;
-  src.connect(an); S.analyser=an;
+function configureAnalyser(){
+  const an=S.analyser;
+  an.fftSize=S.fftN; an.smoothingTimeConstant=S.nSmooth;
   const n=an.frequencyBinCount;
   S.fftDb=new Float32Array(n);
   S.td=new Float32Array(an.fftSize);
@@ -294,6 +307,17 @@ async function initAudio(){
   S.bandPowS=new Float32Array(S.bands.length);
   S.bandEnergy=new Float64Array(S.bands.length);
   S.bandPeak=new Float32Array(S.bands.length).fill(-99);
+  SG.init=false;
+}
+async function initAudio(){
+  S.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  S.stream=await navigator.mediaDevices.getUserMedia({audio:{
+    echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1
+  }});
+  const src=S.ctx.createMediaStreamSource(S.stream);
+  S.analyser=S.ctx.createAnalyser();
+  src.connect(S.analyser);
+  configureAnalyser();
 }
 
 function resetMeasure(){
@@ -421,6 +445,7 @@ window.addEventListener('orientationchange',()=>setTimeout(sizeAll,250));
 
 /* ===== échelle auto : expansion rapide, contraction très lente (anti-scintillement) ===== */
 function autoRange(sc,dLo,dHi){
+  if(!S.dbAuto){sc.lo=20;sc.hi=110;return sc;}
   if(!isFinite(dLo)||!isFinite(dHi)||dHi<=-90)return sc;
   let tLo=Math.floor((dLo-4)/5)*5, tHi=Math.ceil((dHi+4)/5)*5;
   if(tHi-tLo<40){const c=(tHi+tLo)/2; tLo=Math.round((c-20)/5)*5; tHi=tLo+40;}
@@ -429,6 +454,11 @@ function autoRange(sc,dLo,dHi){
   sc.hi+=(tHi-sc.hi)*(tHi>sc.hi?0.25:0.006);
   return sc;
 }
+/* ===== transformation d'axe fréquence : log ou linéaire ===== */
+const TF=f=>S.fscale==='log'?Math.log(Math.max(1e-6,f)):f;
+const TFi=v=>S.fscale==='log'?Math.exp(v):v;
+const F_LOW=()=>S.fscale==='log'?20:0;
+const SPAN_MIN=()=>S.fscale==='log'?Math.log(1.25):50;
 const y2=(L,h,sc)=>(1-Math.max(0,Math.min(1,(L-sc.lo)/(sc.hi-sc.lo))))*(h-16)+2;
 function grid(g,w,h,sc,padL,step){
   g.strokeStyle='#DCE6F4';g.fillStyle='#8fa3c4';g.font='8px Arial';g.textAlign='right';g.lineWidth=1;
@@ -436,16 +466,31 @@ function grid(g,w,h,sc,padL,step){
   for(let d=d0;d<=sc.hi;d+=step){const y=y2(d,h,sc);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText(Math.round(d),padL-3,y+3);}
 }
 
+const nyq=()=>S.ctx?S.ctx.sampleRate/2:20000;
+const fmtF=f=>f>=1000?((f/1000).toFixed(f<10000&&f%1000?1:0))+'k':Math.round(f)+'';
+const TICK_CANDS=[20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000,20000];
+function dynTicks(fmin,fmax,nmax){
+  if(S.fscale==='lin'){
+    const raw=(fmax-fmin)/nmax, mag=Math.pow(10,Math.floor(Math.log10(Math.max(1,raw))));
+    const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=raw)||10*mag;
+    const t=[]; for(let f=Math.ceil(fmin/step)*step;f<=fmax;f+=step)if(f>0)t.push(f);
+    return t;
+  }
+  const inr=TICK_CANDS.filter(f=>f>=fmin*1.02&&f<=fmax*0.98);
+  if(!inr.length)return [];
+  const step=Math.max(1,Math.ceil(inr.length/nmax));
+  return inr.filter((_,i)=>i%step===0);
+}
+
 function drawSpectrum(){
   const c=CV.specCv; if(!c)return;
   const {g,w,h}=c;
   g.fillStyle='#F4F8FE';g.fillRect(0,0,w,h);
-  const padL=26, sc=S.scale.spec;
+  const padL=26, sc=S.scale.spec, K=S.K||1;
   if(!S.bands.length){grid(g,w,h,sc,padL,10);return;}
 
   if(S.mode==='toct'){
     const nb=S.bands.length, pw=S.time==='F'?S.bandPowF:S.bandPowS;
-    // bornes des données (barres + peak-hold)
     let dLo=Infinity,dHi=-Infinity;
     for(let b=0;b<nb;b++){
       const L=lvl(pw[b]); if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
@@ -466,33 +511,63 @@ function drawSpectrum(){
         g.fillText(S.bands[b]>=1000?(S.bands[b]/1000)+'k':S.bands[b],x+bw/2,h-4);
       }
     }
+    /* curseur : bande sélectionnée */
+    if(S.cursor){
+      let b=Math.max(0,Math.min(nb-1,Math.floor(S.cursor.u*nb)));
+      const x=padL+b*bw, L=lvl(pw[b]);
+      g.strokeStyle='#0B1B3C';g.lineWidth=1.5;
+      g.strokeRect(x+0.5,y2(Math.max(L,sc.lo),h,sc)-0.5,Math.max(1,bw-2)+1,Math.max(1,y2(sc.lo,h,sc)-y2(Math.max(L,sc.lo),h,sc))+1);
+      cursorLabel(g,w,x+bw/2,fmtF(S.bands[b])+'Hz · '+fmt(L)+' dB');
+    }
+    $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
   }else{
-    const fmin=20,fmax=Math.min(20000,S.ctx?S.ctx.sampleRate/2:20000);
-    const x2=f=>padL+(Math.log(f/fmin)/Math.log(fmax/fmin))*(w-padL-4);
+    const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
+    const V0=TF(fmin), V1=TF(fmax);
+    const x2=f=>padL+((TF(f)-V0)/(V1-V0))*(w-padL-4);
     const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
-    // bornes des données sur la ligne FFT
     let dLo=Infinity,dHi=-Infinity;
     const pts=[];
-    for(let i=1;i<S.fftDb.length;i++){
-      const f=S.freqs[i]; if(f<fmin)continue; if(f>fmax)break;
+    const i0=Math.max(1,Math.floor(fmin/S.binHz)), i1=Math.min(S.fftDb.length-1,Math.ceil(fmax/S.binHz));
+    for(let i=i0;i<=i1;i++){
+      const f=S.freqs[i];
       let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
       if(S.comp)p*=S.compGain[i];
       if(wSel)p*=wSel[i];
+      p*=K;
       const L=lvl(p); pts.push([x2(f),L]);
       if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
     }
     autoRange(sc,dLo,dHi);
     grid(g,w,h,sc,padL,10);
     g.strokeStyle='#DCE6F4';g.fillStyle='#8fa3c4';g.font='8px Arial';g.textAlign='center';
-    for(const f of [63,250,1000,4000,16000]){
+    for(const f of dynTicks(fmin,fmax,6)){
       const x=x2(f);g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();
-      g.fillText(f>=1000?(f/1000)+'k':f,x,h-4);
+      g.fillText(fmtF(f),x,h-4);
     }
     g.beginPath();g.strokeStyle='#1C4FA0';g.lineWidth=1.3;
     pts.forEach((pt,i)=>{const y=y2(pt[1],h,sc); i?g.lineTo(pt[0],y):g.moveTo(pt[0],y);});
     g.stroke();
+    /* curseur : ligne + fréquence/niveau au bin le plus proche */
+    if(S.cursor&&S.cursor.f>=fmin&&S.cursor.f<=fmax&&S.binHz){
+      const ic=Math.max(1,Math.min(S.fftDb.length-1,Math.round(S.cursor.f/S.binHz)));
+      let p=Math.pow(10,S.fftDb[ic]/10); if(!isFinite(p))p=0;
+      if(S.comp)p*=S.compGain[ic];
+      if(wSel)p*=wSel[ic];
+      const L=lvl(p*K), x=x2(S.freqs[ic]);
+      g.strokeStyle='#0B1B3C';g.lineWidth=1;g.setLineDash([3,3]);
+      g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
+      g.fillStyle='#0B1B3C';g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
+      cursorLabel(g,w,x,fmtF(S.freqs[ic])+'Hz · '+fmt(L)+' dB');
+    }
+    $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz';
   }
-  $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
+}
+function cursorLabel(g,w,x,txt){
+  g.font='bold 10px Arial';
+  const tw=g.measureText(txt).width+10;
+  let lx=Math.max(2,Math.min(w-tw-2,x-tw/2));
+  g.fillStyle='#0B1B3C';g.fillRect(lx,2,tw,15);
+  g.fillStyle='#fff';g.textAlign='left';g.fillText(txt,lx+5,13);
 }
 
 function drawHistory(){
@@ -527,9 +602,9 @@ function drawHistory(){
 
 /* ===== Spectrogramme couleur ===== */
 const SG={init:false,map:null,last:0,W:0,H:0,padL:0,axH:0};
-/* colormap turbo-like : navy → bleu → vert → jaune → orange → rouge */
+/* colormap JET classique : bleu foncé → bleu → cyan → jaune → rouge → rouge foncé */
 const LUT=(()=>{
-  const stops=[[0,3,18,58],[.25,28,79,160],[.5,47,191,131],[.7,245,211,60],[.85,232,138,26],[1,239,51,70]];
+  const stops=[[0,0,0,128],[.125,0,0,255],[.375,0,255,255],[.625,255,255,0],[.875,255,0,0],[1,128,0,0]];
   const lut=new Uint8Array(256*3);
   for(let i=0;i<256;i++){
     const t=i/255; let a=stops[0],b=stops[stops.length-1];
@@ -543,42 +618,39 @@ function sgSetup(c){
   const cv=$('sgramCv');
   SG.W=cv.width; SG.H=cv.height;
   SG.padL=Math.round(26*c.dpr); SG.axH=Math.round(13*c.dpr);
-  const Hu=SG.H-SG.axH;                      // hauteur utile
-  const fmin=20, fmax=Math.min(20000,S.ctx?S.ctx.sampleRate/2:20000);
-  SG.map=[];                                  // ligne de pixels → plage de bins FFT
+  const Hu=SG.H-SG.axH;
+  const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
+  SG.fmin=fmin; SG.fmax=fmax; SG.fsc=S.fscale;
+  const V0=TF(fmin), V1=TF(fmax);
+  SG.map=[];
   if(S.binHz){
-    let prev=Math.round(fmax/S.binHz);
     for(let r=0;r<Hu;r++){
-      const f=fmax*Math.pow(fmin/fmax,(r+1)/Hu);
-      const i1=prev, i0=Math.max(1,Math.round(f/S.binHz));
-      SG.map.push([Math.min(i0,i1),Math.max(i0,i1)]);
-      prev=i0;
+      const fT=TFi(V1-(r/Hu)*(V1-V0)), fB=TFi(V1-((r+1)/Hu)*(V1-V0));
+      const i0=Math.max(1,Math.round(fB/S.binHz)), i1=Math.max(i0,Math.round(fT/S.binHz));
+      SG.map.push([i0,Math.min(S.fftDb?S.fftDb.length-1:i1,i1)]);
     }
   }
   const g=c.g;
   g.save();g.setTransform(1,0,0,1,0,0);
-  g.fillStyle='#03123A';g.fillRect(0,0,SG.W,SG.H);
-  // axe fréquence à gauche
+  g.fillStyle='#000080';g.fillRect(0,0,SG.W,SG.H);
   g.fillStyle='#EAF1FA';g.fillRect(0,0,SG.padL,SG.H);
   g.fillStyle='#8fa3c4';g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
-  for(const f of [63,250,1000,4000,16000]){
-    if(f>fmax)continue;
-    const y=(Math.log(fmax/f)/Math.log(fmax/fmin))*Hu;
-    g.fillText(f>=1000?(f/1000)+'k':f,SG.padL-3*c.dpr,y+3*c.dpr);
+  for(const f of dynTicks(fmin,fmax,7)){
+    const y=((V1-TF(f))/(V1-V0))*Hu;
+    g.fillText(fmtF(f),SG.padL-3*c.dpr,y+3*c.dpr);
   }
-  // axe temps (bas)
   g.fillStyle='#EAF1FA';g.fillRect(SG.padL,SG.H-SG.axH,SG.W-SG.padL,SG.axH);
   g.fillStyle='#8fa3c4';g.textAlign='center';
-  g.fillText('→ temps (défilement)', SG.padL+(SG.W-SG.padL)/2, SG.H-4*c.dpr);
+  g.fillText('→ temps · pincer = zoom fréq. · double-tap = reset', SG.padL+(SG.W-SG.padL)/2, SG.H-4*c.dpr);
   g.restore();
   SG.init=true;
 }
 function drawSgram(){
   const c=CV.sgramCv; if(!c)return;
-  if(!SG.init||SG.W!==$('sgramCv').width)sgSetup(c);
+  if(!SG.init||SG.W!==$('sgramCv').width||SG.fsc!==S.fscale||SG.fmin!==Math.max(F_LOW(),S.fview.min)||SG.fmax!==Math.min(S.fview.max,nyq()))sgSetup(c);
   if(!S.running||S.paused||!S.binHz||!SG.map)return;
   const now=performance.now();
-  if(now-SG.last<50)return;                  // 20 colonnes/s
+  if(now-SG.last<S.colMs)return;
   SG.last=now;
   const g=c.g, W=SG.W, H=SG.H, padL=SG.padL, Hu=H-SG.axH;
   const sc=S.scale.sgram, K=S.K||1;
@@ -610,7 +682,7 @@ function drawSgram(){
   }
   g.putImageData(img,W-1,0);
   g.restore();
-  $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
+  $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(SG.fmin)+'–'+fmtF(SG.fmax)+'Hz';
 }
 
 function drawActive(force){
@@ -618,6 +690,86 @@ function drawActive(force){
   else if(S.screen==='sgram')drawSgram();
   else if(S.screen==='hist')drawHistory();
 }
+
+/* ===== Gestes : pincer = zoom fréquence, glisser = déplacer, tap = curseur, double-tap = reset ===== */
+function clampView(Vmin,span){
+  const HI=TF(nyq()), LOW=S.fscale==='lin'?0:TF(20);
+  span=Math.max(SPAN_MIN(),Math.min(HI-LOW,span));
+  Vmin=Math.max(LOW,Math.min(HI-span,Vmin));
+  S.fview.min=TFi(Vmin); S.fview.max=TFi(Vmin+span);
+}
+function resetView(){
+  S.fview.min=S.fscale==='lin'?0:20;
+  S.fview.max=Math.min(20000,nyq());
+  S.cursor=null; SG.init=false; drawActive();
+}
+function attachZoomPan(id,opts){
+  const cv=$(id), padL=26;
+  let mode=null,sx=0,moved=false,anchors=null,lastTap=0;
+  const geo=()=>{const r=cv.getBoundingClientRect();return{left:r.left,w:r.width};};
+  const uOf=(cx,g)=>((cx-g.left)-padL)/Math.max(1,g.w-padL-4);
+  const vAt=u=>{const V0=TF(Math.max(F_LOW(),S.fview.min)),V1=TF(S.fview.max);return V0+u*(V1-V0);};
+  cv.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    const g=geo();
+    if(e.touches.length===2){
+      const u1=uOf(e.touches[0].clientX,g),u2=uOf(e.touches[1].clientX,g);
+      anchors={u1,u2,L1:vAt(u1),L2:vAt(u2)};
+      mode='pinch';
+    }else if(e.touches.length===1){
+      sx=e.touches[0].clientX;moved=false;mode='pan';
+      const now=Date.now();
+      if(now-lastTap<300){resetView();mode=null;lastTap=0;return;}
+      lastTap=now;
+    }
+  },{passive:false});
+  cv.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    const g=geo();
+    if(mode==='pinch'&&e.touches.length===2){
+      const u1=uOf(e.touches[0].clientX,g),u2=uOf(e.touches[1].clientX,g);
+      if(Math.abs(u1-u2)<0.02)return;
+      const span=(anchors.L1-anchors.L2)/(u1-u2);
+      clampView(anchors.L1-u1*span,span);
+      opts.onChange&&opts.onChange();
+    }else if(mode==='pan'&&e.touches.length===1){
+      const dx=e.touches[0].clientX-sx;
+      if(Math.abs(dx)>6)moved=true;
+      if(!moved)return;
+      sx=e.touches[0].clientX;
+      const V0=TF(Math.max(F_LOW(),S.fview.min)),V1=TF(S.fview.max),span=V1-V0;
+      clampView(V0-dx/Math.max(1,g.w-padL-4)*span,span);
+      opts.onChange&&opts.onChange();
+    }
+  },{passive:false});
+  cv.addEventListener('touchend',()=>{
+    const g=geo();
+    if(mode==='pan'&&!moved&&opts.onTap){
+      const u=uOf(sx,g);
+      if(u>=0&&u<=1)opts.onTap(TFi(vAt(u)),u);
+    }
+    mode=null;anchors=null;
+  });
+  /* souris : molette = zoom centré, clic = curseur */
+  cv.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const g=geo(), u=Math.max(0,Math.min(1,uOf(e.clientX,g)));
+    const V0=TF(Math.max(F_LOW(),S.fview.min)),V1=TF(S.fview.max),span=V1-V0;
+    const k=e.deltaY>0?1.15:1/1.15, ns=span*k;
+    clampView(vAt(u)-u*ns,ns);
+    opts.onChange&&opts.onChange();
+  },{passive:false});
+  cv.addEventListener('click',e=>{
+    if(!opts.onTap)return;
+    const g=geo(), u=uOf(e.clientX,g);
+    if(u>=0&&u<=1)opts.onTap(TFi(vAt(u)),u);
+  });
+}
+attachZoomPan('specCv',{
+  onChange:()=>{if(!S.running)drawSpectrum();},
+  onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();}
+});
+attachZoomPan('sgramCv',{onChange:()=>{SG.init=false;}});
 
 /* ================= UI ================= */
 function ui(){
@@ -627,8 +779,16 @@ function ui(){
   $('gTitle').textContent=S.screen==='spec'
     ? 'SPECTRE · '+(S.mode==='toct'?"TIERS D'OCTAVE":'BANDES FINES')+' · POND. '+S.weight
     : S.screen==='sgram' ? 'SPECTROGRAMME · POND. '+S.weight
-    : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq' : 'VALEURS DE LA MESURE';
-  $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':'Valeurs';
+    : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq'
+    : S.screen==='menu' ? 'MODE EXPERT · TRAITEMENT DU SIGNAL' : 'VALEURS DE LA MESURE';
+  $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='menu'?'Expert':'Valeurs';
+  /* lignes du mode expert */
+  $('mFscale').querySelector('b').textContent=S.fscale==='log'?'LOG':'LINÉAIRE';
+  const fs=S.ctx?S.ctx.sampleRate:48000;
+  $('mFft').querySelector('b').textContent=S.fftN+' · '+(fs/S.fftN).toFixed(1)+' Hz';
+  $('mSmooth').querySelector('b').textContent=S.nSmooth.toFixed(2);
+  $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
+  $('mDbScale').querySelector('b').textContent=S.dbAuto?'Auto':'Fixe 20–110';
   $('kWV').textContent=S.weight;
   $('kTV').textContent=S.time==='F'?'Fast':'Slow';
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':'FFT';
@@ -639,15 +799,45 @@ function ui(){
   const badge=$('modeBadge');
   if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
   else if(S.paused){badge.textContent='PAUSE';badge.className='badge';}
-  ['paneSpec','paneSgram','paneHist','paneVal'].forEach(id=>$(id).classList.remove('on'));
-  $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':'paneVal').classList.add('on');
+  ['paneSpec','paneSgram','paneHist','paneVal','paneMenu'].forEach(id=>$(id).classList.remove('on'));
+  $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':'paneVal').classList.add('on');
 }
 
 /* ================= Touches ================= */
-$('kScreen').onclick=()=>{
-  S.screen=S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':'spec';
+/* ÉCRAN : appui court = cycle des affichages, appui long (0,5 s) = MODE EXPERT */
+let scrT,scrLong=false;
+$('kScreen').addEventListener('pointerdown',()=>{
+  scrLong=false;
+  scrT=setTimeout(()=>{scrLong=true;S.screen='menu';ui();},500);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kScreen').addEventListener(ev,()=>clearTimeout(scrT)));
+$('kScreen').addEventListener('click',()=>{
+  if(scrLong){scrLong=false;return;}
+  S.screen=S.screen==='menu'?'spec':S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':'spec';
   ui();requestAnimationFrame(()=>{sizeAll();});
+});
+
+/* lignes du MODE EXPERT */
+$('mFscale').onclick=()=>{S.fscale=S.fscale==='log'?'lin':'log';resetView();ui();};
+$('mFft').onclick=()=>{
+  const opts=[8192,16384,32768];
+  S.fftN=opts[(opts.indexOf(S.fftN)+1)%opts.length];
+  if(S.analyser)configureAnalyser();
+  ui();
 };
+$('mSmooth').onclick=()=>{
+  const opts=[0,0.5,0.8];
+  S.nSmooth=opts[(opts.indexOf(S.nSmooth)+1)%opts.length];
+  if(S.analyser)S.analyser.smoothingTimeConstant=S.nSmooth;
+  ui();
+};
+$('mSgSpeed').onclick=()=>{
+  const opts=[100,50,25];
+  S.colMs=opts[(opts.indexOf(S.colMs)+1)%opts.length];
+  ui();
+};
+$('mDbScale').onclick=()=>{S.dbAuto=!S.dbAuto;ui();drawActive();};
+
 $('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();drawActive();};
 $('kT').onclick=()=>{S.time=S.time==='F'?'S':'F';ui();drawActive();};
 $('kMode').onclick=()=>{S.mode=S.mode==='toct'?'fft':'toct';ui();drawActive();};
