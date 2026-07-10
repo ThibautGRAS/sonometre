@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Sonomètre — CETIM</title>
+<style>
+  :root{
+    --navy:#001E50;
+    --navy-deep:#00133A;
+    --navy-panel:#0A2A66;
+    --red:#EF3346;
+    --lcd:#F2F6FC;
+    --lcd-dim:#8FA3C4;
+    --ink:#0B1B3C;
+    --amber:#FFB454;
+    --green:#3DDC97;
+    --line:rgba(255,255,255,.12);
+    --font:"Arial Nova", Arial, Helvetica, sans-serif;
+    --mono:"SF Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:var(--font);
+    background:linear-gradient(165deg,var(--navy-deep) 0%,var(--navy) 55%,#032a6b 100%);
+    color:#fff;
+    display:flex;justify-content:center;
+    min-height:100dvh;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .device{width:100%;max-width:520px;padding:12px 14px 28px;display:flex;flex-direction:column;gap:12px}
+
+  /* ---------- entête instrument ---------- */
+  header{display:flex;align-items:baseline;justify-content:space-between;padding:4px 2px}
+  header .brand{font-size:13px;letter-spacing:.22em;font-weight:700}
+  header .brand b{color:var(--red)}
+  header .model{font-size:11px;color:var(--lcd-dim);letter-spacing:.12em}
+
+  /* ---------- afficheur principal ---------- */
+  .display{
+    background:linear-gradient(180deg,#F7FAFF 0%,#E9F0FA 100%);
+    border-radius:14px;
+    padding:14px 16px 12px;
+    color:var(--ink);
+    box-shadow:inset 0 2px 8px rgba(0,30,80,.18), 0 1px 0 rgba(255,255,255,.15);
+    position:relative;
+  }
+  .display .row-top{display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.08em;color:#41598a}
+  .display .badge{font-weight:700;padding:2px 8px;border-radius:4px;background:var(--navy);color:#fff;font-size:11px}
+  .display .badge.rec{background:var(--red);animation:blink 1.2s step-end infinite}
+  @keyframes blink{50%{opacity:.35}}
+  .main-val{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:2px 0 0}
+  .main-val .num{font-family:var(--mono);font-size:clamp(64px,19vw,92px);font-weight:700;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .main-val .unit{font-size:16px;font-weight:700;color:#41598a}
+  .main-label{text-align:center;font-size:12px;letter-spacing:.18em;color:#41598a;margin-top:-4px;font-weight:700}
+  .bargraph{height:14px;border-radius:7px;background:#D5DFF0;margin:10px 2px 4px;overflow:hidden;position:relative}
+  .bargraph .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--navy) 0%,var(--navy) 62%,var(--amber) 78%,var(--red) 92%);transition:width 80ms linear}
+  .bargraph .peakmark{position:absolute;top:0;bottom:0;width:2px;background:var(--red)}
+  .barscale{display:flex;justify-content:space-between;font-size:9px;color:#7d90b5;font-family:var(--mono);padding:0 2px}
+  .subvals{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+  .subvals .cell{background:rgba(0,30,80,.06);border-radius:8px;padding:6px 4px;text-align:center}
+  .subvals .k{font-size:10px;letter-spacing:.06em;color:#41598a;font-weight:700}
+  .subvals .v{font-family:var(--mono);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+  .subvals .v.red{color:var(--red)}
+  .timerline{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:11px;color:#41598a;font-family:var(--mono)}
+  .progress{flex:1;height:4px;background:#D5DFF0;border-radius:2px;margin:0 10px;overflow:hidden}
+  .progress .p{height:100%;width:0%;background:var(--red)}
+
+  /* ---------- écrans graphiques ---------- */
+  .screen{background:#061633;border:1px solid var(--line);border-radius:12px;padding:8px 8px 4px;position:relative}
+  .screen h2{font-size:11px;letter-spacing:.14em;color:var(--lcd-dim);font-weight:700;padding:2px 4px 6px;display:flex;justify-content:space-between}
+  .screen h2 .hint{font-weight:400;letter-spacing:0;text-transform:none;color:#5d76a5}
+  canvas{width:100%;display:block;border-radius:6px}
+
+  /* ---------- commandes ---------- */
+  .panel{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .ctl-group{margin-bottom:12px}
+  .ctl-group:last-child{margin-bottom:0}
+  .ctl-label{font-size:10px;letter-spacing:.16em;color:var(--lcd-dim);font-weight:700;margin-bottom:6px}
+  .seg{display:flex;background:rgba(0,0,0,.28);border-radius:8px;padding:3px;gap:3px}
+  .seg button{
+    flex:1;border:0;background:transparent;color:#B9C7E2;font-family:var(--font);
+    font-size:13px;font-weight:700;padding:9px 4px;border-radius:6px;cursor:pointer;letter-spacing:.02em;
+  }
+  .seg button.on{background:var(--lcd);color:var(--navy);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .cal-row{display:flex;align-items:center;gap:8px}
+  .cal-row button{width:44px;height:40px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:#fff;font-size:18px;font-weight:700;cursor:pointer}
+  .cal-row input{
+    flex:1;text-align:center;font-family:var(--mono);font-size:17px;font-weight:700;
+    background:rgba(0,0,0,.28);border:1px solid var(--line);color:#fff;border-radius:8px;height:40px;
+  }
+  .toggle{display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer}
+  .toggle .t-txt{font-size:12px;font-weight:700}
+  .toggle .t-sub{font-size:10px;color:var(--lcd-dim);margin-top:2px}
+  .switch{width:44px;height:24px;border-radius:12px;background:#31446e;position:relative;flex-shrink:0;transition:background .15s}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+  .toggle.on .switch{background:var(--green)}
+  .toggle.on .switch::after{left:23px}
+
+  /* ---------- transport ---------- */
+  .transport{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+  .transport button{
+    border:0;border-radius:12px;padding:16px 8px;font-family:var(--font);font-size:15px;font-weight:700;
+    letter-spacing:.06em;cursor:pointer;color:#fff;
+  }
+  #btnStart{background:var(--red);box-shadow:0 4px 14px rgba(239,51,70,.4)}
+  #btnStart.running{background:#8a1220}
+  #btnPause{background:rgba(255,255,255,.12);border:1px solid var(--line)}
+  #btnReset{background:rgba(255,255,255,.12);border:1px solid var(--line)}
+  #btnExport{width:100%;margin-top:10px;background:transparent;border:1px dashed var(--line);color:var(--lcd-dim);border-radius:10px;padding:11px;font-size:12px;font-weight:700;letter-spacing:.08em;cursor:pointer}
+
+  .note{font-size:10px;color:#5d76a5;line-height:1.5;padding:0 4px}
+  .note b{color:var(--lcd-dim)}
+  #err{display:none;background:rgba(239,51,70,.15);border:1px solid var(--red);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5}
+  @media (prefers-reduced-motion:reduce){.badge.rec{animation:none}}
+</style>
+</head>
+<body>
+<div class="device">
+
+  <header>
+    <div class="brand">CET<b>I</b>M &nbsp;SONOMÈTRE</div>
+    <div class="model">SLM-3744 · micro interne</div>
+  </header>
+
+  <!-- Afficheur -->
+  <section class="display">
+    <div class="row-top">
+      <span id="modeBadge" class="badge">PRÊT</span>
+      <span id="cfgLine">A · Fast · 1/3 oct.</span>
+    </div>
+    <div class="main-val"><span class="num" id="mainVal">--.-</span><span class="unit">dB</span></div>
+    <div class="main-label" id="mainLabel">L<small>AF</small> — NIVEAU INSTANTANÉ</div>
+    <div class="bargraph"><div class="fill" id="barFill"></div><div class="peakmark" id="peakMark" style="left:0%"></div></div>
+    <div class="barscale"><span>30</span><span>50</span><span>70</span><span>90</span><span>110</span><span>130</span></div>
+    <div class="subvals">
+      <div class="cell"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
+      <div class="cell"><div class="k">LCeq</div><div class="v" id="vLCeq">--.-</div></div>
+      <div class="cell"><div class="k">LZeq</div><div class="v" id="vLZeq">--.-</div></div>
+      <div class="cell"><div class="k">LAFmax</div><div class="v red" id="vMax">--.-</div></div>
+    </div>
+    <div class="timerline">
+      <span id="tElapsed">00:00</span>
+      <div class="progress"><div class="p" id="tProg"></div></div>
+      <span id="tTotal">∞</span>
+    </div>
+  </section>
+
+  <div id="err"></div>
+
+  <!-- Spectre -->
+  <section class="screen">
+    <h2>SPECTRE <span class="hint" id="specHint">tiers d'octave · pondéré A</span></h2>
+    <canvas id="specCv" height="220"></canvas>
+  </section>
+
+  <!-- Historique -->
+  <section class="screen">
+    <h2>ÉVOLUTION TEMPORELLE <span class="hint">niveau + Leq glissant</span></h2>
+    <canvas id="histCv" height="150"></canvas>
+  </section>
+
+  <!-- Commandes -->
+  <section class="panel">
+    <div class="two-cols ctl-group">
+      <div>
+        <div class="ctl-label">PONDÉRATION FRÉQ.</div>
+        <div class="seg" id="segW">
+          <button data-v="A" class="on">A</button><button data-v="C">C</button><button data-v="Z">Z</button>
+        </div>
+      </div>
+      <div>
+        <div class="ctl-label">PONDÉRATION TEMP.</div>
+        <div class="seg" id="segT">
+          <button data-v="F" class="on">Fast</button><button data-v="S">Slow</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctl-group">
+      <div class="ctl-label">ANALYSE SPECTRALE</div>
+      <div class="seg" id="segMode">
+        <button data-v="toct" class="on">Tiers d'octave</button><button data-v="fft">Bandes fines (FFT)</button>
+      </div>
+    </div>
+
+    <div class="ctl-group">
+      <div class="ctl-label">DURÉE DE MESURE</div>
+      <div class="seg" id="segDur">
+        <button data-v="0" class="on">∞</button><button data-v="30">30 s</button><button data-v="60">1 min</button><button data-v="300">5 min</button><button data-v="900">15 min</button>
+      </div>
+    </div>
+
+    <div class="ctl-group">
+      <div class="ctl-label">CALIBRATION — OFFSET dB (dBFS → dB SPL)</div>
+      <div class="cal-row">
+        <button id="calMinus">−</button>
+        <input id="calVal" type="number" inputmode="decimal" step="0.5" value="90.0">
+        <button id="calPlus">+</button>
+      </div>
+    </div>
+
+    <div class="ctl-group">
+      <div class="toggle" id="tglComp">
+        <div>
+          <div class="t-txt">Compensation micro iPhone</div>
+          <div class="t-sub">Correction fréquentielle typique (basses fréquences &lt; 200 Hz, aigus) — approximative</div>
+        </div>
+        <div class="switch"></div>
+      </div>
+    </div>
+
+    <div class="transport">
+      <button id="btnStart">▶ DÉMARRER</button>
+      <button id="btnPause" disabled>Pause</button>
+      <button id="btnReset">Réinit.</button>
+    </div>
+    <button id="btnExport">EXPORTER CSV (historique + spectre Leq)</button>
+  </section>
+
+  <p class="note">
+    <b>Note métrologique :</b> le micro iPhone n'est pas un capteur classe 1/2 (IEC 61672). Traitements audio système désactivés
+    (AGC, réduction de bruit) dans la mesure du possible. Pour un usage quantitatif, calibrer l'offset avec une source de
+    référence 94 dB @ 1 kHz (calibreur acoustique) et vérifier la linéarité. La compensation iPhone est une courbe moyenne
+    publiée pour micros MEMS d'iPhone récents, non traçable.
+  </p>
+</div>
+
+<script>
+"use strict";
+/* ================= État ================= */
+const S = {
+  running:false, paused:false,
+  weight:'A', time:'F', mode:'toct', duration:0,
+  offset:90.0, comp:false,
+  ctx:null, analyser:null, stream:null, raf:0,
+  fftDb:null, freqs:null, binHz:0,
+  // pondérations pré-calculées par bin
+  wA:null, wC:null, compGain:null,
+  // tiers d'octave
+  bands:[], bandBins:[],           // centres nominaux + index de bins
+  bandPowF:null, bandPowS:null,    // puissances lissées F/S par bande (pondération courante)
+  bandEnergy:null,                 // énergie cumulée par bande (Leq bande, pondération courante)
+  // niveaux globaux
+  pF:{A:0,C:0,Z:0}, pS:{A:0,C:0,Z:0},
+  eq:{A:0,C:0,Z:0}, eqT:0,         // énergies cumulées + temps
+  lafMax:-Infinity, lafMin:Infinity,
+  t0:0, elapsed:0, lastT:0,
+  hist:[], histLast:0,             // {t, L, Leq}
+  peakHold:0
+};
+const NOMS=[20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000];
+
+/* ============ Pondérations IEC 61672 ============ */
+function aWeight(f){ if(f<=0)return -200;
+  const f2=f*f, r=(12194**2*f2*f2)/((f2+20.6**2)*Math.sqrt((f2+107.7**2)*(f2+737.9**2))*(f2+12194**2));
+  return 20*Math.log10(r)+2.00; }
+function cWeight(f){ if(f<=0)return -200;
+  const f2=f*f, r=(12194**2*f2)/((f2+20.6**2)*(f2+12194**2));
+  return 20*Math.log10(r)+0.06; }
+
+/* Courbe de compensation micro iPhone (correction à AJOUTER, dB) — approximative */
+const COMP_F=[20,25,31.5,40,50,63,80,100,125,160,200,1000,5000,6300,8000,10000,12500,16000];
+const COMP_G=[12,10, 8,  6, 4.5,3,  2, 1.2,0.7,0.3,0,  0,   0,  -0.5,-1.5,-2.5,-3,-2];
+function compAt(f){
+  if(f<=COMP_F[0])return COMP_G[0];
+  if(f>=COMP_F[COMP_F.length-1])return COMP_G[COMP_G.length-1];
+  for(let i=1;i<COMP_F.length;i++) if(f<COMP_F[i]){
+    const a=Math.log(f/COMP_F[i-1])/Math.log(COMP_F[i]/COMP_F[i-1]);
+    return COMP_G[i-1]+a*(COMP_G[i]-COMP_G[i-1]); }
+  return 0;
+}
+
+/* ================= Audio ================= */
+async function initAudio(){
+  S.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  S.stream=await navigator.mediaDevices.getUserMedia({audio:{
+    echoCancellation:false, noiseSuppression:false, autoGainControl:false,
+    channelCount:1
+  }});
+  const src=S.ctx.createMediaStreamSource(S.stream);
+  const an=S.ctx.createAnalyser();
+  an.fftSize=16384; an.smoothingTimeConstant=0;
+  src.connect(an);
+  S.analyser=an;
+  const n=an.frequencyBinCount;
+  S.fftDb=new Float32Array(n);
+  S.binHz=S.ctx.sampleRate/an.fftSize;
+  S.freqs=new Float32Array(n); S.wA=new Float32Array(n); S.wC=new Float32Array(n); S.compGain=new Float32Array(n);
+  for(let i=0;i<n;i++){
+    const f=i*S.binHz; S.freqs[i]=f;
+    S.wA[i]=Math.pow(10,aWeight(f)/10);
+    S.wC[i]=Math.pow(10,cWeight(f)/10);
+    S.compGain[i]=Math.pow(10,compAt(f)/10);
+  }
+  // bandes tiers d'octave (limitées à fs/2)
+  S.bands=[]; S.bandBins=[];
+  for(const fc of NOMS){
+    if(fc*Math.pow(2,1/6) > S.ctx.sampleRate/2) break;
+    const lo=fc*Math.pow(2,-1/6), hi=fc*Math.pow(2,1/6);
+    const i0=Math.max(1,Math.ceil(lo/S.binHz)), i1=Math.min(n-1,Math.floor(hi/S.binHz));
+    if(i1>=i0){ S.bands.push(fc); S.bandBins.push([i0,i1]); }
+  }
+  S.bandPowF=new Float32Array(S.bands.length);
+  S.bandPowS=new Float32Array(S.bands.length);
+  S.bandEnergy=new Float64Array(S.bands.length);
+}
+
+function resetMeasure(){
+  S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0};
+  S.eq={A:0,C:0,Z:0}; S.eqT=0;
+  S.lafMax=-Infinity; S.lafMin=Infinity;
+  S.elapsed=0; S.hist=[]; S.histLast=0; S.peakHold=0;
+  if(S.bandEnergy) S.bandEnergy.fill(0);
+  if(S.bandPowF) S.bandPowF.fill(0);
+  if(S.bandPowS) S.bandPowS.fill(0);
+  drawAll(true);
+  ui();
+}
+
+/* ================= Boucle ================= */
+function loop(ts){
+  S.raf=requestAnimationFrame(loop);
+  if(!S.lastT){S.lastT=ts;return;}
+  const dt=Math.min(0.2,(ts-S.lastT)/1000); S.lastT=ts;
+  if(S.paused){draw();return;}
+  S.elapsed+=dt;
+
+  S.analyser.getFloatFrequencyData(S.fftDb);
+  const n=S.fftDb.length;
+  let pA=0,pC=0,pZ=0;
+  const nb=S.bands.length, bp=new Float32Array(nb);
+  const wSel = S.weight==='A'?S.wA : S.weight==='C'?S.wC : null;
+
+  // parcours des bins
+  let bi=0;
+  for(let i=1;i<n;i++){
+    let p=Math.pow(10,S.fftDb[i]/10);
+    if(!isFinite(p))p=0;
+    if(S.comp)p*=S.compGain[i];
+    pZ+=p; pA+=p*S.wA[i]; pC+=p*S.wC[i];
+  }
+  // bandes (pondération sélectionnée)
+  for(let b=0;b<nb;b++){
+    const [i0,i1]=S.bandBins[b]; let s=0;
+    for(let i=i0;i<=i1;i++){
+      let p=Math.pow(10,S.fftDb[i]/10);
+      if(!isFinite(p))p=0;
+      if(S.comp)p*=S.compGain[i];
+      if(wSel)p*=wSel[i];
+      s+=p;
+    }
+    bp[b]=s;
+  }
+
+  // lissage temporel F/S (sur puissance)
+  const aF=Math.exp(-dt/0.125), aS=Math.exp(-dt/1.0);
+  for(const k of ['A','C','Z']){
+    const p=k==='A'?pA:k==='C'?pC:pZ;
+    S.pF[k]=aF*S.pF[k]+(1-aF)*p;
+    S.pS[k]=aS*S.pS[k]+(1-aS)*p;
+    S.eq[k]+=p*dt;
+  }
+  S.eqT+=dt;
+  const alpha=S.time==='F'?aF:aS;
+  for(let b=0;b<nb;b++){
+    S.bandPowF[b]=aF*S.bandPowF[b]+(1-aF)*bp[b];
+    S.bandPowS[b]=aS*S.bandPowS[b]+(1-aS)*bp[b];
+    S.bandEnergy[b]+=bp[b]*dt;
+  }
+
+  // niveau affiché
+  const L=lvl(S.time==='F'?S.pF[S.weight]:S.pS[S.weight]);
+  const LAF=lvl(S.time==='F'?S.pF.A:S.pS.A);
+  if(S.eqT>0.5){ if(LAF>S.lafMax)S.lafMax=LAF; if(LAF<S.lafMin)S.lafMin=LAF; }
+  if(L>S.peakHold)S.peakHold=L; else S.peakHold-=dt*2;
+
+  // historique (10 Hz)
+  if(S.elapsed-S.histLast>=0.1){
+    S.histLast=S.elapsed;
+    S.hist.push({t:S.elapsed, L:L, Leq:lvl(S.eq[S.weight]/S.eqT)});
+    const maxPts=(S.duration>0?S.duration:900)/0.1+10;
+    if(S.hist.length>maxPts)S.hist.splice(0,S.hist.length-maxPts);
+  }
+
+  // fin de mesure programmée
+  if(S.duration>0 && S.elapsed>=S.duration){ stopMeasure(true); }
+
+  draw();
+  updateDisplay(L);
+}
+const lvl=p=>p>0?10*Math.log10(p)+S.offset:-99;
+
+/* ================= Affichage numérique ================= */
+function fmt(v){return (v<=-90||!isFinite(v))?'--.-':v.toFixed(1);}
+function updateDisplay(L){
+  document.getElementById('mainVal').textContent=fmt(L);
+  document.getElementById('vLAeq').textContent=fmt(S.eqT>0?lvl(S.eq.A/S.eqT):-99);
+  document.getElementById('vLCeq').textContent=fmt(S.eqT>0?lvl(S.eq.C/S.eqT):-99);
+  document.getElementById('vLZeq').textContent=fmt(S.eqT>0?lvl(S.eq.Z/S.eqT):-99);
+  document.getElementById('vMax').textContent=fmt(S.lafMax);
+  const pct=Math.max(0,Math.min(100,(L-30)/100*100));
+  document.getElementById('barFill').style.width=pct+'%';
+  document.getElementById('peakMark').style.left=Math.max(0,Math.min(100,(S.peakHold-30)))+'%';
+  const m=Math.floor(S.elapsed/60), s=Math.floor(S.elapsed%60);
+  document.getElementById('tElapsed').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  if(S.duration>0)document.getElementById('tProg').style.width=Math.min(100,S.elapsed/S.duration*100)+'%';
+}
+
+/* ================= Canvas ================= */
+function setupCanvas(cv){
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.clientWidth,h=parseInt(cv.getAttribute('height'));
+  cv.width=w*dpr; cv.height=h*dpr; cv.style.height=h+'px';
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  return [g,w,h];
+}
+const DBMIN=20, DBMAX=110;
+function y2(L,h,pad){return pad+ (1-Math.max(0,Math.min(1,(L-DBMIN)/(DBMAX-DBMIN)))) * (h-pad-16);}
+
+function drawSpectrum(){
+  const cv=document.getElementById('specCv');
+  const [g,w,h]=setupCanvas(cv);
+  g.fillStyle='#061633';g.fillRect(0,0,w,h);
+  const padL=26;
+  // grille dB
+  g.strokeStyle='rgba(255,255,255,.07)';g.fillStyle='#5d76a5';g.font='9px Arial';g.textAlign='right';
+  for(let d=DBMIN;d<=DBMAX;d+=10){const y=y2(d,h,6);g.beginPath();g.moveTo(padL,y);g.lineTo(w-4,y);g.stroke();g.fillText(d,padL-4,y+3);}
+  if(!S.bands.length)return;
+
+  if(S.mode==='toct'){
+    const nb=S.bands.length, bw=(w-padL-6)/nb;
+    const pw=S.time==='F'?S.bandPowF:S.bandPowS;
+    g.textAlign='center';
+    for(let b=0;b<nb;b++){
+      const L=lvl(pw[b]);
+      const x=padL+b*bw, y=y2(L,h,6), y0=y2(DBMIN,h,6);
+      const grad=g.createLinearGradient(0,y,0,y0);
+      grad.addColorStop(0, L>85?'#EF3346':L>70?'#FFB454':'#4D8DFF');
+      grad.addColorStop(1,'rgba(20,60,140,.25)');
+      g.fillStyle=grad;
+      g.fillRect(x+1,y,Math.max(1,bw-2),Math.max(0,y0-y));
+      if([31.5,63,125,250,500,1000,2000,4000,8000,16000].includes(S.bands[b])){
+        g.fillStyle='#5d76a5';
+        const t=S.bands[b]>=1000?(S.bands[b]/1000)+'k':S.bands[b];
+        g.fillText(t,x+bw/2,h-4);
+      }
+    }
+  }else{
+    // bandes fines : ligne sur axe log 20 Hz – 20 kHz
+    const fmin=20,fmax=Math.min(20000,S.ctx.sampleRate/2);
+    const x2=f=>padL+(Math.log(f/fmin)/Math.log(fmax/fmin))*(w-padL-6);
+    g.strokeStyle='rgba(255,255,255,.07)';g.fillStyle='#5d76a5';g.font='9px Arial';g.textAlign='center';
+    for(const f of [31.5,63,125,250,500,1000,2000,4000,8000,16000]){
+      const x=x2(f);g.beginPath();g.moveTo(x,6);g.lineTo(x,h-14);g.stroke();
+      g.fillText(f>=1000?(f/1000)+'k':f,x,h-4);
+    }
+    const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
+    g.beginPath();g.strokeStyle='#4D8DFF';g.lineWidth=1.4;
+    let started=false;
+    for(let i=1;i<S.fftDb.length;i++){
+      const f=S.freqs[i]; if(f<fmin)continue; if(f>fmax)break;
+      let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
+      if(S.comp)p*=S.compGain[i];
+      if(wSel)p*=wSel[i];
+      const L=lvl(p), x=x2(f), y=y2(L,h,6);
+      if(!started){g.moveTo(x,y);started=true;}else g.lineTo(x,y);
+    }
+    g.stroke();
+  }
+}
+
+function drawHistory(){
+  const cv=document.getElementById('histCv');
+  const [g,w,h]=setupCanvas(cv);
+  g.fillStyle='#061633';g.fillRect(0,0,w,h);
+  const padL=26;
+  g.strokeStyle='rgba(255,255,255,.07)';g.fillStyle='#5d76a5';g.font='9px Arial';g.textAlign='right';
+  for(let d=DBMIN;d<=DBMAX;d+=20){const y=y2(d,h,6);g.beginPath();g.moveTo(padL,y);g.lineTo(w-4,y);g.stroke();g.fillText(d,padL-4,y+3);}
+  if(S.hist.length<2)return;
+  const span=S.duration>0?S.duration:Math.max(30,S.elapsed);
+  const t1=S.hist[S.hist.length-1].t, t0=Math.max(0,t1-span);
+  const x2=t=>padL+((t-t0)/Math.max(1e-6,span))*(w-padL-6);
+  // niveau instantané
+  g.beginPath();g.strokeStyle='rgba(77,141,255,.9)';g.lineWidth=1.2;let st=false;
+  for(const pt of S.hist){if(pt.t<t0)continue;const x=x2(pt.t),y=y2(pt.L,h,6);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
+  g.stroke();
+  // Leq
+  g.beginPath();g.strokeStyle='#EF3346';g.lineWidth=2;st=false;
+  for(const pt of S.hist){if(pt.t<t0)continue;const x=x2(pt.t),y=y2(pt.Leq,h,6);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
+  g.stroke();
+  // légende
+  g.textAlign='left';g.fillStyle='rgba(77,141,255,.9)';g.fillText('L'+S.weight+(S.time==='F'?'F':'S'),padL+4,14);
+  g.fillStyle='#EF3346';g.fillText('L'+S.weight+'eq',padL+44,14);
+}
+function draw(){drawSpectrum();drawHistory();}
+function drawAll(clear){draw();if(clear)updateDisplay(-99);}
+
+/* ================= Contrôles ================= */
+function seg(id,cb){
+  const el=document.getElementById(id);
+  el.addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');cb(b.dataset.v);ui();
+  });
+}
+seg('segW',v=>{S.weight=v;});
+seg('segT',v=>{S.time=v;});
+seg('segMode',v=>{S.mode=v;});
+seg('segDur',v=>{S.duration=parseInt(v);});
+
+document.getElementById('calMinus').onclick=()=>{S.offset=Math.round((S.offset-0.5)*2)/2;document.getElementById('calVal').value=S.offset.toFixed(1);};
+document.getElementById('calPlus').onclick=()=>{S.offset=Math.round((S.offset+0.5)*2)/2;document.getElementById('calVal').value=S.offset.toFixed(1);};
+document.getElementById('calVal').onchange=e=>{const v=parseFloat(e.target.value);if(isFinite(v))S.offset=v;};
+
+document.getElementById('tglComp').onclick=function(){S.comp=!S.comp;this.classList.toggle('on',S.comp);};
+
+function ui(){
+  const wl='L'+S.weight+(S.time==='F'?'F':'S');
+  document.getElementById('mainLabel').innerHTML=wl+' — NIVEAU INSTANTANÉ';
+  document.getElementById('cfgLine').textContent=S.weight+' · '+(S.time==='F'?'Fast':'Slow')+' · '+(S.mode==='toct'?"1/3 oct.":"FFT");
+  document.getElementById('specHint').textContent=(S.mode==='toct'?"tiers d'octave":"bandes fines "+(S.binHz?S.binHz.toFixed(1)+' Hz':''))+' · pondéré '+S.weight;
+  document.getElementById('tTotal').textContent=S.duration>0?(S.duration>=60?(S.duration/60)+':00':'00:'+S.duration):'∞';
+  const badge=document.getElementById('modeBadge');
+  if(S.running&&!S.paused){badge.textContent='● MESURE';badge.className='badge rec';}
+  else if(S.paused){badge.textContent='PAUSE';badge.className='badge';}
+  else{badge.textContent='PRÊT';badge.className='badge';}
+}
+
+/* ================= Transport ================= */
+const btnStart=document.getElementById('btnStart'),btnPause=document.getElementById('btnPause');
+btnStart.onclick=async()=>{
+  if(S.running){stopMeasure(false);return;}
+  try{
+    if(!S.ctx)await initAudio();
+    if(S.ctx.state==='suspended')await S.ctx.resume();
+  }catch(e){
+    const el=document.getElementById('err');
+    el.style.display='block';
+    el.textContent="Accès au micro refusé ou indisponible. Autorise le micro dans Réglages ▸ Safari ▸ Micro, et ouvre la page en HTTPS. ("+e.message+")";
+    return;
+  }
+  resetMeasure();
+  S.running=true;S.paused=false;S.lastT=0;
+  btnStart.textContent='■ ARRÊTER';btnStart.classList.add('running');
+  btnPause.disabled=false;
+  cancelAnimationFrame(S.raf);S.raf=requestAnimationFrame(loop);
+  ui();
+};
+function stopMeasure(auto){
+  S.running=false;S.paused=false;
+  cancelAnimationFrame(S.raf);
+  btnStart.textContent='▶ DÉMARRER';btnStart.classList.remove('running');
+  btnPause.disabled=true;btnPause.textContent='Pause';
+  const badge=document.getElementById('modeBadge');
+  badge.textContent=auto?'TERMINÉ · Leq figé':'ARRÊTÉ';badge.className='badge';
+}
+btnPause.onclick=()=>{
+  if(!S.running)return;
+  S.paused=!S.paused;
+  btnPause.textContent=S.paused?'Reprendre':'Pause';
+  ui();
+};
+document.getElementById('btnReset').onclick=()=>{stopMeasure(false);resetMeasure();};
+
+/* ================= Export CSV ================= */
+document.getElementById('btnExport').onclick=()=>{
+  let csv='SONOMETRE CETIM - export\n';
+  csv+='Ponderation;'+S.weight+';Temps;'+(S.time==='F'?'Fast':'Slow')+';Offset dB;'+S.offset+';Comp iPhone;'+(S.comp?'oui':'non')+'\n';
+  csv+='LAeq;'+fmt(S.eqT>0?lvl(S.eq.A/S.eqT):-99)+';LCeq;'+fmt(S.eqT>0?lvl(S.eq.C/S.eqT):-99)+';LZeq;'+fmt(S.eqT>0?lvl(S.eq.Z/S.eqT):-99)+';LAFmax;'+fmt(S.lafMax)+';LAFmin;'+fmt(S.lafMin)+'\n\n';
+  csv+='SPECTRE Leq (ponderation '+S.weight+')\nfc [Hz];Leq [dB]\n';
+  for(let b=0;b<S.bands.length;b++)csv+=S.bands[b]+';'+fmt(S.eqT>0?lvl(S.bandEnergy[b]/S.eqT):-99)+'\n';
+  csv+='\nHISTORIQUE (10 Hz)\nt [s];L'+S.weight+(S.time==='F'?'F':'S')+' [dB];L'+S.weight+'eq [dB]\n';
+  for(const pt of S.hist)csv+=pt.t.toFixed(1)+';'+pt.L.toFixed(1)+';'+pt.Leq.toFixed(1)+'\n';
+  const blob=new Blob(["\ufeff"+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='sonometre_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
+  a.click();
+};
+
+/* init */
+window.addEventListener('resize',()=>drawAll(false));
+ui();drawAll(true);
+</script>
+</body>
+</html>
