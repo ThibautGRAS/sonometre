@@ -771,11 +771,12 @@ function attachZoomPan(id,axis,opts){
     const r=cv.getBoundingClientRect();
     if(e.touches.length>=2){
       const t=two(e);
-      pinchAx=(opts.time&&Math.abs(t[0].clientX-t[1].clientX)>Math.abs(t[0].clientY-t[1].clientY))?'time':'main';
-      if(pinchAx==='time'){
-        const u1=uxOf(t[0],r),u2=uxOf(t[1],r);
-        anchors={u1,u2,B1:bx(u1),B2:bx(u2)};
+      if(opts.time){
+        /* axe décidé au premier mouvement : on mémorise l'écartement initial */
+        pinchAx=null;
+        anchors={sprX:Math.abs(t[0].clientX-t[1].clientX),sprY:Math.abs(t[0].clientY-t[1].clientY)};
       }else{
+        pinchAx='main';
         const u1=uOf(t[0],r),u2=uOf(t[1],r);
         anchors={u1,u2,V1:Vof(u1),V2:Vof(u2)};
       }
@@ -797,6 +798,22 @@ function attachZoomPan(id,axis,opts){
     const r=cv.getBoundingClientRect();
     if(mode==='pinch'&&e.touches.length>=2){
       const t=two(e);
+      if(pinchAx===null){
+        /* décision d'axe : quel écartement a le plus varié depuis la pose ? */
+        const sprX=Math.abs(t[0].clientX-t[1].clientX), sprY=Math.abs(t[0].clientY-t[1].clientY);
+        const dX=Math.abs(sprX-anchors.sprX), dY=Math.abs(sprY-anchors.sprY);
+        if(Math.max(dX,dY)<8)return;
+        pinchAx=dX>dY?'time':'main';
+        /* ré-ancrage à l'instant du verrouillage : pas de saut */
+        if(pinchAx==='time'){
+          const u1=uxOf(t[0],r),u2=uxOf(t[1],r);
+          anchors={u1,u2,B1:bx(u1),B2:bx(u2)};
+        }else{
+          const u1=uOf(t[0],r),u2=uOf(t[1],r);
+          anchors={u1,u2,V1:Vof(u1),V2:Vof(u2)};
+        }
+        return;
+      }
       if(pinchAx==='time'){
         const u1=uxOf(t[0],r),u2=uxOf(t[1],r);
         if(Math.abs(u1-u2)<0.02)return;
