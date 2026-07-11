@@ -30,7 +30,9 @@
 
   /* ---------- entête ---------- */
   header{display:flex;align-items:center;justify-content:space-between;padding:2px 18px 8px 20px;flex:0 0 auto}
-  .logo{height:26px;width:auto;display:block}
+  .brandwrap{display:flex;align-items:center;gap:11px}
+  .logo{height:24px;width:auto;display:block}
+  .wordmark{font-family:var(--font);font-size:14px;font-weight:400;letter-spacing:.16em;color:#DCE9FF;text-transform:uppercase;padding-left:11px;border-left:2px solid var(--red);line-height:1}
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .led.on{background:var(--green);box-shadow:0 0 8px rgba(47,191,131,.9)}
 
@@ -78,9 +80,8 @@
   @keyframes blink{50%{opacity:.2}}
 
   .mainrow{display:flex;align-items:baseline;justify-content:center;gap:8px;flex:0 0 auto;margin-top:2px}
-  .numwrap{position:relative;font-family:var(--mono);font-size:clamp(44px,13vw,64px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;white-space:pre}
-  .numwrap .ghost{color:rgba(127,216,255,.08);user-select:none}
-  .numwrap .num{position:absolute;inset:0;text-align:right;color:#F2FAFF;text-shadow:0 0 14px rgba(79,195,255,.45),0 0 3px rgba(79,195,255,.6)}
+  .numwrap{font-family:var(--mono);font-size:clamp(44px,13vw,64px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;white-space:pre}
+  .numwrap .num{color:#F2FAFF;text-shadow:0 0 14px rgba(79,195,255,.45),0 0 3px rgba(79,195,255,.6)}
   .mainrow .unit{font-size:14px;font-weight:700;color:var(--lcd-dim)}
   .mainrow .lbl{font-size:12px;font-weight:700;color:var(--ice);letter-spacing:.1em;text-shadow:0 0 8px rgba(79,195,255,.5)}
 
@@ -106,11 +107,15 @@
   .valtable .v.red{color:#FF6B7A;text-shadow:0 0 8px rgba(239,51,70,.5)}
 
   /* écran MODE EXPERT */
-  .menu{height:100%;display:flex;flex-direction:column;gap:5px;overflow:hidden}
-  .mrow{display:flex;justify-content:space-between;align-items:center;background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:9px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--lcd-ink)}
+  .menu{height:100%;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+  .mrow{display:flex;justify-content:space-between;align-items:center;background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--lcd-ink)}
   .mrow:active{background:rgba(79,195,255,.18)}
   .mrow b{font-family:var(--mono);color:var(--ice);font-size:12px;font-variant-numeric:tabular-nums}
-  .mnote{font-size:8.5px;color:var(--lcd-dim);text-align:center;margin-top:auto;padding:2px 6px;line-height:1.4}
+  .mrow.act{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);color:var(--lcd-dim)}
+  .mrow.act b{color:#8FB2E8;font-size:14px}
+  .mrow.act.red{color:#FF9AA6;border-color:rgba(239,51,70,.35);background:rgba(239,51,70,.10)}
+  .mrow.act.red b{color:#FF6B7A}
+  .mnote{font-size:8px;color:var(--lcd-dim);text-align:center;margin-top:auto;padding:2px 6px;line-height:1.35}
 
   .bottomstrip{display:flex;justify-content:space-between;align-items:center;flex:0 0 auto;margin-top:6px;padding-top:5px;border-top:1px solid var(--lcd-grid);font-family:var(--mono);font-size:11px;color:var(--lcd-dim)}
   .bottomstrip b{color:var(--lcd-ink);font-weight:700;text-shadow:0 0 6px rgba(79,195,255,.35)}
@@ -151,20 +156,21 @@
   <div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
 
   <header>
-    <svg class="logo" viewBox="0 0 320 64" aria-label="CETIM">
-      <!-- pictogramme -->
-      <g fill="#fff">
-        <rect x="4"  y="16" width="36" height="15" rx="2"/>
-        <rect x="4"  y="34" width="19" height="15" rx="2"/>
-        <path d="M48 6 h30 a12 12 0 0 1 12 12 v31 h-15 V21 h-27 z"/>
-        <rect x="48" y="34" width="19" height="15" rx="1"/>
-      </g>
-      <rect x="48" y="34" width="15" height="15" rx="1" fill="#EF3346"/>
-      <!-- lettrage -->
-      <g fill="#fff" font-family="Arial Nova, Arial, sans-serif" font-weight="700">
-        <text x="108" y="49" font-size="46" letter-spacing="1">CETIM</text>
-      </g>
-    </svg>
+    <div class="brandwrap">
+      <svg class="logo" viewBox="0 0 320 64" aria-label="CETIM">
+        <g fill="#fff">
+          <rect x="4"  y="16" width="36" height="15" rx="2"/>
+          <rect x="4"  y="34" width="19" height="15" rx="2"/>
+          <path d="M48 6 h30 a12 12 0 0 1 12 12 v31 h-15 V21 h-27 z"/>
+          <rect x="48" y="34" width="19" height="15" rx="1"/>
+        </g>
+        <rect x="48" y="34" width="15" height="15" rx="1" fill="#EF3346"/>
+        <g fill="#fff" font-family="Arial Nova, Arial, sans-serif" font-weight="700">
+          <text x="108" y="49" font-size="46" letter-spacing="1">CETIM</text>
+        </g>
+      </svg>
+      <span class="wordmark">Sonomètre</span>
+    </div>
     <span class="led" id="led"></span>
   </header>
 
@@ -181,7 +187,7 @@
     </div>
 
     <div class="mainrow">
-      <span class="numwrap"><span class="ghost">888.8</span><span class="num" id="mainVal">--.-</span></span>
+      <span class="numwrap"><span class="num" id="mainVal">--.-</span></span>
       <span class="unit" id="unitLbl">dB(A)</span>
       <span class="lbl" id="mainLbl">LAF</span>
     </div>
@@ -212,7 +218,11 @@
           <div class="mrow" id="mSmooth"><span>Lissage spectral natif</span><b>0.00</b></div>
           <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
           <div class="mrow" id="mDbScale"><span>Échelle dB graphiques</span><b>Auto</b></div>
-          <div class="mnote">Fenêtre Blackman (AnalyserNode, fixe) · Recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · Toucher une ligne pour changer la valeur</div>
+          <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
+          <div class="mrow act" id="mClrHist"><span>Effacer l'évolution temporelle</span><b>⌫</b></div>
+          <div class="mrow act" id="mClrPeak"><span>Effacer max / min / peak-hold</span><b>⌫</b></div>
+          <div class="mrow act red" id="mClrAll"><span>Tout effacer (remise à zéro)</span><b>⌫</b></div>
+          <div class="mnote">Fenêtre Blackman (AnalyserNode, fixe) · Recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · Toucher une ligne pour agir</div>
         </div>
       </div>
     </div>
@@ -341,6 +351,10 @@ function resetMeasure(){
   if(S.bandPeak)S.bandPeak.fill(-99);
   updateNumbers(-99); drawActive();
 }
+/* effacements ciblés (mode expert) */
+function clearSgram(){ SG.init=false; if(SG.bg&&SG.buf){SG.bg.fillStyle='#000080';SG.bg.fillRect(0,0,SG.buf.width,SG.buf.height);} drawActive(); }
+function clearHist(){ S.hist=[]; S.histLast=0; drawActive(); }
+function clearPeak(){ S.lafMax=-Infinity; S.lafMin=Infinity; S.peakHold=0; if(S.bandPeak)S.bandPeak.fill(-99); updateNumbers(-99); drawActive(); }
 
 /* ================= Boucle ================= */
 const lvl=p=>p>0?10*Math.log10(p)+S.offset:-99;
@@ -959,6 +973,13 @@ $('mSgSpeed').onclick=()=>{
   ui();
 };
 $('mDbScale').onclick=()=>{S.dbAuto=!S.dbAuto;ui();drawActive();};
+
+/* effacements — flash de confirmation sur la ligne touchée */
+function flashDone(el){const b=el.querySelector('b'),o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,700);}
+$('mClrSgram').onclick=function(){clearSgram();flashDone(this);};
+$('mClrHist').onclick=function(){clearHist();flashDone(this);};
+$('mClrPeak').onclick=function(){clearPeak();flashDone(this);};
+$('mClrAll').onclick=function(){clearSgram();resetMeasure();flashDone(this);};
 
 $('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();drawActive();};
 $('kT').onclick=()=>{S.time=S.time==='F'?'S':'F';ui();drawActive();};
