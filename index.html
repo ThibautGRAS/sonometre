@@ -601,7 +601,6 @@ function drawHistory(){
 }
 
 /* ===== Spectrogramme couleur ===== */
-const SG={init:false,map:null,last:0,W:0,H:0,padL:0,axH:0};
 /* colormap JET classique : bleu foncé → bleu → cyan → jaune → rouge → rouge foncé */
 const LUT=(()=>{
   const stops=[[0,0,0,128],[.125,0,0,255],[.375,0,255,255],[.625,255,255,0],[.875,255,0,0],[1,128,0,0]];
@@ -614,75 +613,43 @@ const LUT=(()=>{
   }
   return lut;
 })();
-function sgSetup(c,keepImage){
+/* ===== Spectrogramme : tampon PLEINE BANDE + fenêtre de visualisation =====
+   Le calcul et le stockage couvrent toujours 20 Hz(0)–Nyquist dans un canvas
+   hors-écran haute résolution. Le zoom n'est qu'un recadrage à l'affichage :
+   aucune donnée n'est perdue en dehors de la fenêtre. */
+const SG={init:false,buf:null,bg:null,map:null,last:0,W:0,H:0,padL:0,axH:0,bufH:0,fsc:'log'};
+function sgFull(){return {lo:S.fscale==='lin'?0:20, hi:nyq()};}
+function sgSetup(c){
   const cv=$('sgramCv');
   SG.W=cv.width; SG.H=cv.height;
   SG.padL=Math.round(26*c.dpr); SG.axH=Math.round(13*c.dpr);
-  const Hu=SG.H-SG.axH;
-  const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
-  SG.fmin=fmin; SG.fmax=fmax; SG.fsc=S.fscale;
-  const V0=TF(fmin), V1=TF(fmax);
+  const Hu=SG.H-SG.axH, Wp=SG.W-SG.padL;
+  SG.fsc=S.fscale;
+  SG.bufH=Math.min(1600,Math.max(Hu,2*Hu));
+  if(!SG.buf)SG.buf=document.createElement('canvas');
+  SG.buf.width=Wp; SG.buf.height=SG.bufH;
+  SG.bg=SG.buf.getContext('2d');
+  SG.bg.fillStyle='#000080'; SG.bg.fillRect(0,0,Wp,SG.bufH);
+  /* carte lignes du tampon → bins FFT, sur TOUTE la bande */
+  const full=sgFull(), V0=TF(full.lo), V1=TF(full.hi);
+  SG.V0f=V0; SG.V1f=V1;
   SG.map=[];
   if(S.binHz){
-    for(let r=0;r<Hu;r++){
-      const fT=TFi(V1-(r/Hu)*(V1-V0)), fB=TFi(V1-((r+1)/Hu)*(V1-V0));
+    for(let r=0;r<SG.bufH;r++){
+      const fT=TFi(V1-(r/SG.bufH)*(V1-V0)), fB=TFi(V1-((r+1)/SG.bufH)*(V1-V0));
       const i0=Math.max(1,Math.round(fB/S.binHz)), i1=Math.max(i0,Math.round(fT/S.binHz));
       SG.map.push([i0,Math.min(S.fftDb?S.fftDb.length-1:i1,i1)]);
     }
   }
-  const g=c.g;
-  g.save();g.setTransform(1,0,0,1,0,0);
-  if(!keepImage){g.fillStyle='#000080';g.fillRect(0,0,SG.W,SG.H);}
-  g.fillStyle='#EAF1FA';g.fillRect(0,0,SG.padL,SG.H);
-  g.fillStyle='#8fa3c4';g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
-  for(const f of dynTicks(fmin,fmax,7)){
-    const y=((V1-TF(f))/(V1-V0))*Hu;
-    g.fillText(fmtF(f),SG.padL-3*c.dpr,y+3*c.dpr);
-  }
-  g.fillStyle='#EAF1FA';g.fillRect(SG.padL,SG.H-SG.axH,SG.W-SG.padL,SG.axH);
-  g.fillStyle='#8fa3c4';g.textAlign='center';
-  g.fillText('→ temps · pincer = zoom fréq. · double-tap = reset', SG.padL+(SG.W-SG.padL)/2, SG.H-4*c.dpr);
-  g.restore();
   SG.init=true;
 }
-function drawSgram(){
-  const c=CV.sgramCv; if(!c)return;
-  const cv=$('sgramCv');
-  const nfmin=Math.max(F_LOW(),S.fview.min), nfmax=Math.min(S.fview.max,nyq());
-  const near=(a,b)=>Math.abs(a-b)<1e-6*Math.max(1,Math.abs(b));
-  const sizeChanged=!SG.init||SG.W!==cv.width||SG.H!==cv.height;
-  const viewChanged=SG.fsc!==S.fscale||!near(SG.fmin,nfmin)||!near(SG.fmax,nfmax);
-  if(sizeChanged)sgSetup(c,false);
-  else if(viewChanged){
-    if(SG.fsc!==S.fscale)sgSetup(c,false);    // log↔lin : non affine, on repart à zéro
-    else{
-      /* zoom/pan : remapper l'image existante (affine en espace transformé) */
-      const Hu=SG.H-SG.axH, Wp=SG.W-SG.padL;
-      const V0o=TF(SG.fmin),V1o=TF(SG.fmax),V0n=TF(nfmin),V1n=TF(nfmax);
-      if(!SG.tmp)SG.tmp=document.createElement('canvas');
-      SG.tmp.width=Wp;SG.tmp.height=Hu;
-      SG.tmp.getContext('2d').drawImage(cv,SG.padL,0,Wp,Hu,0,0,Wp,Hu);
-      const g=c.g;
-      g.save();g.setTransform(1,0,0,1,0,0);
-      g.fillStyle='#000080';g.fillRect(SG.padL,0,Wp,Hu);
-      const k=(V1o-V0o)/(V1n-V0n), yTop=(V1n-V1o)/(V1n-V0n)*Hu;
-      g.imageSmoothingEnabled=false;
-      g.drawImage(SG.tmp,0,0,Wp,Hu,SG.padL,yTop,Wp,Hu*k);
-      g.restore();
-      sgSetup(c,true);                         // reconstruit axe + carte, garde l'image remappée
-    }
-  }
-  if(!S.running||S.paused||!S.binHz||!SG.map)return;
-  const now=performance.now();
-  if(now-SG.last<S.colMs)return;
-  SG.last=now;
-  const g=c.g, W=SG.W, H=SG.H, padL=SG.padL, Hu=H-SG.axH;
-  const sc=S.scale.sgram, K=S.K||1;
+function sgColumn(){
+  /* calcule et stocke une colonne pleine bande dans le tampon */
+  const sc=S.scale.sgram, K=S.K||1, Hb=SG.bufH, Wp=SG.buf.width;
   const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
-  // niveaux de la colonne + bornes
-  const col=new Float32Array(Hu);
+  const col=new Float32Array(Hb);
   let dLo=Infinity,dHi=-Infinity;
-  for(let r=0;r<Hu;r++){
+  for(let r=0;r<Hb;r++){
     const [i0,i1]=SG.map[r]; let pm=0;
     for(let i=i0;i<=i1;i++){
       let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
@@ -694,19 +661,50 @@ function drawSgram(){
     if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
   }
   autoRange(sc,dLo,dHi);
-  g.save();g.setTransform(1,0,0,1,0,0);
-  // défilement d'1 px vers la gauche (zone utile uniquement)
-  g.drawImage($('sgramCv'), padL+1,0, W-padL-1,Hu, padL,0, W-padL-1,Hu);
-  // nouvelle colonne à droite
-  const img=g.createImageData(1,Hu), d=img.data;
-  for(let r=0;r<Hu;r++){
+  const bg=SG.bg;
+  bg.drawImage(SG.buf,1,0,Wp-1,Hb,0,0,Wp-1,Hb);      // défilement du tampon
+  const img=bg.createImageData(1,Hb), d=img.data;
+  for(let r=0;r<Hb;r++){
     const t=Math.max(0,Math.min(1,(col[r]-sc.lo)/(sc.hi-sc.lo)));
     const i=Math.round(t*255)*3;
     d[r*4]=LUT[i]; d[r*4+1]=LUT[i+1]; d[r*4+2]=LUT[i+2]; d[r*4+3]=255;
   }
-  g.putImageData(img,W-1,0);
+  bg.putImageData(img,Wp-1,0);
+}
+function sgBlit(c){
+  /* affiche la fenêtre courante (zoom) depuis le tampon pleine bande */
+  const g=c.g, W=SG.W, H=SG.H, padL=SG.padL, Hu=H-SG.axH, Wp=W-padL;
+  const nfmin=Math.max(F_LOW(),S.fview.min), nfmax=Math.min(S.fview.max,nyq());
+  const V0n=TF(Math.max(nfmin,S.fscale==='lin'?0:20)), V1n=TF(nfmax);
+  const sy=(SG.V1f-V1n)/(SG.V1f-SG.V0f)*SG.bufH;
+  const sh=(V1n-V0n)/(SG.V1f-SG.V0f)*SG.bufH;
+  g.save();g.setTransform(1,0,0,1,0,0);
+  g.imageSmoothingEnabled=true;
+  g.fillStyle='#000080';g.fillRect(padL,0,Wp,Hu);
+  g.drawImage(SG.buf,0,Math.max(0,sy),Wp,Math.max(1,sh),padL,0,Wp,Hu);
+  /* axe fréquence (fenêtre courante) */
+  g.fillStyle='#EAF1FA';g.fillRect(0,0,padL,H);
+  g.fillStyle='#8fa3c4';g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
+  for(const f of dynTicks(nfmin,nfmax,7)){
+    const y=((V1n-TF(f))/(V1n-V0n))*Hu;
+    g.fillText(fmtF(f),padL-3*c.dpr,y+3*c.dpr);
+  }
+  g.fillStyle='#EAF1FA';g.fillRect(padL,H-SG.axH,Wp,SG.axH);
+  g.fillStyle='#8fa3c4';g.textAlign='center';
+  g.fillText('→ temps · pincer verticalement = zoom fréq. · double-tap = reset', padL+Wp/2, H-4*c.dpr);
   g.restore();
-  $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(SG.fmin)+'–'+fmtF(SG.fmax)+'Hz';
+  const sc=S.scale.sgram;
+  $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(nfmin)+'–'+fmtF(nfmax)+'Hz';
+}
+function drawSgram(){
+  const c=CV.sgramCv; if(!c)return;
+  const cv=$('sgramCv');
+  if(!SG.init||SG.W!==cv.width||SG.H!==cv.height||SG.fsc!==S.fscale)sgSetup(c);
+  if(S.running&&!S.paused&&S.binHz&&SG.map&&SG.map.length){
+    const now=performance.now();
+    if(now-SG.last>=S.colMs){SG.last=now;sgColumn();}
+  }
+  sgBlit(c);
 }
 
 function drawActive(force){
