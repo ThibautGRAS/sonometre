@@ -119,6 +119,27 @@
   .mrow.act.red b{color:#FF6B7A}
   .mnote{font-size:8px;color:var(--lcd-dim);text-align:center;margin-top:auto;padding:2px 6px;line-height:1.35}
 
+  /* ---------- écran CALIBRATION ---------- */
+  .cal{height:100%;display:flex;flex-direction:column;overflow:hidden}
+  .calhead{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--ice);font-weight:700;flex:0 0 auto;padding-bottom:5px}
+  .calx{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--lcd-dim);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer}
+  .calbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:4px;padding-right:2px}
+  .calbody::-webkit-scrollbar{width:3px}.calbody::-webkit-scrollbar-thumb{background:rgba(79,195,255,.3);border-radius:2px}
+  .msub{font-size:9px;letter-spacing:.12em;color:var(--lcd-dim);font-weight:700;padding:6px 2px 2px}
+  .crow2{display:flex;gap:5px;align-items:center}
+  .cbtn{flex:1;background:rgba(79,195,255,.10);border:1px solid rgba(79,195,255,.25);color:#CFEBFF;border-radius:7px;padding:9px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)}
+  .cbtn:active{background:rgba(79,195,255,.22)}
+  .cbtn.go{background:rgba(47,191,131,.15);border-color:rgba(47,191,131,.45);color:#9EF0C9}
+  .cin{width:64px;background:rgba(0,0,0,.28);border:1px solid var(--line);color:#fff;border-radius:7px;height:34px;text-align:center;font-family:var(--mono);font-size:15px;font-weight:700}
+  .cunit{font-size:10px;color:var(--lcd-dim);flex:0 0 auto}
+  .sweepgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+  .scell{background:rgba(79,195,255,.06);border:1px solid rgba(79,195,255,.12);border-radius:6px;padding:4px 2px;text-align:center;cursor:pointer;font-family:var(--mono)}
+  .scell .sf{font-size:8px;color:var(--lcd-dim);font-weight:700}
+  .scell .sd{font-size:10px;font-weight:700;color:var(--ice);margin-top:1px}
+  .scell.done{background:rgba(47,191,131,.14);border-color:rgba(47,191,131,.4)}
+  .scell.done .sd{color:#7FE9B8}
+  .scell.sel{border-color:var(--ice);box-shadow:0 0 8px rgba(79,195,255,.5)}
+
   .bottomstrip{display:flex;justify-content:space-between;align-items:center;flex:0 0 auto;margin-top:6px;padding-top:5px;border-top:1px solid var(--lcd-grid);font-family:var(--mono);font-size:11px;color:var(--lcd-dim)}
   .bottomstrip b{color:var(--lcd-ink);font-weight:700;text-shadow:0 0 6px rgba(79,195,255,.35)}
   .progress{height:3px;background:#0B2450;border-radius:2px;overflow:hidden;flex:1;margin:0 10px}
@@ -222,11 +243,41 @@
           <div class="mrow" id="mOverlap"><span>Recouvrement (overlap)</span><b>50 %</b></div>
           <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
           <div class="mrow" id="mDbScale"><span>Échelle dB graphiques</span><b>Auto</b></div>
+          <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
           <div class="mrow act" id="mClrHist"><span>Effacer l'évolution temporelle</span><b>⌫</b></div>
           <div class="mrow act" id="mClrPeak"><span>Effacer max / min / peak-hold</span><b>⌫</b></div>
           <div class="mrow act red" id="mClrAll"><span>Tout effacer (remise à zéro)</span><b>⌫</b></div>
           <div class="mnote">FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · faire défiler pour voir toutes les options</div>
+        </div>
+      </div>
+      <div class="gpane" id="paneCal">
+        <div class="cal">
+          <div class="calhead">
+            <span id="calDev">Appareil : —</span>
+            <button class="calx" id="calClose">✕ fermer</button>
+          </div>
+          <div class="calbody">
+            <div class="mrow" id="cGeneric"><span>Mode générique auto</span><b id="cGenV">activer</b></div>
+            <div class="mrow" id="cProfSel"><span>Profil chargé</span><b id="cProfV">aucun</b></div>
+            <div class="crow2">
+              <button class="cbtn" id="cImport">Importer JSON</button>
+              <button class="cbtn" id="cExport">Exporter JSON</button>
+            </div>
+            <div class="msub">CALIBREUR 1 kHz</div>
+            <div class="crow2">
+              <input class="cin" id="calRef1k" type="number" inputmode="decimal" value="94" step="0.1">
+              <span class="cunit">dB réf</span>
+              <button class="cbtn go" id="calDo1k">Caler offset</button>
+            </div>
+            <div class="msub">BALAYAGE TIERS D'OCTAVE (manuel)</div>
+            <div class="sweepgrid" id="sweepGrid"></div>
+            <div class="crow2">
+              <button class="cbtn go" id="swSaveProfile">Enregistrer profil</button>
+              <button class="cbtn" id="swReset">Vider relevé</button>
+            </div>
+            <div class="mnote" id="calNote">Source = matériel labo · Référence = sonomètre étalon. Touche une bande, stabilise la source, saisis le niveau étalon : l'iPhone enregistre son niveau. Correction = réf − iPhone.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -251,7 +302,7 @@
       <button class="key" id="kDur"><span class="kf">DURÉE</span><span class="kv" id="kDurV">∞</span></button>
       <button class="key" id="kCalM"><span class="kf">CAL</span><span class="kv">−0.5</span></button>
       <button class="key" id="kCalP"><span class="kf">CAL</span><span class="kv">+0.5</span></button>
-      <button class="key" id="kComp"><span class="kf">COMP iPHONE</span><span class="dot"></span></button>
+      <button class="key" id="kComp"><span class="kf">CORRECTION</span><span class="kv" id="kCompV">Off</span></button>
     </div>
     <div class="krow">
       <button class="key" id="kReset"><span class="kf">MESURE</span><span class="kv">Réinit</span></button>
@@ -280,8 +331,38 @@ const S = {
   fscale:'log', fftN:16384, nSmooth:0, colMs:50, dbAuto:true,
   win:'blackman', overlap:0.5,
   tap:null, ring:null, ringW:0, winCoef:null, winSum2:1, re:null, im:null, mag:null,
+  device:'', corr:'off', corrCurve:null, profiles:[], sweep:null,
   scale:{spec:{lo:30,hi:90}, hist:{lo:30,hi:90}, sgram:{lo:0,hi:60}}
 };
+/* ===== Correction en amplitude =====
+   corr: 'off' | 'generic' | 'profile'
+   corrCurve: {fc:[...], gain_dB:[...]} interpolée par bin dans compGain[] */
+const GENERIC={
+  iphone:{fc:COMP_F_DEF(), g:COMP_G_DEF()},
+  ipad:  {fc:[20,50,100,200,1000,8000,16000], g:[10,5,2,0.5,0,-1,-2]},
+  android:{fc:[20,50,100,200,1000,8000,16000], g:[8,4,1.5,0.3,0,-0.5,-1.5]},
+  desktop:{fc:[20,1000,20000], g:[0,0,0]}
+};
+function COMP_F_DEF(){return [20,25,31.5,40,50,63,80,100,125,160,200,1000,5000,6300,8000,10000,12500,16000];}
+function COMP_G_DEF(){return [12,10,8,6,4.5,3,2,1.2,0.7,0.3,0,0,0,-0.5,-1.5,-2.5,-3,-2];}
+function detectDevice(){
+  const u=navigator.userAgent||'';
+  if(/iPhone/.test(u))return 'iphone';
+  if(/iPad/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1))return 'ipad';
+  if(/Android/.test(u))return 'android';
+  return 'desktop';
+}
+function interpCurve(curve,f){
+  const fc=curve.fc, g=curve.g||curve.gain_dB;
+  if(!fc||!fc.length)return 0;
+  if(f<=fc[0])return g[0];
+  if(f>=fc[fc.length-1])return g[g.length-1];
+  for(let i=1;i<fc.length;i++)if(f<fc[i]){
+    const a=Math.log(f/fc[i-1])/Math.log(fc[i]/fc[i-1]);
+    return g[i-1]+a*(g[i]-g[i-1]);
+  }
+  return 0;
+}
 const WINS={
   rect:{name:'Rectangulaire',f:(i,N)=>1},
   hann:{name:'Hann',f:(i,N)=>0.5-0.5*Math.cos(2*Math.PI*i/(N-1))},
@@ -331,17 +412,6 @@ function cWeight(f){ if(f<=0)return -200;
   return 20*Math.log10(r)+0.06; }
 
 /* Compensation micro iPhone (correction à AJOUTER, dB) — approximative */
-const COMP_F=[20,25,31.5,40,50,63,80,100,125,160,200,1000,5000,6300,8000,10000,12500,16000];
-const COMP_G=[12,10, 8,  6, 4.5,3,  2, 1.2,0.7,0.3,0,  0,   0,  -0.5,-1.5,-2.5,-3,-2];
-function compAt(f){
-  if(f<=COMP_F[0])return COMP_G[0];
-  if(f>=COMP_F[COMP_F.length-1])return COMP_G[COMP_G.length-1];
-  for(let i=1;i<COMP_F.length;i++) if(f<COMP_F[i]){
-    const a=Math.log(f/COMP_F[i-1])/Math.log(COMP_F[i]/COMP_F[i-1]);
-    return COMP_G[i-1]+a*(COMP_G[i]-COMP_G[i-1]); }
-  return 0;
-}
-
 /* ================= Audio ================= */
 function configureAnalyser(){
   const N=S.fftN, n=N/2;
@@ -361,11 +431,14 @@ function configureAnalyser(){
   S.K=0;
   S.binHz=S.ctx.sampleRate/N;
   S.freqs=new Float32Array(n); S.wA=new Float32Array(n); S.wC=new Float32Array(n); S.compGain=new Float32Array(n);
+  const curve = S.corr==='profile'&&S.corrCurve ? S.corrCurve
+              : S.corr==='generic' ? GENERIC[S.device]||GENERIC.iphone
+              : null;
   for(let i=0;i<n;i++){
     const f=i*S.binHz; S.freqs[i]=f;
     S.wA[i]=Math.pow(10,aWeight(f)/10);
     S.wC[i]=Math.pow(10,cWeight(f)/10);
-    S.compGain[i]=Math.pow(10,compAt(f)/10);
+    S.compGain[i]=curve?Math.pow(10,interpCurve(curve,f)/10):1;
   }
   S.bands=[]; S.bandBins=[];
   for(const fc of NOMS){
@@ -444,7 +517,7 @@ function loop(ts){
   for(let i=1;i<n;i++){
     let p=mag[i];
     if(!isFinite(p))p=0;
-    if(S.comp)p*=S.compGain[i];
+    if(S.corr!=='off')p*=S.compGain[i];
     pZ+=p; pA+=p*S.wA[i]; pC+=p*S.wC[i];
   }
   for(let b=0;b<nb;b++){
@@ -452,7 +525,7 @@ function loop(ts){
     for(let i=i0;i<=i1;i++){
       let p=mag[i];
       if(!isFinite(p))p=0;
-      if(S.comp)p*=S.compGain[i];
+      if(S.corr!=='off')p*=S.compGain[i];
       if(wSel)p*=wSel[i];
       s+=p;
     }
@@ -623,7 +696,7 @@ function drawSpectrum(){
     for(let i=i0;i<=i1;i++){
       const f=S.freqs[i];
       let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
-      if(S.comp)p*=S.compGain[i];
+      if(S.corr!=='off')p*=S.compGain[i];
       if(wSel)p*=wSel[i];
       p*=K;
       const L=lvl(p); pts.push([x2(f),L]);
@@ -643,7 +716,7 @@ function drawSpectrum(){
     if(S.cursor&&S.cursor.f>=fmin&&S.cursor.f<=fmax&&S.binHz){
       const ic=Math.max(1,Math.min(S.fftDb.length-1,Math.round(S.cursor.f/S.binHz)));
       let p=Math.pow(10,S.fftDb[ic]/10); if(!isFinite(p))p=0;
-      if(S.comp)p*=S.compGain[ic];
+      if(S.corr!=='off')p*=S.compGain[ic];
       if(wSel)p*=wSel[ic];
       const L=lvl(p*K), x=x2(S.freqs[ic]);
       g.strokeStyle='#BFE9FF';g.lineWidth=1;g.setLineDash([3,3]);
@@ -745,7 +818,7 @@ function sgColumn(){
     const [i0,i1]=SG.map[r]; let pm=0;
     for(let i=i0;i<=i1;i++){
       let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
-      if(S.comp)p*=S.compGain[i];
+      if(S.corr!=='off')p*=S.compGain[i];
       if(wSel)p*=wSel[i];
       if(p>pm)pm=p;
     }
@@ -987,7 +1060,8 @@ function ui(){
     ? 'SPECTRE · '+(S.mode==='toct'?"TIERS D'OCTAVE":'BANDES FINES')+' · POND. '+S.weight
     : S.screen==='sgram' ? 'SPECTROGRAMME · POND. '+S.weight
     : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq'
-    : S.screen==='menu' ? 'MODE EXPERT · TRAITEMENT DU SIGNAL' : 'VALEURS DE LA MESURE';
+    : S.screen==='menu' ? 'MODE EXPERT · TRAITEMENT DU SIGNAL'
+    : S.screen==='cal' ? 'CALIBRATION · CORRECTION AMPLITUDE' : 'VALEURS DE LA MESURE';
   $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='menu'?'Expert':'Valeurs';
   /* lignes du mode expert */
   $('mFscale').querySelector('b').textContent=S.fscale==='log'?'LOG':'LINÉAIRE';
@@ -1003,14 +1077,14 @@ function ui(){
   $('kTV').textContent=S.time==='F'?'Fast':'Slow';
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':'FFT';
   $('kDurV').textContent=DURL[DURS.indexOf(S.duration)];
-  $('kComp').classList.toggle('lit',S.comp);
-  $('vCal').textContent=S.offset.toFixed(1)+' dB · '+(S.comp?'on':'off');
+  $('kCompV').textContent=S.corr==='off'?'Off':S.corr==='generic'?'Auto':'Profil';
+  $('vCal').textContent=S.offset.toFixed(1)+' dB · '+(S.corr==='off'?'sans corr.':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'));
   $('led').classList.toggle('on',S.running&&!S.paused);
   const badge=$('modeBadge');
   if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
   else if(S.paused){badge.textContent='PAUSE';badge.className='badge';}
-  ['paneSpec','paneSgram','paneHist','paneVal','paneMenu'].forEach(id=>$(id).classList.remove('on'));
-  $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':'paneVal').classList.add('on');
+  ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
+  $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
 }
 
 /* ================= Touches ================= */
@@ -1050,6 +1124,128 @@ $('mSgSpeed').onclick=()=>{
   ui();
 };
 $('mDbScale').onclick=()=>{S.dbAuto=!S.dbAuto;ui();drawActive();};
+$('mCalib').onclick=()=>{S.screen='cal';ui();renderCal();};
+$('calClose').onclick=()=>{S.screen='menu';ui();};
+
+/* ===== Profils (localStorage) ===== */
+const LS_KEY='cetim_sono_profiles';
+function loadProfiles(){try{S.profiles=JSON.parse(localStorage.getItem(LS_KEY)||'[]');}catch(e){S.profiles=[];}}
+function saveProfiles(){try{localStorage.setItem(LS_KEY,JSON.stringify(S.profiles));}catch(e){}}
+function applyProfile(p){
+  S.corrCurve={fc:p.fc.slice(),g:p.gain_dB.slice()};
+  S.corrName=p.name; S.corr='profile';
+  if(p.offset!=null)S.offset=p.offset;
+  if(S.analyser)configureAnalyser();
+  ui();drawActive();
+}
+
+/* ===== Rendu de l'écran calibration ===== */
+function renderCal(){
+  $('calDev').textContent='Appareil détecté : '+({iphone:'iPhone',ipad:'iPad',android:'Android',desktop:'Ordinateur'}[S.device]||S.device);
+  $('cGenV').textContent=S.corr==='generic'?'actif ✓':'activer';
+  $('cProfV').textContent=S.corr==='profile'?(S.corrName||'chargé'):(S.profiles.length?S.profiles.length+' dispo.':'aucun');
+  renderSweep();
+}
+function renderSweep(){
+  const grid=$('sweepGrid'); grid.innerHTML='';
+  if(!S.sweep)S.sweep={ref:{},iph:{}};
+  for(const fc of NOMS){
+    const d=document.createElement('div');
+    d.className='scell'+(S.sweep.ref[fc]!=null?' done':'')+(S.sweep.sel===fc?' sel':'');
+    const done=S.sweep.ref[fc]!=null;
+    d.innerHTML='<div class="sf">'+(fc>=1000?(fc/1000)+'k':fc)+'</div><div class="sd">'+
+      (done?('+'+(S.sweep.ref[fc]-S.sweep.iph[fc]).toFixed(1)).replace('+-','-'):'—')+'</div>';
+    d.onclick=()=>sweepBand(fc);
+    grid.appendChild(d);
+  }
+}
+/* balayage : capture le niveau iPhone de la bande + saisie du niveau étalon */
+function bandLevelNow(fc){
+  const b=S.bands.indexOf(fc);
+  if(b<0)return null;
+  return lvl(S.time==='F'?S.bandPowF[b]:S.bandPowS[b]);
+}
+function sweepBand(fc){
+  if(!S.running){alert("Démarre la mesure (▶) avant de calibrer : l'iPhone doit capter la source.");return;}
+  S.sweep.sel=fc; renderSweep();
+  const iph=bandLevelNow(fc);
+  if(iph==null||iph<=-90){alert('Pas de signal exploitable sur cette bande. Vérifie la source.');return;}
+  const ref=prompt('Bande '+(fc>=1000?(fc/1000)+' kHz':fc+' Hz')+'\nNiveau lu au sonomètre étalon (dB) ?\n(iPhone mesure actuellement '+iph.toFixed(1)+' dB)','');
+  if(ref==null)return;
+  const r=parseFloat(ref.replace(',','.'));
+  if(!isFinite(r)){alert('Valeur invalide.');return;}
+  S.sweep.ref[fc]=r; S.sweep.iph[fc]=iph;
+  renderSweep();
+}
+$('swReset').onclick=()=>{if(confirm('Vider tout le relevé de balayage ?')){S.sweep={ref:{},iph:{}};renderSweep();}};
+$('swSaveProfile').onclick=()=>{
+  const fcs=NOMS.filter(fc=>S.sweep&&S.sweep.ref[fc]!=null);
+  if(fcs.length<2){alert('Relève au moins 2 bandes avant d\'enregistrer un profil.');return;}
+  const name=prompt('Nom du profil (ex. iPhone13-micro-bas) :','');
+  if(!name)return;
+  const p={name,device:S.device,date:new Date().toISOString().slice(0,10),
+    offset:S.offset, fc:fcs, gain_dB:fcs.map(fc=>+(S.sweep.ref[fc]-S.sweep.iph[fc]).toFixed(2))};
+  S.profiles=S.profiles.filter(x=>x.name!==name); S.profiles.push(p); saveProfiles();
+  applyProfile(p); renderCal();
+  alert('Profil « '+name+' » enregistré et appliqué ('+fcs.length+' bandes).');
+};
+
+/* générique auto */
+$('cGeneric').onclick=()=>{
+  S.corr=S.corr==='generic'?'off':'generic';
+  if(S.analyser)configureAnalyser();
+  ui();drawActive();renderCal();
+};
+/* sélection de profil (cycle parmi ceux enregistrés) */
+$('cProfSel').onclick=()=>{
+  if(!S.profiles.length){alert('Aucun profil enregistré. Fais un balayage ou importe un JSON.');return;}
+  let idx=S.profiles.findIndex(p=>p.name===S.corrName);
+  idx=(idx+1)%S.profiles.length;
+  applyProfile(S.profiles[idx]); renderCal();
+};
+/* export JSON (téléchargement, déposable sur le repo) */
+$('cExport').onclick=()=>{
+  const data=S.corr==='profile'&&S.corrCurve
+    ? {name:S.corrName,device:S.device,offset:S.offset,fc:S.corrCurve.fc,gain_dB:S.corrCurve.g}
+    : {profiles:S.profiles};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='cetim_calibration_'+(S.corrName||'profils')+'.json';a.click();
+};
+/* import JSON */
+$('cImport').onclick=()=>{
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      try{
+        const d=JSON.parse(rd.result);
+        const list=d.profiles?d.profiles:[d];
+        let n=0;
+        for(const p of list)if(p.fc&&p.gain_dB){S.profiles=S.profiles.filter(x=>x.name!==p.name);S.profiles.push(p);n++;}
+        saveProfiles();
+        if(n){applyProfile(S.profiles[S.profiles.length-1]);renderCal();alert(n+' profil(s) importé(s).');}
+        else alert('Aucun profil valide dans ce fichier.');
+      }catch(err){alert('JSON illisible : '+err.message);}
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
+};
+/* calibreur 1 kHz : cale l'offset pour que la lecture large bande = référence à 1 kHz */
+$('calDo1k').onclick=()=>{
+  if(!S.running){alert('Démarre la mesure (▶) et présente le calibreur 1 kHz.');return;}
+  const ref=parseFloat(($('calRef1k').value||'94').replace(',','.'));
+  if(!isFinite(ref)){alert('Référence invalide.');return;}
+  const b=S.bands.indexOf(1000);
+  if(b<0){alert('Bande 1 kHz indisponible.');return;}
+  const cur=lvl(S.time==='F'?S.bandPowF[b]:S.bandPowS[b]);
+  if(cur<=-90){alert('Pas de signal à 1 kHz. Vérifie le calibreur.');return;}
+  S.offset+= (ref-cur);   // décale l'offset pour amener la bande 1 kHz sur la référence
+  ui();
+  alert('Offset calé : '+S.offset.toFixed(1)+' dB (écart corrigé '+(ref-cur>=0?'+':'')+(ref-cur).toFixed(1)+' dB).');
+};
 
 /* effacements — flash de confirmation sur la ligne touchée */
 function flashDone(el){const b=el.querySelector('b'),o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,700);}
@@ -1077,7 +1273,13 @@ function holdKey(el,fn){
 }
 holdKey($('kCalM'),()=>{S.offset=Math.round((S.offset-0.5)*2)/2;ui();calFlash();});
 holdKey($('kCalP'),()=>{S.offset=Math.round((S.offset+0.5)*2)/2;ui();calFlash();});
-$('kComp').onclick=()=>{S.comp=!S.comp;ui();};
+$('kComp').onclick=()=>{
+  if(S.corr==='off')S.corr='generic';
+  else if(S.corr==='generic')S.corr=S.corrCurve?'profile':'off';
+  else S.corr='off';
+  if(S.analyser)configureAnalyser();
+  ui();drawActive();
+};
 $('kReset').onclick=()=>{if(S.running)stopMeasure(false);resetMeasure();$('modeBadge').textContent='PRÊT';$('modeBadge').className='badge';};
 
 /* Pause : appui long sur DÉMARRER ? Non — simple : DÉMARRER alterne marche/arrêt, RÉINIT remet à zéro */
@@ -1112,7 +1314,7 @@ function stopMeasure(auto){
 /* ================= Export CSV ================= */
 $('kCsv').onclick=()=>{
   let csv='SONOMETRE CETIM - export\n';
-  csv+='Ponderation;'+S.weight+';Temps;'+(S.time==='F'?'Fast':'Slow')+';Offset dB;'+S.offset+';Comp iPhone;'+(S.comp?'oui':'non')+'\n';
+  csv+='Ponderation;'+S.weight+';Temps;'+(S.time==='F'?'Fast':'Slow')+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
   csv+='LAeq;'+fmt(S.eqT>0?lvl(S.eq.A/S.eqT):-99)+';LCeq;'+fmt(S.eqT>0?lvl(S.eq.C/S.eqT):-99)+';LZeq;'+fmt(S.eqT>0?lvl(S.eq.Z/S.eqT):-99)+';LAFmax;'+fmt(S.lafMax)+';LAFmin;'+fmt(S.lafMin)+'\n\n';
   csv+='SPECTRE Leq (ponderation '+S.weight+')\nfc [Hz];Leq [dB]\n';
   for(let b=0;b<S.bands.length;b++)csv+=S.bands[b]+';'+fmt(S.eqT>0?lvl(S.bandEnergy[b]/S.eqT):-99)+'\n';
@@ -1125,6 +1327,8 @@ $('kCsv').onclick=()=>{
 };
 
 /* init */
+S.device=detectDevice();
+loadProfiles();
 ui();
 requestAnimationFrame(()=>sizeAll());
 </script>
