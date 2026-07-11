@@ -107,8 +107,10 @@
   .valtable .v.red{color:#FF6B7A;text-shadow:0 0 8px rgba(239,51,70,.5)}
 
   /* écran MODE EXPERT */
-  .menu{height:100%;display:flex;flex-direction:column;gap:4px;overflow:hidden}
-  .mrow{display:flex;justify-content:space-between;align-items:center;background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--lcd-ink)}
+  .menu{height:100%;display:flex;flex-direction:column;gap:4px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px;touch-action:pan-y}
+  .menu::-webkit-scrollbar{width:3px}
+  .menu::-webkit-scrollbar-thumb{background:rgba(79,195,255,.3);border-radius:2px}
+  .mrow{display:flex;justify-content:space-between;align-items:center;background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--lcd-ink);flex:0 0 auto}
   .mrow:active{background:rgba(79,195,255,.18)}
   .mrow b{font-family:var(--mono);color:var(--ice);font-size:12px;font-variant-numeric:tabular-nums}
   .mrow.act{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);color:var(--lcd-dim)}
@@ -163,8 +165,8 @@
           <rect x="4"  y="34" width="19" height="15" rx="2"/>
           <path d="M48 6 h30 a12 12 0 0 1 12 12 v31 h-15 V21 h-27 z"/>
           <rect x="48" y="34" width="19" height="15" rx="1"/>
+          <rect x="48" y="34" width="15" height="15" rx="1"/>
         </g>
-        <rect x="48" y="34" width="15" height="15" rx="1" fill="#EF3346"/>
         <g fill="#fff" font-family="Arial Nova, Arial, sans-serif" font-weight="700">
           <text x="108" y="49" font-size="46" letter-spacing="1">CETIM</text>
         </g>
@@ -214,15 +216,17 @@
       <div class="gpane" id="paneMenu">
         <div class="menu">
           <div class="mrow" id="mFscale"><span>Échelle fréquence</span><b>LOG</b></div>
-          <div class="mrow" id="mFft"><span>Taille FFT · résolution</span><b>16384 · 2.9 Hz</b></div>
-          <div class="mrow" id="mSmooth"><span>Lissage spectral natif</span><b>0.00</b></div>
+          <div class="mrow" id="mWin"><span>Type de fenêtre</span><b>Blackman</b></div>
+          <div class="mrow" id="mFft"><span>Nombre de points (FFT)</span><b>16384</b></div>
+          <div class="mrow" id="mRes"><span>Résolution · bande</span><b>2.9 Hz</b></div>
+          <div class="mrow" id="mOverlap"><span>Recouvrement (overlap)</span><b>50 %</b></div>
           <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
           <div class="mrow" id="mDbScale"><span>Échelle dB graphiques</span><b>Auto</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
           <div class="mrow act" id="mClrHist"><span>Effacer l'évolution temporelle</span><b>⌫</b></div>
           <div class="mrow act" id="mClrPeak"><span>Effacer max / min / peak-hold</span><b>⌫</b></div>
           <div class="mrow act red" id="mClrAll"><span>Tout effacer (remise à zéro)</span><b>⌫</b></div>
-          <div class="mnote">Fenêtre Blackman (AnalyserNode, fixe) · Recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · Toucher une ligne pour agir</div>
+          <div class="mnote">FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · faire défiler pour voir toutes les options</div>
         </div>
       </div>
     </div>
@@ -274,8 +278,46 @@ const S = {
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, tview:{x0:0,x1:1},
   fscale:'log', fftN:16384, nSmooth:0, colMs:50, dbAuto:true,
+  win:'blackman', overlap:0.5,
+  tap:null, ring:null, ringW:0, winCoef:null, winSum2:1, re:null, im:null, mag:null,
   scale:{spec:{lo:30,hi:90}, hist:{lo:30,hi:90}, sgram:{lo:0,hi:60}}
 };
+const WINS={
+  rect:{name:'Rectangulaire',f:(i,N)=>1},
+  hann:{name:'Hann',f:(i,N)=>0.5-0.5*Math.cos(2*Math.PI*i/(N-1))},
+  hamming:{name:'Hamming',f:(i,N)=>0.54-0.46*Math.cos(2*Math.PI*i/(N-1))},
+  blackman:{name:'Blackman',f:(i,N)=>0.42-0.5*Math.cos(2*Math.PI*i/(N-1))+0.08*Math.cos(4*Math.PI*i/(N-1))},
+  flattop:{name:'Flat-top',f:(i,N)=>{const a=[0.21557895,0.41663158,0.277263158,0.083578947,0.006947368],w=2*Math.PI*i/(N-1);
+    return a[0]-a[1]*Math.cos(w)+a[2]*Math.cos(2*w)-a[3]*Math.cos(3*w)+a[4]*Math.cos(4*w);}}
+};
+const WIN_ORDER=['blackman','hann','hamming','flattop','rect'];
+const FFT_SIZES=[2048,4096,8192,16384,32768];
+const OVERLAPS=[0,0.5,0.75];
+
+/* ===== FFT radix-2 itérative (in-place) ===== */
+function fft(re,im){
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){
+    let bit=n>>1;
+    for(;j&bit;bit>>=1)j^=bit;
+    j^=bit;
+    if(i<j){const tr=re[i];re[i]=re[j];re[j]=tr;const ti=im[i];im[i]=im[j];im[j]=ti;}
+  }
+  for(let len=2;len<=n;len<<=1){
+    const ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
+    for(let i=0;i<n;i+=len){
+      let cr=1,ci=0;
+      for(let k=0;k<len>>1;k++){
+        const ur=re[i+k], ui=im[i+k];
+        const vr=re[i+k+(len>>1)]*cr-im[i+k+(len>>1)]*ci;
+        const vi=re[i+k+(len>>1)]*ci+im[i+k+(len>>1)]*cr;
+        re[i+k]=ur+vr; im[i+k]=ui+vi;
+        re[i+k+(len>>1)]=ur-vr; im[i+k+(len>>1)]=ui-vi;
+        const ncr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=ncr;
+      }
+    }
+  }
+}
 const NOMS=[20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000];
 const DURS=[0,30,60,300,900], DURL=['∞','30 s','1 min','5 min','15 min'];
 const $=id=>document.getElementById(id);
@@ -302,13 +344,22 @@ function compAt(f){
 
 /* ================= Audio ================= */
 function configureAnalyser(){
+  const N=S.fftN, n=N/2;
+  /* tap temps réel : AnalyserNode utilisé UNIQUEMENT comme prise de signal temporel */
   const an=S.analyser;
-  an.fftSize=S.fftN; an.smoothingTimeConstant=S.nSmooth;
-  const n=an.frequencyBinCount;
+  an.fftSize=Math.min(32768,N); an.smoothingTimeConstant=0;
+  S.tap=new Float32Array(an.fftSize);
+  /* ring buffer : accumule le signal pour fenêtrer N points même si le tap est plus court */
+  S.ring=new Float32Array(N); S.ringW=0;
+  /* fenêtre + normalisation cohérente (somme des carrés pour la puissance) */
+  S.winCoef=new Float32Array(N);
+  let s2=0; const wf=WINS[S.win].f;
+  for(let i=0;i<N;i++){const c=wf(i,N);S.winCoef[i]=c;s2+=c*c;}
+  S.winSum2=s2;
+  S.re=new Float32Array(N); S.im=new Float32Array(N); S.mag=new Float32Array(n);
   S.fftDb=new Float32Array(n);
-  S.td=new Float32Array(an.fftSize);
   S.K=0;
-  S.binHz=S.ctx.sampleRate/an.fftSize;
+  S.binHz=S.ctx.sampleRate/N;
   S.freqs=new Float32Array(n); S.wA=new Float32Array(n); S.wC=new Float32Array(n); S.compGain=new Float32Array(n);
   for(let i=0;i<n;i++){
     const f=i*S.binHz; S.freqs[i]=f;
@@ -339,6 +390,23 @@ async function initAudio(){
   src.connect(S.analyser);
   configureAnalyser();
 }
+/* calcule le spectre courant (magnitude puissance par bin) avec la fenêtre choisie */
+function computeSpectrum(){
+  const N=S.fftN, tap=S.tap, an=S.analyser;
+  an.getFloatTimeDomainData(tap);
+  /* alimente le ring buffer avec le dernier bloc capté */
+  const L=tap.length;
+  if(N<=L){ S.ring.set(tap.subarray(L-N)); }
+  else {
+    S.ring.copyWithin(0,L); S.ring.set(tap,N-L);
+  }
+  const re=S.re, im=S.im, w=S.winCoef;
+  for(let i=0;i<N;i++){re[i]=S.ring[i]*w[i];im[i]=0;}
+  fft(re,im);
+  const n=N/2, mag=S.mag, norm=2/S.winSum2;   // densité de puissance normalisée par fenêtre
+  for(let i=0;i<n;i++){mag[i]=(re[i]*re[i]+im[i]*im[i])*norm;}
+  return mag;
+}
 
 function resetMeasure(){
   S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0};
@@ -365,14 +433,16 @@ function loop(ts){
   if(S.paused)return;
   S.elapsed+=dt;
 
-  S.analyser.getFloatFrequencyData(S.fftDb);
-  const n=S.fftDb.length;
+  const mag=computeSpectrum();
+  const n=mag.length;
+  // remplir fftDb (dB) pour compatibilité avec l'affichage aval
+  for(let i=0;i<n;i++){S.fftDb[i]=mag[i]>0?10*Math.log10(mag[i]):-180;}
   let pA=0,pC=0,pZ=0;
   const nb=S.bands.length, bp=new Float32Array(nb);
   const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
 
   for(let i=1;i<n;i++){
-    let p=Math.pow(10,S.fftDb[i]/10);
+    let p=mag[i];
     if(!isFinite(p))p=0;
     if(S.comp)p*=S.compGain[i];
     pZ+=p; pA+=p*S.wA[i]; pC+=p*S.wC[i];
@@ -380,7 +450,7 @@ function loop(ts){
   for(let b=0;b<nb;b++){
     const [i0,i1]=S.bandBins[b]; let s=0;
     for(let i=i0;i<=i1;i++){
-      let p=Math.pow(10,S.fftDb[i]/10);
+      let p=mag[i];
       if(!isFinite(p))p=0;
       if(S.comp)p*=S.compGain[i];
       if(wSel)p*=wSel[i];
@@ -389,12 +459,10 @@ function loop(ts){
     bp[b]=s;
   }
 
-  /* Correction de Parseval : la somme des bins FFT (fenêtre Blackman de l'AnalyserNode)
-     n'est pas normalisée en puissance. On la recale sur le RMS temporel exact pour que
-     le niveau Z corresponde au vrai dBFS RMS (pleine échelle sinus = offset − 3 dB). */
-  S.analyser.getFloatTimeDomainData(S.td);
-  let Pt=0; for(let i=0;i<S.td.length;i++)Pt+=S.td[i]*S.td[i];
-  Pt/=S.td.length;
+  /* Correction de Parseval : recale la puissance spectrale sur le RMS temporel exact
+     du bloc fenêtré, pour que le niveau Z corresponde au vrai dBFS RMS. */
+  let Pt=0; const rg=S.ring; for(let i=0;i<rg.length;i++)Pt+=rg[i]*rg[i];
+  Pt/=rg.length;
   if(pZ>0&&Pt>0&&isFinite(Pt)){const k=Pt/pZ; S.K=S.K?0.9*S.K+0.1*k:k;}
   const K=S.K||1;
   pA*=K; pC*=K; pZ*=K;
@@ -740,7 +808,10 @@ function drawSgram(){
   if(!SG.init||SG.W!==cv.width||SG.H!==cv.height||SG.fsc!==S.fscale)sgSetup(c);
   if(S.running&&!S.paused&&S.binHz&&SG.map&&SG.map.length){
     const now=performance.now();
-    if(now-SG.last>=S.colMs){SG.last=now;sgColumn();}
+    const fs=S.ctx?S.ctx.sampleRate:48000;
+    const hopMs=S.fftN*(1-S.overlap)/fs*1000;      // temps d'avance d'une trame avec recouvrement
+    const interval=Math.max(16,Math.min(S.colMs,hopMs));
+    if(now-SG.last>=interval){SG.last=now;sgColumn();}
   }
   sgBlit(c);
 }
@@ -921,8 +992,11 @@ function ui(){
   /* lignes du mode expert */
   $('mFscale').querySelector('b').textContent=S.fscale==='log'?'LOG':'LINÉAIRE';
   const fs=S.ctx?S.ctx.sampleRate:48000;
-  $('mFft').querySelector('b').textContent=S.fftN+' · '+(fs/S.fftN).toFixed(1)+' Hz';
-  $('mSmooth').querySelector('b').textContent=S.nSmooth.toFixed(2);
+  $('mWin').querySelector('b').textContent=WINS[S.win].name;
+  $('mFft').querySelector('b').textContent=S.fftN.toString();
+  const res=fs/S.fftN;
+  $('mRes').querySelector('b').textContent=(res<1?res.toFixed(2):res.toFixed(1))+' Hz';
+  $('mOverlap').querySelector('b').textContent=Math.round(S.overlap*100)+' %';
   $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
   $('mDbScale').querySelector('b').textContent=S.dbAuto?'Auto':'Fixe 20–110';
   $('kWV').textContent=S.weight;
@@ -955,16 +1029,19 @@ $('kScreen').addEventListener('click',()=>{
 
 /* lignes du MODE EXPERT */
 $('mFscale').onclick=()=>{S.fscale=S.fscale==='log'?'lin':'log';resetView();ui();};
-$('mFft').onclick=()=>{
-  const opts=[8192,16384,32768];
-  S.fftN=opts[(opts.indexOf(S.fftN)+1)%opts.length];
+$('mWin').onclick=()=>{
+  S.win=WIN_ORDER[(WIN_ORDER.indexOf(S.win)+1)%WIN_ORDER.length];
   if(S.analyser)configureAnalyser();
   ui();
 };
-$('mSmooth').onclick=()=>{
-  const opts=[0,0.5,0.8];
-  S.nSmooth=opts[(opts.indexOf(S.nSmooth)+1)%opts.length];
-  if(S.analyser)S.analyser.smoothingTimeConstant=S.nSmooth;
+$('mFft').onclick=()=>{
+  S.fftN=FFT_SIZES[(FFT_SIZES.indexOf(S.fftN)+1)%FFT_SIZES.length];
+  if(S.analyser)configureAnalyser();
+  ui();
+};
+$('mRes').onclick=$('mFft').onclick;   // toucher la résolution change aussi le nombre de points
+$('mOverlap').onclick=()=>{
+  S.overlap=OVERLAPS[(OVERLAPS.indexOf(S.overlap)+1)%OVERLAPS.length];
   ui();
 };
 $('mSgSpeed').onclick=()=>{
