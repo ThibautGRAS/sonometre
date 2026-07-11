@@ -29,11 +29,9 @@
   }
 
   /* ---------- entête ---------- */
-  header{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 8px;flex:0 0 auto}
-  header .brand{font-size:12px;letter-spacing:.22em;font-weight:700;display:flex;align-items:center;gap:8px}
-  header .brand b{color:var(--red)}
-  header .model{font-size:9px;color:#7d90b5;letter-spacing:.12em}
-  .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block}
+  header{display:flex;align-items:center;justify-content:space-between;padding:2px 18px 8px 20px;flex:0 0 auto}
+  .logo{height:26px;width:auto;display:block}
+  .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .led.on{background:var(--green);box-shadow:0 0 8px rgba(47,191,131,.9)}
 
   /* ---------- éléments physiques du boîtier ---------- */
@@ -144,8 +142,6 @@
   .key-start.running{background:linear-gradient(180deg,#5f6b85 0%,#3c4a6e 45%,#232c44 100%);box-shadow:0 3px 0 #10182b, inset 0 1px 0 rgba(255,255,255,.15)}
   .key-start .kv{font-size:16px;letter-spacing:.08em}
 
-  .plate{flex:0 0 auto;text-align:center;font-size:8px;letter-spacing:.3em;color:#3d5688;padding-top:8px;font-weight:700}
-
   #err{display:none;position:absolute;left:12px;right:12px;top:12px;z-index:9;background:#B21226;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5)}
   @media (prefers-reduced-motion:reduce){.badge.rec::before{animation:none}}
 </style>
@@ -155,8 +151,21 @@
   <div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
 
   <header>
-    <div class="brand"><span class="led" id="led"></span>CET<b>I</b>M SONOMÈTRE</div>
-    <div class="model">SLM-3744 · MICRO INTERNE</div>
+    <svg class="logo" viewBox="0 0 320 64" aria-label="CETIM">
+      <!-- pictogramme -->
+      <g fill="#fff">
+        <rect x="4"  y="16" width="36" height="15" rx="2"/>
+        <rect x="4"  y="34" width="19" height="15" rx="2"/>
+        <path d="M48 6 h30 a12 12 0 0 1 12 12 v31 h-15 V21 h-27 z"/>
+        <rect x="48" y="34" width="19" height="15" rx="1"/>
+      </g>
+      <rect x="48" y="34" width="15" height="15" rx="1" fill="#EF3346"/>
+      <!-- lettrage -->
+      <g fill="#fff" font-family="Arial Nova, Arial, sans-serif" font-weight="700">
+        <text x="108" y="49" font-size="46" letter-spacing="1">CETIM</text>
+      </g>
+    </svg>
+    <span class="led" id="led"></span>
   </header>
 
   <div class="miccap"><i></i></div>
@@ -168,7 +177,6 @@
   <div class="lcd">
     <div class="statusline">
       <span id="modeBadge" class="badge">PRÊT</span>
-      <span id="cfgLine">A·F·1/3</span>
       <span id="tLine">00:00 / ∞</span>
     </div>
 
@@ -238,7 +246,6 @@
     </div>
   </div>
 
-  <div class="plate">IEC 61672 · INDICATIF — CETIM ACOUSTIQUE</div>
 
 <script>
 "use strict";
@@ -891,7 +898,6 @@ attachZoomPan('sgramCv','y',{time:true,onChange:()=>{if(!S.running||S.paused)dra
 function ui(){
   $('mainLbl').textContent='L'+S.weight+S.time;
   $('unitLbl').textContent='dB('+S.weight+')';
-  $('cfgLine').textContent=S.weight+'·'+S.time+'·'+(S.mode==='toct'?'1/3':'FFT')+(S.comp?'·comp':'');
   $('gTitle').textContent=S.screen==='spec'
     ? 'SPECTRE · '+(S.mode==='toct'?"TIERS D'OCTAVE":'BANDES FINES')+' · POND. '+S.weight
     : S.screen==='sgram' ? 'SPECTROGRAMME · POND. '+S.weight
