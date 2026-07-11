@@ -9,9 +9,10 @@
 <style>
   :root{
     --navy:#001E50; --navy-deep:#00133A; --red:#EF3346;
-    --lcd-bg:#EAF1FA; --lcd-ink:#0B1B3C; --lcd-dim:#41598a; --lcd-grid:#C7D5EA;
+    --lcd-bg:#050F26; --lcd-bg2:#0A1F42; --lcd-ink:#EAF6FF; --lcd-dim:#6E8CC0; --lcd-grid:rgba(127,216,255,.14);
+    --ice:#4FC3FF;
     --key:#0A2A66; --key-hi:rgba(255,255,255,.14); --line:rgba(255,255,255,.12);
-    --amber:#E88A1A; --green:#2FBF83;
+    --amber:#FFB454; --green:#2FBF83;
     --font:"Arial Nova", Arial, Helvetica, sans-serif;
     --mono:"SF Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   }
@@ -62,35 +63,37 @@
   .bezel::after{content:"";position:absolute;inset:7px;border-radius:12px;pointer-events:none;z-index:3;
     background:linear-gradient(112deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,.03) 16%,transparent 28%)}
 
-  /* ---------- ÉCRAN LCD FIXE ---------- */
+  /* ---------- ÉCRAN LCD FIXE (affichage sombre lumineux) ---------- */
   .lcd{
     flex:1 1 auto;min-height:0;min-width:0;
-    background:linear-gradient(180deg,#F4F8FE 0%,var(--lcd-bg) 100%);
+    background:
+      radial-gradient(140% 90% at 50% 0%, rgba(79,195,255,.10) 0%, transparent 55%),
+      linear-gradient(180deg,var(--lcd-bg2) 0%,var(--lcd-bg) 100%);
     border-radius:11px;color:var(--lcd-ink);
     display:flex;flex-direction:column;
     padding:10px 12px 8px;overflow:hidden;
   }
   .statusline{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--lcd-dim);flex:0 0 auto;font-family:var(--mono)}
-  .badge{font-weight:700;padding:2px 7px;border-radius:4px;background:var(--navy);color:#fff;font-size:10px;font-family:var(--font);letter-spacing:.04em}
-  .badge.rec{background:var(--red)}
+  .badge{font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(79,195,255,.14);border:1px solid rgba(79,195,255,.35);color:#BFE3FF;font-size:10px;font-family:var(--font);letter-spacing:.04em}
+  .badge.rec{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 10px rgba(239,51,70,.55)}
   .badge.rec::before{content:"● ";animation:blink 1.2s step-end infinite}
   @keyframes blink{50%{opacity:.2}}
 
   .mainrow{display:flex;align-items:baseline;justify-content:center;gap:8px;flex:0 0 auto;margin-top:2px}
   .numwrap{position:relative;font-family:var(--mono);font-size:clamp(44px,13vw,64px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;white-space:pre}
-  .numwrap .ghost{color:rgba(11,27,60,.07);user-select:none}
-  .numwrap .num{position:absolute;inset:0;text-align:right}
+  .numwrap .ghost{color:rgba(127,216,255,.08);user-select:none}
+  .numwrap .num{position:absolute;inset:0;text-align:right;color:#F2FAFF;text-shadow:0 0 14px rgba(79,195,255,.45),0 0 3px rgba(79,195,255,.6)}
   .mainrow .unit{font-size:14px;font-weight:700;color:var(--lcd-dim)}
-  .mainrow .lbl{font-size:12px;font-weight:700;color:var(--lcd-dim);letter-spacing:.1em}
+  .mainrow .lbl{font-size:12px;font-weight:700;color:var(--ice);letter-spacing:.1em;text-shadow:0 0 8px rgba(79,195,255,.5)}
 
-  .bargraph{height:9px;border-radius:5px;background:#D0DCEE;margin:6px 2px 2px;overflow:hidden;position:relative;flex:0 0 auto}
-  .bargraph .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--navy) 0%,var(--navy) 62%,var(--amber) 78%,var(--red) 92%)}
-  .bargraph .peakmark{position:absolute;top:0;bottom:0;width:2px;background:var(--red)}
-  .barscale{display:flex;justify-content:space-between;font-size:8px;color:#8fa3c4;font-family:var(--mono);padding:0 2px;flex:0 0 auto}
+  .bargraph{height:9px;border-radius:5px;background:#0B2450;margin:6px 2px 2px;overflow:hidden;position:relative;flex:0 0 auto;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
+  .bargraph .fill{height:100%;width:0%;background:linear-gradient(90deg,#2E9BFF 0%,var(--ice) 62%,var(--amber) 78%,var(--red) 92%);box-shadow:0 0 10px rgba(79,195,255,.45)}
+  .bargraph .peakmark{position:absolute;top:0;bottom:0;width:2px;background:#FF6B7A;box-shadow:0 0 6px rgba(239,51,70,.8)}
+  .barscale{display:flex;justify-content:space-between;font-size:8px;color:var(--lcd-dim);font-family:var(--mono);padding:0 2px;flex:0 0 auto}
 
   /* zone graphique fixe : les 3 affichages sont superposés, un seul visible */
   .graphzone{flex:1 1 auto;min-height:0;position:relative;margin-top:6px;border-top:1px solid var(--lcd-grid);padding-top:6px}
-  .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--lcd-dim);z-index:2}
+  .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--ice);z-index:2;text-shadow:0 0 8px rgba(79,195,255,.4)}
   .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
   .gpane.on{display:block}
@@ -99,22 +102,22 @@
   /* écran VALEURS */
   #paneVal{overflow:hidden}
   .valtable{display:grid;grid-template-columns:1fr 1fr;gap:6px;height:100%;align-content:start}
-  .valtable .cell{background:rgba(0,30,80,.06);border-radius:8px;padding:8px;text-align:center}
+  .valtable .cell{background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:8px;text-align:center}
   .valtable .k{font-size:10px;letter-spacing:.06em;color:var(--lcd-dim);font-weight:700}
-  .valtable .v{font-family:var(--mono);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
-  .valtable .v.red{color:var(--red)}
+  .valtable .v{font-family:var(--mono);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lcd-ink);text-shadow:0 0 8px rgba(79,195,255,.3)}
+  .valtable .v.red{color:#FF6B7A;text-shadow:0 0 8px rgba(239,51,70,.5)}
 
   /* écran MODE EXPERT */
   .menu{height:100%;display:flex;flex-direction:column;gap:5px;overflow:hidden}
-  .mrow{display:flex;justify-content:space-between;align-items:center;background:rgba(0,30,80,.06);border-radius:8px;padding:9px 10px;font-size:12px;font-weight:700;cursor:pointer}
-  .mrow:active{background:rgba(0,30,80,.14)}
-  .mrow b{font-family:var(--mono);color:var(--navy);font-size:12px;font-variant-numeric:tabular-nums}
-  .mnote{font-size:8.5px;color:#8fa3c4;text-align:center;margin-top:auto;padding:2px 6px;line-height:1.4}
+  .mrow{display:flex;justify-content:space-between;align-items:center;background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:9px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--lcd-ink)}
+  .mrow:active{background:rgba(79,195,255,.18)}
+  .mrow b{font-family:var(--mono);color:var(--ice);font-size:12px;font-variant-numeric:tabular-nums}
+  .mnote{font-size:8.5px;color:var(--lcd-dim);text-align:center;margin-top:auto;padding:2px 6px;line-height:1.4}
 
   .bottomstrip{display:flex;justify-content:space-between;align-items:center;flex:0 0 auto;margin-top:6px;padding-top:5px;border-top:1px solid var(--lcd-grid);font-family:var(--mono);font-size:11px;color:var(--lcd-dim)}
-  .bottomstrip b{color:var(--lcd-ink);font-weight:700}
-  .progress{height:3px;background:#D0DCEE;border-radius:2px;overflow:hidden;flex:1;margin:0 10px}
-  .progress .p{height:100%;width:0%;background:var(--red)}
+  .bottomstrip b{color:var(--lcd-ink);font-weight:700;text-shadow:0 0 6px rgba(79,195,255,.35)}
+  .progress{height:3px;background:#0B2450;border-radius:2px;overflow:hidden;flex:1;margin:0 10px}
+  .progress .p{height:100%;width:0%;background:var(--red);box-shadow:0 0 6px rgba(239,51,70,.7)}
 
   /* ---------- CLAVIER PHYSIQUE ---------- */
   .keypad{flex:0 0 auto;display:flex;flex-direction:column;gap:7px;padding-top:10px}
@@ -461,7 +464,7 @@ const F_LOW=()=>S.fscale==='log'?20:0;
 const SPAN_MIN=()=>S.fscale==='log'?Math.log(1.25):50;
 const y2=(L,h,sc)=>(1-Math.max(0,Math.min(1,(L-sc.lo)/(sc.hi-sc.lo))))*(h-16)+2;
 function grid(g,w,h,sc,padL,step){
-  g.strokeStyle='#DCE6F4';g.fillStyle='#8fa3c4';g.font='8px Arial';g.textAlign='right';g.lineWidth=1;
+  g.strokeStyle='rgba(127,216,255,.14)';g.fillStyle='#5F7FB8';g.font='8px Arial';g.textAlign='right';g.lineWidth=1;
   const d0=Math.ceil(sc.lo/step)*step;
   for(let d=d0;d<=sc.hi;d+=step){const y=y2(d,h,sc);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText(Math.round(d),padL-3,y+3);}
 }
@@ -485,7 +488,7 @@ function dynTicks(fmin,fmax,nmax){
 function drawSpectrum(){
   const c=CV.specCv; if(!c)return;
   const {g,w,h}=c;
-  g.fillStyle='#F4F8FE';g.fillRect(0,0,w,h);
+  g.fillStyle='#050F26';g.fillRect(0,0,w,h);
   const padL=26, sc=S.scale.spec, K=S.K||1;
   if(!S.bands.length){grid(g,w,h,sc,padL,10);return;}
 
@@ -502,12 +505,12 @@ function drawSpectrum(){
     g.textAlign='center';
     for(let b=0;b<nb;b++){
       const L=lvl(pw[b]), x=padL+b*bw, y=y2(L,h,sc), y0=y2(sc.lo,h,sc);
-      g.fillStyle=L>85?'#EF3346':L>70?'#E88A1A':'#1C4FA0';
+      g.fillStyle=L>85?'#EF3346':L>70?'#FFB454':'#2E9BFF';
       g.fillRect(x+1,y,Math.max(1,bw-2),Math.max(0,y0-y));
       const Lp=S.bandPeak[b];
-      if(Lp>sc.lo){g.fillStyle='#0B1B3C';g.fillRect(x+1,y2(Lp,h,sc)-1,Math.max(1,bw-2),2);}
+      if(Lp>sc.lo){g.fillStyle='#BFE9FF';g.fillRect(x+1,y2(Lp,h,sc)-1,Math.max(1,bw-2),2);}
       if([31.5,125,500,2000,8000].includes(S.bands[b])){
-        g.fillStyle='#8fa3c4';
+        g.fillStyle='#5F7FB8';
         g.fillText(S.bands[b]>=1000?(S.bands[b]/1000)+'k':S.bands[b],x+bw/2,h-4);
       }
     }
@@ -515,7 +518,7 @@ function drawSpectrum(){
     if(S.cursor){
       let b=Math.max(0,Math.min(nb-1,Math.floor(S.cursor.u*nb)));
       const x=padL+b*bw, L=lvl(pw[b]);
-      g.strokeStyle='#0B1B3C';g.lineWidth=1.5;
+      g.strokeStyle='#BFE9FF';g.lineWidth=1.5;
       g.strokeRect(x+0.5,y2(Math.max(L,sc.lo),h,sc)-0.5,Math.max(1,bw-2)+1,Math.max(1,y2(sc.lo,h,sc)-y2(Math.max(L,sc.lo),h,sc))+1);
       cursorLabel(g,w,x+bw/2,fmtF(S.bands[b])+'Hz · '+fmt(L)+' dB');
     }
@@ -539,12 +542,12 @@ function drawSpectrum(){
     }
     autoRange(sc,dLo,dHi);
     grid(g,w,h,sc,padL,10);
-    g.strokeStyle='#DCE6F4';g.fillStyle='#8fa3c4';g.font='8px Arial';g.textAlign='center';
+    g.strokeStyle='rgba(127,216,255,.14)';g.fillStyle='#5F7FB8';g.font='8px Arial';g.textAlign='center';
     for(const f of dynTicks(fmin,fmax,6)){
       const x=x2(f);g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();
       g.fillText(fmtF(f),x,h-4);
     }
-    g.beginPath();g.strokeStyle='#1C4FA0';g.lineWidth=1.3;
+    g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.3;
     pts.forEach((pt,i)=>{const y=y2(pt[1],h,sc); i?g.lineTo(pt[0],y):g.moveTo(pt[0],y);});
     g.stroke();
     /* curseur : ligne + fréquence/niveau au bin le plus proche */
@@ -554,9 +557,9 @@ function drawSpectrum(){
       if(S.comp)p*=S.compGain[ic];
       if(wSel)p*=wSel[ic];
       const L=lvl(p*K), x=x2(S.freqs[ic]);
-      g.strokeStyle='#0B1B3C';g.lineWidth=1;g.setLineDash([3,3]);
+      g.strokeStyle='#BFE9FF';g.lineWidth=1;g.setLineDash([3,3]);
       g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
-      g.fillStyle='#0B1B3C';g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
+      g.fillStyle='#BFE9FF';g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
       cursorLabel(g,w,x,fmtF(S.freqs[ic])+'Hz · '+fmt(L)+' dB');
     }
     $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz';
@@ -566,14 +569,14 @@ function cursorLabel(g,w,x,txt){
   g.font='bold 10px Arial';
   const tw=g.measureText(txt).width+10;
   let lx=Math.max(2,Math.min(w-tw-2,x-tw/2));
-  g.fillStyle='#0B1B3C';g.fillRect(lx,2,tw,15);
-  g.fillStyle='#fff';g.textAlign='left';g.fillText(txt,lx+5,13);
+  g.fillStyle='#08306B';g.fillRect(lx,2,tw,15);g.strokeStyle='rgba(79,195,255,.5)';g.strokeRect(lx+0.5,2.5,tw-1,14);
+  g.fillStyle='#CFEBFF';g.textAlign='left';g.fillText(txt,lx+5,13);
 }
 
 function drawHistory(){
   const c=CV.histCv; if(!c)return;
   const {g,w,h}=c;
-  g.fillStyle='#F4F8FE';g.fillRect(0,0,w,h);
+  g.fillStyle='#050F26';g.fillRect(0,0,w,h);
   const padL=26, sc=S.scale.hist;
   if(S.hist.length<2){grid(g,w,h,sc,padL,10);return;}
   const span=S.duration>0?S.duration:Math.max(30,S.elapsed);
@@ -588,14 +591,14 @@ function drawHistory(){
   autoRange(sc,dLo,dHi);
   grid(g,w,h,sc,padL,10);
   const x2=t=>padL+((t-t0)/Math.max(1e-6,span))*(w-padL-4);
-  g.beginPath();g.strokeStyle='#1C4FA0';g.lineWidth=1.1;let st=false;
+  g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.1;let st=false;
   for(const pt of S.hist){if(pt.t<t0)continue;const x=x2(pt.t),y=y2(pt.L,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
   g.stroke();
   g.beginPath();g.strokeStyle='#EF3346';g.lineWidth=2;st=false;
   for(const pt of S.hist){if(pt.t<t0)continue;const x=x2(pt.t),y=y2(pt.Leq,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
   g.stroke();
   g.textAlign='left';g.font='9px Arial';
-  g.fillStyle='#1C4FA0';g.fillText('L'+S.weight+S.time,padL+4,10);
+  g.fillStyle='#4FC3FF';g.fillText('L'+S.weight+S.time,padL+4,10);
   g.fillStyle='#EF3346';g.fillText('L'+S.weight+'eq',padL+40,10);
   $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
 }
@@ -691,15 +694,15 @@ function sgBlit(c){
   g.fillStyle='#000080';g.fillRect(padL,0,Wp,Hu);
   g.drawImage(SG.buf,sx,Math.max(0,sy),sw,Math.max(1,sh),padL,0,Wp,Hu);
   /* axe fréquence (fenêtre courante) */
-  g.fillStyle='#EAF1FA';g.fillRect(0,0,padL,H);
-  g.fillStyle='#8fa3c4';g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
+  g.fillStyle='#050F26';g.fillRect(0,0,padL,H);
+  g.fillStyle='#5F7FB8';g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
   for(const f of dynTicks(nfmin,nfmax,7)){
     const y=((V1n-TF(f))/(V1n-V0n))*Hu;
     g.fillText(fmtF(f),padL-3*c.dpr,y+3*c.dpr);
   }
   /* axe temps : secondes avant l'instant présent */
-  g.fillStyle='#EAF1FA';g.fillRect(padL,H-SG.axH,Wp,SG.axH);
-  g.fillStyle='#8fa3c4';
+  g.fillStyle='#050F26';g.fillRect(padL,H-SG.axH,Wp,SG.axH);
+  g.fillStyle='#5F7FB8';
   const Tbuf=SG.buf.width*S.colMs/1000;              // durée totale du tampon
   const agoL=(1-S.tview.x0)*Tbuf, agoM=(1-(S.tview.x0+S.tview.x1)/2)*Tbuf, agoR=(1-S.tview.x1)*Tbuf;
   const ft=t=>t<0.05?'0 s':'−'+(t<10?t.toFixed(1):Math.round(t))+' s';
