@@ -118,6 +118,9 @@
   .valsec{grid-column:span 2;display:flex;justify-content:space-around;gap:6px;flex-wrap:wrap;
     font-size:11px;color:#5F7FB8;padding:6px 4px;border-top:1px solid rgba(79,195,255,.10);margin-top:2px}
   .valsec b{color:#BFD9F5;font-family:var(--mono);font-weight:700}
+  .valdots{position:absolute;bottom:6px;left:0;right:0;display:flex;justify-content:center;gap:8px}
+  .valdots .vd{width:7px;height:7px;border-radius:50%;background:rgba(79,195,255,.25)}
+  .valdots .vd.on{background:var(--ice)}
   .valtable .k{font-size:10px;letter-spacing:.06em;color:var(--lcd-dim);font-weight:700}
   .valtable .v{font-family:var(--mono);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lcd-ink);text-shadow:0 0 8px rgba(79,195,255,.3)}
   .valtable .v.red{color:#FF6B7A;text-shadow:0 0 8px rgba(239,51,70,.5)}
@@ -291,20 +294,23 @@
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
-        <div class="valtable">
+        <div class="valtable" id="valPage0">
           <div class="cell hero"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
           <div class="cell"><div class="k">LCpeak</div><div class="v red" id="vLCpk">--.-</div></div>
           <div class="cell"><div class="k">LAFmax</div><div class="v red" id="vMax">--.-</div></div>
           <div class="cell"><div class="k">L10</div><div class="v" id="vL10">--.-</div></div>
           <div class="cell"><div class="k">L90</div><div class="v" id="vL90">--.-</div></div>
-          <div class="valsec">
-            <span>LCeq <b id="vLCeq">--.-</b></span>
-            <span>LZeq <b id="vLZeq">--.-</b></span>
-            <span>L50 <b id="vL50">--.-</b></span>
-            <span>LAFmin <b id="vMin">--.-</b></span>
-          </div>
-          <div class="valsec" style="margin-top:2px"><span>CAL. <b id="vCal">120.0 dB · off</b></span></div>
         </div>
+        <div class="valtable" id="valPage1" style="display:none">
+          <div class="cell"><div class="k">LAE (SEL)</div><div class="v" id="vLAE">--.-</div></div>
+          <div class="cell"><div class="k">Δ LF (LCeq−LAeq)</div><div class="v" id="vDLF">--.-</div></div>
+          <div class="cell"><div class="k">LCeq</div><div class="v" id="vLCeq">--.-</div></div>
+          <div class="cell"><div class="k">LZeq</div><div class="v" id="vLZeq">--.-</div></div>
+          <div class="cell"><div class="k">L50</div><div class="v" id="vL50">--.-</div></div>
+          <div class="cell"><div class="k">LAFmin</div><div class="v" id="vMin">--.-</div></div>
+          <div class="valsec"><span>CAL. <b id="vCal">120.0 dB · off</b></span></div>
+        </div>
+        <div class="valdots"><span class="vd on" id="vd0"></span><span class="vd" id="vd1"></span></div>
       </div>
       <div class="gpane" id="paneMenu">
         <div class="menu">
@@ -363,7 +369,7 @@
       </div>
     </div>
 
-    <div class="bottomstrip">
+    <div class="bottomstrip" id="bottomStrip">
       <span>LAeq <b id="sLAeq">--.-</b></span>
       <div class="progress"><div class="p" id="tProg"></div></div>
       <span>LCeq <b id="sLCeq">--.-</b></span>
@@ -901,6 +907,10 @@ function updateNumbers(L){
   }
   $('vL10').textContent=fmt(S.L10); $('vL50').textContent=fmt(S.L50); $('vL90').textContent=fmt(S.L90);
   $('vLCpk').textContent=fmt(S.lcPeak);
+  /* page 2 : LAE (SEL) = LAeq + 10·log10(T/1s) ; Δ LF = LCeq − LAeq */
+  const laeqN=S.eqT>0?lvl(S.eq.A/S.eqT):-99, lceqN=S.eqT>0?lvl(S.eq.C/S.eqT):-99;
+  $('vLAE').textContent=(S.eqT>0&&laeqN>-90)?fmt(laeqN+10*Math.log10(Math.max(0.1,S.eqT))):'--.-';
+  $('vDLF').textContent=(laeqN>-90&&lceqN>-90)?fmt(lceqN-laeqN):'--.-';
   const laeq=S.eqT>0?lvl(S.eq.A/S.eqT):-99, lceq=S.eqT>0?lvl(S.eq.C/S.eqT):-99;
   $('sLAeq').textContent=fmt(laeq); $('sLCeq').textContent=fmt(lceq);
   $('vLAeq').textContent=fmt(laeq); $('vLCeq').textContent=fmt(lceq);
@@ -1891,6 +1901,7 @@ function ui(){
   else if(S.paused){badge.textContent='⏸ PAUSE';badge.className='badge';}
   ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
   $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
+  $('bottomStrip').style.visibility = S.screen==='val' ? 'hidden' : 'visible';   // redondant sur Valeurs
 }
 
 /* ================= Touches ================= */
@@ -2454,6 +2465,26 @@ setMicStat('off');
 $('kStart').classList.add('mic-wait');
 ui();
 requestAnimationFrame(()=>sizeAll());
+
+/* ===== écran Valeurs : 2 pages (swipe horizontal) ===== */
+S.valPage=0;
+function showValPage(p){
+  S.valPage=p;
+  $('valPage0').style.display=p===0?'grid':'none';
+  $('valPage1').style.display=p===1?'grid':'none';
+  $('vd0').classList.toggle('on',p===0);
+  $('vd1').classList.toggle('on',p===1);
+}
+(function(){
+  const pane=$('paneVal'); if(!pane)return;
+  let x0=0,y0=0;
+  pane.addEventListener('touchstart',e=>{if(e.touches.length===1){x0=e.touches[0].clientX;y0=e.touches[0].clientY;}},{passive:true});
+  pane.addEventListener('touchend',e=>{
+    const t=e.changedTouches[0]; if(!t)return;
+    const dx=t.clientX-x0, dy=t.clientY-y0;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) showValPage(dx<0?1:0);   // gauche = page 2
+  },{passive:true});
+})();
 
 /* ===== retour haptique sur les boutons =====
    navigator.vibrate fonctionne sur Android/Chrome ; iOS Safari ne le supporte pas
