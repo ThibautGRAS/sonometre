@@ -198,7 +198,7 @@
       inset 1px 0 0 rgba(255,255,255,.04), inset -1px 0 0 rgba(0,0,0,.28),
       inset 0 -7px 10px rgba(0,0,0,.22),
       inset 0 0 14px rgba(79,195,255,.09);
-    transition:transform .05s, box-shadow .05s;
+    transition:transform .05s, box-shadow .05s, filter .09s;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     font-family:var(--font);
     overflow:hidden;
@@ -209,8 +209,10 @@
       linear-gradient(180deg, rgba(255,255,255,.15) 0%, rgba(255,255,255,.05) 40%, transparent 45%),
       linear-gradient(118deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.03) 22%, transparent 38%)}
   .key:active{transform:translateY(2px);
+    filter:brightness(1.28) saturate(1.1);
     box-shadow:0 1px 0 #041233, 0 1px 3px rgba(0,0,0,.4),
-      inset 0 2px 4px rgba(0,0,0,.35), inset 0 -5px 8px rgba(0,0,0,.2)}
+      inset 0 2px 4px rgba(0,0,0,.35), inset 0 -5px 8px rgba(0,0,0,.2),
+      inset 0 0 18px rgba(99,205,255,.22)}
   .key:active::before{opacity:.5}
   .key .kf{font-size:8px;letter-spacing:.14em;color:#A9C6EA;font-weight:700;
     text-shadow:0 0 6px rgba(120,190,255,.45), 0 1px 1px rgba(0,0,0,.45)}   /* légende rétroéclairée */
@@ -2484,6 +2486,9 @@ const ICO={
   pause:'<svg class="tico" viewBox="0 0 24 24"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>'
 };
 function setTransport(){
+  const key=(S.running?'R':'r')+(S.paused?'P':'p');
+  if(S._transport===key)return;                 // rien n'a changé : ne pas re-rendre les SVG
+  S._transport=key;
   $('kStart').querySelector('.kv').innerHTML=S.running?ICO.stop:ICO.play;
   $('kStart').classList.toggle('running',S.running);
   $('kStart').setAttribute('aria-label',S.running?'Arrêter':'Démarrer');
