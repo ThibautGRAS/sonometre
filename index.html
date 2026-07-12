@@ -837,7 +837,7 @@ async function acquireMic(){
 }
 function micAlive(){
   const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
-  return !!(tr && tr.readyState==='live' && S.ctx && S.ctx.state==='running');
+  return !!(tr && tr.readyState==='live' && !tr.muted && S.ctx && S.ctx.state==='running');
 }
 /* la piste micro est morte (retour d'arrière-plan, appel téléphonique…) */
 function micLost(why){
@@ -848,15 +848,29 @@ function micLost(why){
   }
 }
 /* tente de tout remettre en route au retour au premier plan */
-async function reviveMic(){
-  if(!S.ctx)return;
+async function reviveMic(fromGesture){
+  if(!S.ctx)return false;
   try{ if(S.ctx.state!=='running') await S.ctx.resume(); }catch(e){}
-  const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
-  if(!tr || tr.readyState!=='live'){
-    try{ await acquireMic(); }catch(e){ setMicStat('off'); return; }
+  let tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  if(!tr || tr.readyState!=='live' || tr.muted){
+    try{ await acquireMic(); }
+    catch(e){ if(!fromGesture){ setMicStat('off'); return false; } }
   }
+  /* contexte toujours bloqué (interrupted) : en geste utilisateur, reconstruction complète */
+  if(fromGesture && S.ctx.state!=='running'){
+    try{
+      try{ await S.ctx.close(); }catch(e){}
+      S.ctx=new (window.AudioContext||window.webkitAudioContext)();
+      S.analyser=S.ctx.createAnalyser();
+      await acquireMic();
+      configureAnalyser();
+    }catch(e){ setMicStat('off'); return false; }
+  }
+  tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  const ok=!!(tr && tr.readyState==='live' && !tr.muted && S.ctx.state==='running');
   S.lastT=0;                                    // repart proprement (pas de dt fantôme)
-  if(micAlive()) setMicStat(S.running?'ready':(S.micReady?'ready':'off'));
+  setMicStat(ok?'ready':'off');
+  return ok;
 }
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible') setTimeout(reviveMic,250);
@@ -2614,6 +2628,7 @@ $('kStart').onclick=async function(){
   const coldStart=!S.micReady;                       // micro déjà préchauffé ?
   try{
     if(!S.ctx)await initAudio();
+    else if(!micAlive())await reviveMic(true);       // piste tuée/muette par l'arrière-plan : réacquérir ICI (geste)
     if(S.ctx.state==='suspended')await S.ctx.resume();
     for(let i=0;i<40 && S.ctx.state!=='running';i++)await new Promise(r=>setTimeout(r,25));
     if(coldStart && S.analyser){const tmp=new Float32Array(S.analyser.fftSize);
@@ -2741,7 +2756,7 @@ function armStart(){
 }
 ['pointerdown','touchstart'].forEach(ev=>window.addEventListener(ev,prewarmMic,{once:true,passive:true}));
 /* iOS exige parfois un GESTE pour relancer l'audio après une interruption : tout toucher réanime si besoin */
-window.addEventListener('pointerdown',()=>{ if(S.ctx && !micAlive()) reviveMic(); },{passive:true});
+window.addEventListener('pointerdown',()=>{ if(S.ctx && !micAlive()) reviveMic(true); },{passive:true});
 
 </script>
 </body>
