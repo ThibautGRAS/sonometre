@@ -981,22 +981,22 @@ function loop(ts){
       S.trigWait=!!S.trigLevel;           // puis attente de seuil éventuelle
       if(S.delayT<=0 && !S.trigWait) beginRun();
     }
-    updateNumbers(L); sgTick(); drawActive();
+    updateNumbers(L); drawActive();
     return;
   }
-  /* ---- phase DÉPART DIFFÉRÉ : décompte, rien n'est intégré ---- */
+  /* ---- phase DÉPART DIFFÉRÉ : décompte, rien n'est intégré NI affiché en accumulation ---- */
   if(S.delayT>0){
     S.delayT-=dt;
     const b=$('modeBadge'); b.textContent='DÉPART DANS '+Math.ceil(S.delayT)+' s'; b.className='badge';
     if(S.delayT<=0 && !S.trigWait) beginRun();
-    updateNumbers(L); sgTick(); drawActive();
+    updateNumbers(L); drawActive();
     return;
   }
   /* ---- phase ATTENTE DE SEUIL : démarre quand LAF ≥ seuil ---- */
   if(S.trigWait){
     const b=$('modeBadge'); b.textContent='ATTENTE ≥ '+S.trigLevel+' dB'; b.className='badge';
     if(LAF>=S.trigLevel){ S.trigWait=false; beginRun(); }
-    else { updateNumbers(L); sgTick(); drawActive(); return; }
+    else { updateNumbers(L); drawActive(); return; }
   }
   if(S.eqT>0.5){ if(LAF>S.lafMax)S.lafMax=LAF; if(LAF<S.lafMin)S.lafMin=LAF; }
   if(L>S.peakHold)S.peakHold=L; else S.peakHold-=dt*2;
@@ -1624,6 +1624,11 @@ function beginRun(){
   S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;
   S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;S.lcPeak=-Infinity;
   S.L10=-99;S.L50=-99;S.L90=-99;S.statT=0;
+  /* départ VIERGE : la mesure commence exactement ici, rien d'antérieur à l'écran */
+  if(S.bandPeak)S.bandPeak.fill(-99);
+  if(S.bandEnergy)S.bandEnergy.fill(0);
+  S.histView=null; S.histCursor=null; S.tview={x0:0,x1:1};
+  if(SG.cols){SG.cols.fill(null);SG.colSeq=0;SG.vScaleKey='';SG.vSeq=-1;S.sgCursor=null;}
   ui();
 }
 /* alimente le spectrogramme (appelé par la boucle même quand un autre écran/menu est affiché) */
