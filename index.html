@@ -1067,6 +1067,9 @@ function sgSetup(c){
   SG.W=cv.width; SG.H=cv.height;
   SG.padL=Math.round(26*c.dpr); SG.axH=Math.round(13*c.dpr); SG.padR=Math.round(30*c.dpr);
   const Hu=SG.H-SG.axH, Wp=SG.W-SG.padL-SG.padR;
+  /* mémoriser l'ANCIENNE projection avant de la remplacer (pour reprojeter l'historique) */
+  const oldFsc=SG.fsc, oldV0=SG.V0f, oldV1=SG.V1f;
+  const fscChanged = SG.cols && oldFsc && oldFsc!==S.fscale && isFinite(oldV0) && isFinite(oldV1);
   SG.fsc=S.fscale;
   SG.bufH=1024;                    // hauteur de DONNÉES fixe : colonnes valides quel que soit l'écran
   SG.Wp=Wp;                        // largeur logique du tampon de données (colonnes)
@@ -1106,6 +1109,35 @@ function sgSetup(c){
     }
   }
   SG.flineHz=fline;
+  /* ===== REPROJECTION log↔lin de l'historique =====
+     Les colonnes ont été écrites dans l'ancienne grille (lignes uniformes dans l'ancien
+     espace transformé). Pour chaque ligne de la NOUVELLE grille (fréquence f connue),
+     on lit la valeur à la position de f dans l'ANCIENNE grille. */
+  if(fscChanged){
+    const TFold = f => oldFsc==='log' ? Math.log(Math.max(1e-6,f)) : f;
+    const oldSpan=Math.max(1e-9,oldV1-oldV0);
+    const rOld = v => Math.max(0,Math.min(SG.bufH-1,Math.round((oldV1-v)/oldSpan*SG.bufH-0.5)));
+    /* pour chaque NOUVELLE ligne : plage de lignes anciennes couvertes → on prend le MAX
+       (préserve les pics quand plusieurs anciennes lignes se projettent sur une nouvelle) */
+    const r0m=new Int32Array(SG.bufH), r1m=new Int32Array(SG.bufH);
+    for(let r=0;r<SG.bufH;r++){
+      const fT=TFi(V1-(r/SG.bufH)*(V1-V0)), fB=TFi(V1-((r+1)/SG.bufH)*(V1-V0));
+      const vT=TFold(fT), vB=TFold(fB);
+      if(Math.max(vT,vB)<oldV0-1e-9 || Math.min(vT,vB)>oldV1+1e-9){r0m[r]=-1;continue;}
+      const a=rOld(Math.min(vT,oldV1)), b=rOld(Math.max(vB,oldV0));
+      r0m[r]=Math.min(a,b); r1m[r]=Math.max(a,b);
+    }
+    for(let x=0;x<SG.cols.length;x++){
+      const a=SG.cols[x]; if(!a)continue;
+      const b=new Float32Array(SG.bufH);
+      for(let r=0;r<SG.bufH;r++){
+        if(r0m[r]<0){b[r]=-99;continue;}
+        let m=-99; for(let k=r0m[r];k<=r1m[r];k++){if(a[k]>m)m=a[k];}
+        b[r]=m;
+      }
+      SG.cols[x]=b;
+    }
+  }
   if(!SG.view)SG.view=document.createElement('canvas');
   SG.view.width=Wp; SG.view.height=Hu;
   SG.vg=SG.view.getContext('2d');
@@ -1769,7 +1801,7 @@ $('kScreen').addEventListener('click',()=>{
 });
 
 /* lignes du MODE EXPERT */
-$('mFscale').onclick=()=>{S.fscale=S.fscale==='log'?'lin':'log';resetView();ui();};
+$('mFscale').onclick=()=>{S.fscale=S.fscale==='log'?'lin':'log';SG.init=false;resetView();ui();};
 $('mWin').onclick=()=>{
   S.win=WIN_ORDER[(WIN_ORDER.indexOf(S.win)+1)%WIN_ORDER.length];
   if(S.analyser)configureAnalyser();
