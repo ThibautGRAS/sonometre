@@ -1021,19 +1021,36 @@ const SG={init:false,buf:null,bg:null,map:null,last:0,W:0,H:0,padL:0,axH:0,bufH:
 function sgFull(){return {lo:S.fscale==='lin'?0:20, hi:nyq()};}
 function sgSetup(c){
   const cv=$('sgramCv');
-  const sameGeom = SG.W===cv.width && SG.H===cv.height && SG.fsc===S.fscale && SG.cols;
   SG.W=cv.width; SG.H=cv.height;
   SG.padL=Math.round(26*c.dpr); SG.axH=Math.round(13*c.dpr); SG.padR=Math.round(30*c.dpr);
   const Hu=SG.H-SG.axH, Wp=SG.W-SG.padL-SG.padR;
   SG.fsc=S.fscale;
-  SG.bufH=Math.min(1600,Math.max(Hu,2*Hu));
+  SG.bufH=1024;                    // hauteur de DONNÉES fixe : colonnes valides quel que soit l'écran
   if(!SG.buf)SG.buf=document.createElement('canvas');
   SG.buf.width=Wp; SG.buf.height=SG.bufH;
   SG.bg=SG.buf.getContext('2d');
-  /* tampon de DONNÉES dB : PRÉSERVÉ si la géométrie n'a pas changé (changement de
-     paramètre DSP en cours de mesure) — sinon réalloué */
-  if(!(sameGeom&&SG.cols.length===Wp)){
-    SG.cols=new Array(Wp);
+  /* tampon de DONNÉES dB. On PRÉSERVE le contenu même si la largeur change (passage
+     écran masqué → visible, rotation) : rééchantillonnage des colonnes existantes.
+     Les lignes (bufH) sont recalculées par la carte ci-dessous, donc on garde les colonnes
+     telles quelles en hauteur (elles seront relues via SG.map à hauteur constante bufH). */
+  const oldCols=SG.cols, oldW=oldCols?oldCols.length:0, oldSeq=SG.colSeq||0;
+  if(!SG.cols || SG.cols.length!==Wp){
+    const nc=new Array(Wp).fill(null);
+    if(oldCols && oldW>1 && oldSeq>0){
+      /* remappe les colonnes remplies (les plus à droite = récentes) vers la nouvelle largeur */
+      const filled=Math.min(oldW,oldSeq);
+      for(let x=0;x<Wp;x++){
+        // position temporelle relative (droite = présent) conservée
+        const srcRel=(x-(Wp-filled))/Math.max(1,filled-1);   // 0..1 sur la portion remplie
+        if(srcRel<0){nc[x]=null;continue;}
+        const sx=(oldW-filled)+Math.round(srcRel*(filled-1));
+        nc[x]=oldCols[Math.max(0,Math.min(oldW-1,sx))]||null;
+      }
+      SG.colSeq=Math.min(Wp,filled);
+    }else{
+      SG.colSeq=0;
+    }
+    SG.cols=nc;
     SG.colHz=new Array(Wp);
   }
   /* carte lignes du tampon → bins FFT, sur TOUTE la bande (recalculée : binHz a pu changer) */
@@ -1052,7 +1069,6 @@ function sgSetup(c){
   if(!SG.view)SG.view=document.createElement('canvas');
   SG.view.width=Wp; SG.view.height=Hu;
   SG.vg=SG.view.getContext('2d');
-  if(!sameGeom)SG.colSeq=0;
   SG.vScaleKey=''; SG.vViewKey=''; SG.vSeq=-1;      // force un re-rendu complet depuis les données
   SG.init=true;
 }
