@@ -253,7 +253,7 @@
           <div class="mrow act" id="mClrHist"><span>Effacer l'évolution temporelle</span><b>⌫</b></div>
           <div class="mrow act" id="mClrPeak"><span>Effacer max / min / peak-hold</span><b>⌫</b></div>
           <div class="mrow act red" id="mClrAll"><span>Tout effacer (remise à zéro)</span><b>⌫</b></div>
-          <div class="mnote">FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · faire défiler pour voir toutes les options</div>
+          <div class="mnote">FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s · faire défiler pour voir toutes les options</div>
         </div>
       </div>
       <div class="gpane" id="paneCal">
@@ -335,8 +335,9 @@ const S = {
   fftDb:null, td:null, K:0, freqs:null, binHz:0,
   wA:null, wC:null, compGain:null,
   bands:[], bandBins:[],
-  bandPowF:null, bandPowS:null, bandPeak:null, bandEnergy:null,
-  pF:{A:0,C:0,Z:0}, pS:{A:0,C:0,Z:0},
+  bandPowF:null, bandPowS:null, bandPowV:null, bandPeak:null, bandEnergy:null,
+  binPowF:null, binPowS:null, binPowV:null,
+  pF:{A:0,C:0,Z:0}, pS:{A:0,C:0,Z:0}, pV:{A:0,C:0,Z:0},
   eq:{A:0,C:0,Z:0}, eqT:0,
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
@@ -414,6 +415,9 @@ function fft(re,im){
 }
 const NOMS=[20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000];
 const DURS=[0,10,30,60,300,900], DURL=['∞','10 s','30 s','1 min','5 min','15 min'];
+const TAU={F:0.125,S:1.0,V:10.0};                  // constantes de temps (s)
+const TIME_ORDER=['F','S','V'];
+const TIME_LBL={F:'Fast',S:'Slow',V:'V-Slow'};
 const $=id=>document.getElementById(id);
 
 /* ============ Pondérations IEC 61672 ============ */
@@ -462,6 +466,10 @@ function configureAnalyser(){
   }
   S.bandPowF=new Float32Array(S.bands.length);
   S.bandPowS=new Float32Array(S.bands.length);
+  S.bandPowV=new Float32Array(S.bands.length);
+  S.binPowF=new Float32Array(n);
+  S.binPowS=new Float32Array(n);
+  S.binPowV=new Float32Array(n);
   S.bandEnergy=new Float64Array(S.bands.length);
   S.bandPeak=new Float32Array(S.bands.length).fill(-99);
   SG.init=false;
@@ -495,13 +503,17 @@ function computeSpectrum(){
 }
 
 function resetMeasure(){
-  S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0};
+  S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0}; S.pV={A:0,C:0,Z:0};
   S.eq={A:0,C:0,Z:0}; S.eqT=0;
   S.lafMax=-Infinity; S.lafMin=Infinity;
   S.elapsed=0; S.hist=[]; S.histLast=0; S.peakHold=0;
   if(S.bandEnergy)S.bandEnergy.fill(0);
   if(S.bandPowF)S.bandPowF.fill(0);
   if(S.bandPowS)S.bandPowS.fill(0);
+  if(S.bandPowV)S.bandPowV.fill(0);
+  if(S.binPowF)S.binPowF.fill(0);
+  if(S.binPowS)S.binPowS.fill(0);
+  if(S.binPowV)S.binPowV.fill(0);
   if(S.bandPeak)S.bandPeak.fill(-99);
   updateNumbers(-99); drawActive();
 }
@@ -554,24 +566,36 @@ function loop(ts){
   pA*=K; pC*=K; pZ*=K;
   for(let b=0;b<nb;b++)bp[b]*=K;
 
-  const aF=Math.exp(-dt/0.125), aS=Math.exp(-dt/1.0);
+  const aF=Math.exp(-dt/TAU.F), aS=Math.exp(-dt/TAU.S), aV=Math.exp(-dt/TAU.V);
   for(const k of ['A','C','Z']){
     const p=k==='A'?pA:k==='C'?pC:pZ;
     S.pF[k]=aF*S.pF[k]+(1-aF)*p;
     S.pS[k]=aS*S.pS[k]+(1-aS)*p;
+    S.pV[k]=aV*S.pV[k]+(1-aV)*p;
     S.eq[k]+=p*dt;
   }
   S.eqT+=dt;
+  const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
   for(let b=0;b<nb;b++){
     S.bandPowF[b]=aF*S.bandPowF[b]+(1-aF)*bp[b];
     S.bandPowS[b]=aS*S.bandPowS[b]+(1-aS)*bp[b];
+    S.bandPowV[b]=aV*S.bandPowV[b]+(1-aV)*bp[b];
     S.bandEnergy[b]+=bp[b]*dt;
-    const Lb=lvl(S.time==='F'?S.bandPowF[b]:S.bandPowS[b]);
+    const Lb=lvl(pick(S.bandPowF[b],S.bandPowS[b],S.bandPowV[b]));
     if(Lb>S.bandPeak[b])S.bandPeak[b]=Lb; else S.bandPeak[b]-=dt*3;
   }
+  /* lissage du spectre FFT par bin (mêmes constantes) : Fast/Slow/V-Slow agissent aussi sur les bandes fines */
+  for(let i=1;i<n;i++){
+    let p=mag[i]; if(!isFinite(p))p=0;
+    if(S.corr!=='off')p*=S.compGain[i];
+    p*=K;
+    S.binPowF[i]=aF*S.binPowF[i]+(1-aF)*p;
+    S.binPowS[i]=aS*S.binPowS[i]+(1-aS)*p;
+    S.binPowV[i]=aV*S.binPowV[i]+(1-aV)*p;
+  }
 
-  const L=lvl(S.time==='F'?S.pF[S.weight]:S.pS[S.weight]);
-  const LAF=lvl(S.time==='F'?S.pF.A:S.pS.A);
+  const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
+  const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
   if(S.eqT>0.5){ if(LAF>S.lafMax)S.lafMax=LAF; if(LAF<S.lafMin)S.lafMin=LAF; }
   if(L>S.peakHold)S.peakHold=L; else S.peakHold-=dt*2;
 
@@ -668,7 +692,7 @@ function drawSpectrum(){
   if(!S.bands.length){grid(g,w,h,sc,padL,10);return;}
 
   if(S.mode==='toct'){
-    const nb=S.bands.length, pw=S.time==='F'?S.bandPowF:S.bandPowS;
+    const nb=S.bands.length, pw=S.time==='F'?S.bandPowF:S.time==='S'?S.bandPowS:S.bandPowV;
     let dLo=Infinity,dHi=-Infinity;
     for(let b=0;b<nb;b++){
       const L=lvl(pw[b]); if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
@@ -703,15 +727,15 @@ function drawSpectrum(){
     const V0=TF(fmin), V1=TF(fmax);
     const x2=f=>padL+((TF(f)-V0)/(V1-V0))*(w-padL-4);
     const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
+    const binPow=S.time==='F'?S.binPowF:S.time==='S'?S.binPowS:S.binPowV;
     let dLo=Infinity,dHi=-Infinity;
     const pts=[];
     const i0=Math.max(1,Math.floor(fmin/S.binHz)), i1=Math.min(S.fftDb.length-1,Math.ceil(fmax/S.binHz));
     for(let i=i0;i<=i1;i++){
       const f=S.freqs[i];
-      let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
-      if(S.corr!=='off')p*=S.compGain[i];
-      if(wSel)p*=wSel[i];
-      p*=K;
+      let p=binPow?binPow[i]:0;          // déjà lissé, corrigé (corr) et calé (K)
+      if(!isFinite(p))p=0;
+      if(wSel)p*=wSel[i];                // pondération A/C appliquée à l'affichage
       const L=lvl(p); pts.push([x2(f),L]);
       if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
     }
@@ -728,10 +752,9 @@ function drawSpectrum(){
     /* curseur : ligne + fréquence/niveau au bin le plus proche */
     if(S.cursor&&S.cursor.f>=fmin&&S.cursor.f<=fmax&&S.binHz){
       const ic=Math.max(1,Math.min(S.fftDb.length-1,Math.round(S.cursor.f/S.binHz)));
-      let p=Math.pow(10,S.fftDb[ic]/10); if(!isFinite(p))p=0;
-      if(S.corr!=='off')p*=S.compGain[ic];
+      let p=binPow?binPow[ic]:0; if(!isFinite(p))p=0;
       if(wSel)p*=wSel[ic];
-      const L=lvl(p*K), x=x2(S.freqs[ic]);
+      const L=lvl(p), x=x2(S.freqs[ic]);
       g.strokeStyle='#BFE9FF';g.lineWidth=1;g.setLineDash([3,3]);
       g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
       g.fillStyle='#BFE9FF';g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
@@ -1198,7 +1221,7 @@ function ui(){
   $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
   $('mDbScale').querySelector('b').textContent=S.dbAuto?'Auto':'Fixe 20–110';
   $('kWV').textContent=S.weight;
-  $('kTV').textContent=S.time==='F'?'Fast':'Slow';
+  $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':'FFT';
   $('kDurV').textContent=DURL[DURS.indexOf(S.duration)];
   $('kCompV').textContent=S.corr==='off'?'Off':S.corr==='generic'?'Auto':'Profil';
@@ -1337,7 +1360,7 @@ function renderSweep(){
 function bandLevelNow(fc){
   const b=S.bands.indexOf(fc);
   if(b<0)return null;
-  return lvl(S.time==='F'?S.bandPowF[b]:S.bandPowS[b]);
+  return lvl(S.time==='F'?S.bandPowF[b]:S.time==='S'?S.bandPowS[b]:S.bandPowV[b]);
 }
 function sweepBand(fc){
   if(!S.running){alert("Démarre la mesure (▶) avant de calibrer : l'iPhone doit capter la source.");return;}
@@ -1415,7 +1438,7 @@ $('calDo1k').onclick=()=>{
   if(!isFinite(ref)){alert('Référence invalide.');return;}
   const b=S.bands.indexOf(1000);
   if(b<0){alert('Bande 1 kHz indisponible.');return;}
-  const cur=lvl(S.time==='F'?S.bandPowF[b]:S.bandPowS[b]);
+  const cur=lvl(S.time==='F'?S.bandPowF[b]:S.time==='S'?S.bandPowS[b]:S.bandPowV[b]);
   if(cur<=-90){alert('Pas de signal à 1 kHz. Vérifie le calibreur.');return;}
   S.offset+= (ref-cur);
   ui();renderCal();
@@ -1430,7 +1453,7 @@ $('mClrPeak').onclick=function(){clearPeak();flashDone(this);};
 $('mClrAll').onclick=function(){clearSgram();resetMeasure();flashDone(this);};
 
 $('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();drawActive();};
-$('kT').onclick=()=>{S.time=S.time==='F'?'S':'F';ui();drawActive();};
+$('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER.length];ui();drawActive();};
 $('kMode').onclick=()=>{S.mode=S.mode==='toct'?'fft':'toct';ui();drawActive();};
 $('kDur').onclick=()=>{S.duration=DURS[(DURS.indexOf(S.duration)+1)%DURS.length];ui();updateNumbers(-99);};
 
@@ -1489,7 +1512,7 @@ function stopMeasure(auto){
 /* ================= Export CSV ================= */
 $('kCsv').onclick=()=>{
   let csv='SONOMETRE CETIM - export\n';
-  csv+='Ponderation;'+S.weight+';Temps;'+(S.time==='F'?'Fast':'Slow')+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
+  csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
   csv+='LAeq;'+fmt(S.eqT>0?lvl(S.eq.A/S.eqT):-99)+';LCeq;'+fmt(S.eqT>0?lvl(S.eq.C/S.eqT):-99)+';LZeq;'+fmt(S.eqT>0?lvl(S.eq.Z/S.eqT):-99)+';LAFmax;'+fmt(S.lafMax)+';LAFmin;'+fmt(S.lafMin)+'\n\n';
   csv+='SPECTRE Leq (ponderation '+S.weight+')\nfc [Hz];Leq [dB]\n';
   for(let b=0;b<S.bands.length;b++)csv+=S.bands[b]+';'+fmt(S.eqT>0?lvl(S.bandEnergy[b]/S.eqT):-99)+'\n';
