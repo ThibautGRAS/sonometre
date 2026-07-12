@@ -135,7 +135,9 @@
   .curvebox{background:#050F26;border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:5px 6px 2px;position:relative}
   .curvelbl{display:flex;justify-content:space-between;font-size:8.5px;font-weight:700;color:var(--lcd-dim);font-family:var(--mono);padding-bottom:2px}
   .curvelbl span:first-child{color:var(--ice)}
-  #curveCv{width:100%;height:80px;display:block}
+  #curveCv{width:100%;height:80px;display:block;touch-action:none}
+  .calbody{overscroll-behavior:contain}
+  .menu{overscroll-behavior:contain}
 
   .sweepgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
   .scell{background:rgba(79,195,255,.06);border:1px solid rgba(79,195,255,.12);border-radius:6px;padding:4px 2px;text-align:center;cursor:pointer;font-family:var(--mono)}
@@ -1608,7 +1610,11 @@ $('cImport').onclick=()=>{
   };
   inp.click();
 };
-$('offReset').onclick=()=>{S.offset=120.0;ui();renderCal();};
+/* tout changement d'offset s'applique immédiatement : graphes + courbe de calibration */
+function afterOffsetChange(){ui();drawActive();if(S.screen==='cal')renderCal();}
+/* le doigt posé sur la courbe ne doit pas faire défiler le menu de calibration */
+$('curveCv').addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+$('offReset').onclick=()=>{S.offset=120.0;afterOffsetChange();};
 /* calibreur 1 kHz : cale l'offset pour que la lecture large bande = référence à 1 kHz */
 $('calDo1k').onclick=()=>{
   if(!S.running){alert('Démarre la mesure (▶) et présente le calibreur 1 kHz.');return;}
@@ -1619,7 +1625,7 @@ $('calDo1k').onclick=()=>{
   const cur=lvl(S.time==='F'?S.bandPowF[b]:S.time==='S'?S.bandPowS[b]:S.bandPowV[b]);
   if(cur<=-90){alert('Pas de signal à 1 kHz. Vérifie le calibreur.');return;}
   S.offset+= (ref-cur);
-  ui();renderCal();
+  afterOffsetChange();
   alert('Offset calé : '+S.offset.toFixed(1)+' dB (écart corrigé '+(ref-cur>=0?'+':'')+(ref-cur).toFixed(1)+' dB).');
 };
 
@@ -1644,7 +1650,7 @@ function renderCalPop(){
   for(const v of OFFSET_PRESETS){
     const b=document.createElement('button');
     b.textContent=v; if(Math.abs(v-S.offset)<0.01)b.className='on';
-    b.onclick=()=>{S.offset=v;ui();renderCalPop();};
+    b.onclick=()=>{S.offset=v;afterOffsetChange();renderCalPop();};
     g.appendChild(b);
   }
 }
@@ -1658,8 +1664,8 @@ $('cpCorr').onclick=()=>{
   if(S.analyser)configureAnalyser();
   ui();drawActive();renderCalPop();
 };
-$('cpMinus').onclick=()=>{S.offset=Math.round((S.offset-0.5)*2)/2;ui();renderCalPop();};
-$('cpPlus').onclick=()=>{S.offset=Math.round((S.offset+0.5)*2)/2;ui();renderCalPop();};
+$('cpMinus').onclick=()=>{S.offset=Math.round((S.offset-0.5)*2)/2;afterOffsetChange();renderCalPop();};
+$('cpPlus').onclick=()=>{S.offset=Math.round((S.offset+0.5)*2)/2;afterOffsetChange();renderCalPop();};
 $('cpFull').onclick=()=>{$('calPop').classList.remove('on');S.screen='cal';ui();requestAnimationFrame(renderCal);};
 
 $('kReset').onclick=()=>{if(S.running)stopMeasure(false);resetMeasure();$('modeBadge').textContent='PRÊT';$('modeBadge').className='badge';setLocks();};
