@@ -1741,7 +1741,22 @@ function renderDynPop(){
   $('dpInterp').classList.toggle('on',S.sgInterp);
 }
 function openDynPop(){renderDynPop();$('dynPop').classList.add('on');}
-$('kDyn').onclick=openDynPop;
+let dynLong=false,dynT;
+$('kDyn').addEventListener('pointerdown',()=>{
+  dynLong=false;
+  dynT=setTimeout(()=>{
+    dynLong=true;
+    S.dbAuto=true;                       // dB auto
+    S.fview={min:S.fscale==='lin'?0:20,max:Math.min(20000,nyq())};  // fréquence pleine bande
+    S.tview={x0:0,x1:1}; S.histView=null; // temps plein (spectrogramme + évolution)
+    S.cursor=null;
+    ui();drawActive();
+    if($('dynPop').classList.contains('on'))renderDynPop();
+    const b=$('modeBadge'); if(!S.running){b.textContent='ÉCHELLES AUTO';b.className='badge';setTimeout(()=>{if(!S.running){b.textContent='PRÊT';}},1000);}
+  },500);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kDyn').addEventListener(ev,()=>clearTimeout(dynT)));
+$('kDyn').addEventListener('click',()=>{ if(dynLong){dynLong=false;return;} openDynPop(); });
 $('dpClose').onclick=()=>$('dynPop').classList.remove('on');
 $('dynPop').addEventListener('click',e=>{if(e.target.id==='dynPop')$('dynPop').classList.remove('on');});
 function dbStep(which,d){
