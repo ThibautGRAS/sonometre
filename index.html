@@ -199,6 +199,7 @@
       inset 0 -7px 10px rgba(0,0,0,.22),
       inset 0 0 14px rgba(79,195,255,.09);
     transition:transform .05s, box-shadow .05s, filter .09s;
+    will-change:transform,filter;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     font-family:var(--font);
     overflow:hidden;
@@ -222,7 +223,7 @@
   .key .dot{width:6px;height:6px;border-radius:50%;background:#31446e;margin-top:1px}
   .key.lit .dot{background:var(--green);box-shadow:0 0 6px rgba(47,191,131,.9)}
   /* ---- transport universel : ▶ ■ ⏸ ---- */
-  .tico{width:26px;height:26px;display:block;fill:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35)) drop-shadow(0 0 4px rgba(255,255,255,.4))}
+  .tico{width:26px;height:26px;display:block;fill:#fff;transform:translateZ(0);filter:drop-shadow(0 1px 2px rgba(0,0,0,.35)) drop-shadow(0 0 4px rgba(255,255,255,.4))}
   .key-start{
     background:linear-gradient(180deg,#43D97A 0%,#22A855 45%,#137A39 100%);
     box-shadow:0 3px 0 #0A4A22, inset 0 1px 0 rgba(255,255,255,.28);
