@@ -737,8 +737,12 @@ function autoRange(sc,dLo,dHi,minSpan){
   let tLo=Math.floor((dLo-4)/5)*5, tHi=Math.ceil((dHi+4)/5)*5;
   if(tHi-tLo<minSpan){const c=(tHi+tLo)/2; tLo=Math.round((c-minSpan/2)/5)*5; tHi=tLo+minSpan;}
   tLo=Math.max(-10,tLo); tHi=Math.min(140,tHi);
-  sc.lo+=(tLo-sc.lo)*(tLo<sc.lo?0.25:0.02);   // descend vite si dépassement, remonte doucement
-  sc.hi+=(tHi-sc.hi)*(tHi>sc.hi?0.25:0.02);
+  /* expansion immédiate (jamais d'écrêtage), contraction avec ZONE MORTE de 5 dB :
+     de petites fluctuations du max ne font pas trembler l'échelle ni la colorbar */
+  if(tLo<sc.lo)      sc.lo+=(tLo-sc.lo)*0.25;
+  else if(sc.lo<tLo-5) sc.lo+=(tLo-sc.lo)*0.02;
+  if(tHi>sc.hi)      sc.hi+=(tHi-sc.hi)*0.25;
+  else if(sc.hi>tHi+5) sc.hi+=(tHi-sc.hi)*0.02;
   return sc;
 }
 /* ===== transformation d'axe fréquence : log ou linéaire ===== */
@@ -1073,8 +1077,12 @@ function sgBlit(c){
   g.textAlign='right'; g.fillText(ft(agoR),Wr-3*c.dpr,H-4*c.dpr);
   /* ===== COLORBAR dB (jet) à droite ===== */
   {
-    const cbx=Wr+6*c.dpr, cbw=10*c.dpr, cbTop=2, cbBot=Hu;
+    const cbx=Wr+6*c.dpr, cbw=10*c.dpr;
+    const cbTop=Math.round(30*c.dpr), cbBot=Hu;      // démarre sous la pastille d'échelle
     g.fillStyle='#050F26';g.fillRect(Wr,0,padR,H);
+    /* unité en tête de barre */
+    g.fillStyle='#8FB2E8';g.font='bold '+(9*c.dpr)+'px Arial';g.textAlign='center';
+    g.fillText('dB',cbx+cbw/2,cbTop-8*c.dpr);
     const grad=g.createLinearGradient(0,cbTop,0,cbBot);   // haut = max, bas = min
     for(let s=0;s<=10;s++){const t=s/10;const i=Math.round((1-t)*255)*3;
       grad.addColorStop(t,'rgb('+LUT[i]+','+LUT[i+1]+','+LUT[i+2]+')');}
@@ -1084,11 +1092,9 @@ function sgBlit(c){
     const step=(sc.hi-sc.lo)>60?20:(sc.hi-sc.lo)>25?10:5;
     for(let d=Math.ceil(sc.lo/step)*step;d<=sc.hi;d+=step){
       const y=cbTop+(1-(d-sc.lo)/(sc.hi-sc.lo))*(cbBot-cbTop);
+      if(y<cbTop+4*c.dpr||y>cbBot-1)continue;        // pas d'étiquette qui déborde de la barre
       g.fillText(Math.round(d),cbx+cbw+2*c.dpr,y+3*c.dpr);
     }
-    /* libellé "dB" en haut de la colorbar */
-    g.save();g.translate(cbx+cbw+padR*0.62,cbTop+(cbBot-cbTop)/2);g.rotate(Math.PI/2);
-    g.textAlign='center';g.fillStyle='#5F7FB8';g.fillText('dB',0,0);g.restore();
   }
   /* curseur : viseur (pin) = cercle figé sur une zone ; suivi (auto) = ligne pointillée au présent */
   if(S.sgCursor&&S.sgCursor.f){
