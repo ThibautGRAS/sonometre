@@ -202,9 +202,11 @@
     font-family:var(--font);
     overflow:hidden;
   }
-  /* reflet spéculaire diagonal sur le capuchon (comme le biseau de l'écran) */
+  /* reflet vitré, même langage que l'écran : nappe haute avec ligne de cassure + balayage diagonal */
   .key::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
-    background:linear-gradient(118deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.035) 22%, transparent 38%)}
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.15) 0%, rgba(255,255,255,.05) 40%, transparent 45%),
+      linear-gradient(118deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.03) 22%, transparent 38%)}
   .key:active{transform:translateY(2px);
     box-shadow:0 1px 0 #041233, 0 1px 3px rgba(0,0,0,.4),
       inset 0 2px 4px rgba(0,0,0,.35), inset 0 -5px 8px rgba(0,0,0,.2)}
