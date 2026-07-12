@@ -628,8 +628,10 @@ async function refreshMicInfo(){
   }else{
     $('miLabel').textContent='micro non actif'; $('miRate').textContent='—'; $('miCh').textContent='—';
   }
-  /* liste des entrées audio : sélecteur seulement s'il y en a plusieurs (surtout Android) */
+  /* liste des entrées audio : sélecteur seulement s'il y en a plusieurs (surtout Android).
+     enumerateDevices n'acquiert PAS le micro et ne peut pas révoquer la permission. */
   try{
+    if(!navigator.mediaDevices||!navigator.mediaDevices.enumerateDevices){$('miSelRow').style.display='none';return;}
     const devs=await navigator.mediaDevices.enumerateDevices();
     S.micList=devs.filter(d=>d.kind==='audioinput');
     const many=S.micList.length>1 && S.micList.some(d=>d.label);
@@ -900,9 +902,18 @@ async function initAudio(){
 async function acquireMic(){
   if(S.srcNode){try{S.srcNode.disconnect();}catch(e){}}
   if(S.stream){for(const t of S.stream.getTracks()){try{t.stop();}catch(e){}}}
-  const ac={echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1};
-  if(S.micDevId)ac.deviceId={exact:S.micDevId};
-  S.stream=await navigator.mediaDevices.getUserMedia({audio:ac});
+  const base={echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1};
+  /* device demandé en contrainte SOUPLE (ideal) : si indisponible/périmé, iOS prend le défaut
+     au lieu d'échouer avec OverconstrainedError (cause du micro qui ne s'acquiert plus) */
+  try{
+    const ac=Object.assign({},base);
+    if(S.micDevId)ac.deviceId={ideal:S.micDevId};
+    S.stream=await navigator.mediaDevices.getUserMedia({audio:ac});
+  }catch(e){
+    /* dernier recours : acquisition SANS aucune contrainte de device */
+    S.micDevId=null;
+    S.stream=await navigator.mediaDevices.getUserMedia({audio:base});
+  }
   S.srcNode=S.ctx.createMediaStreamSource(S.stream);
   S.srcNode.connect(S.analyser);
   S.lcLastCt=S.ctx.currentTime;                 // évite un saut de bloc dans les filtres temporels
