@@ -291,6 +291,10 @@
           <div class="cell"><div class="k">LZeq</div><div class="v" id="vLZeq">--.-</div></div>
           <div class="cell"><div class="k">LAFmax</div><div class="v red" id="vMax">--.-</div></div>
           <div class="cell"><div class="k">LAFmin</div><div class="v" id="vMin">--.-</div></div>
+          <div class="cell"><div class="k">LCpeak</div><div class="v red" id="vLCpk">--.-</div></div>
+          <div class="cell"><div class="k">L10</div><div class="v" id="vL10">--.-</div></div>
+          <div class="cell"><div class="k">L50</div><div class="v" id="vL50">--.-</div></div>
+          <div class="cell"><div class="k">L90</div><div class="v" id="vL90">--.-</div></div>
           <div class="cell"><div class="k">OFFSET CAL. / COMP</div><div class="v" id="vCal" style="font-size:16px">120.0 dB · off</div></div>
         </div>
       </div>
@@ -452,6 +456,20 @@
     <div class="mnote" style="margin-top:8px">Affichage uniquement — réglable pendant la mesure · pincer à deux doigts reste actif</div>
   </div></div>
 
+  <!-- popover DÉCLENCHEMENT (appui long sur Démarrer) -->
+  <div id="trigPop" class="calpop"><div class="calpop-in">
+    <div class="cp-head">DÉCLENCHEMENT <button id="tpClose">✕</button></div>
+    <div class="cp-lbl">DÉPART DIFFÉRÉ</div>
+    <div class="cp-presets" id="tpDelay"></div>
+    <div class="cp-lbl" style="margin-top:10px">SEUIL DE DÉPART (LAF)</div>
+    <div class="cp-presets" id="tpLevel"></div>
+    <div class="cp-fine">
+      <button id="tpLvlM">−</button><span class="cp-val" id="tpLvlV">70</span><button id="tpLvlP">+</button>
+      <span class="cp-mini" style="flex:1">dB — la mesure démarre au franchissement</span>
+    </div>
+    <div class="mnote" style="margin-top:8px">Ordre : armement micro → décompte → attente du seuil → mesure. Appui court sur ▶ pour lancer.</div>
+  </div></div>
+
 
 <script>
 "use strict";
@@ -472,6 +490,9 @@ const S = {
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true,
+  lcPeak:-Infinity, lcBq:null, lcLastCt:0,            // LCpeak (crête pondérée C, domaine temporel)
+  trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
+  statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
   device:'', corr:'off', corrCurve:null, profiles:[], sweep:null,
   scale:{spec:{lo:30,hi:90}, hist:{lo:30,hi:90}, sgram:{lo:0,hi:60}}
@@ -518,6 +539,42 @@ const FFT_SIZES=[2048,4096,8192,16384,32768];
 const OVERLAPS=[0,0.5,0.75];
 
 /* ===== FFT radix-2 itérative (in-place) ===== */
+/* ===== pondération C dans le domaine TEMPOREL (pour LCpeak) =====
+   C(s) = (2πf4)²·s² / ((s+2πf1)²·(s+2πf4)²), f1=20.599 Hz, f4=12194.22 Hz (IEC 61672),
+   discrétisée en 2 biquads par transformation bilinéaire, normalisée à 1 kHz. */
+function designCWeight(fs){
+  const K=2*fs, w1=2*Math.PI*20.598997;
+  /* pré-warping du pôle HF : la bilinéaire compresse les fréquences près de Nyquist,
+     on décale le pôle analogique pour qu'il tombe juste en numérique */
+  const w4=K*Math.tan(Math.PI*12194.217/fs);
+  const biquad=(b,a)=>({b0:b[0]/a[0],b1:b[1]/a[0],b2:b[2]/a[0],a1:a[1]/a[0],a2:a[2]/a[0],z1:0,z2:0});
+  /* section 1 : s²/(s+w1)²  (double passe-haut) */
+  const d1=[(K+w1)**2, 2*(w1*w1-K*K), (w1-K)**2];
+  const s1=biquad([K*K,-2*K*K,K*K],d1);
+  /* section 2 : w4²/(s+w4)²  (double passe-bas) */
+  const d2=[(K+w4)**2, 2*(w4*w4-K*K), (w4-K)**2];
+  const s2=biquad([w4*w4,2*w4*w4,w4*w4],d2);
+  /* normalisation à 1 kHz (réponse du filtre digital) */
+  const H=(s,f)=>{const w=2*Math.PI*f/fs,c1=Math.cos(w),s_=Math.sin(w);
+    const re=(z)=>z; // eval H(e^{jw}) :
+    const nR=s.b0+s.b1*c1+s.b2*Math.cos(2*w), nI=-s.b1*s_-s.b2*Math.sin(2*w);
+    const dR=1+s.a1*c1+s.a2*Math.cos(2*w),   dI=-s.a1*s_-s.a2*Math.sin(2*w);
+    return Math.hypot(nR,nI)/Math.hypot(dR,dI);};
+  const g=1/(H(s1,1000)*H(s2,1000));
+  s1.b0*=g; s1.b1*=g; s1.b2*=g;
+  return [s1,s2];
+}
+function cFilterRun(bq,x){        // filtre en place (Direct Form II transposée), retourne max|y|
+  let mx=0;
+  const s1=bq[0],s2=bq[1];
+  for(let i=0;i<x.length;i++){
+    let v=x[i];
+    let y=s1.b0*v+s1.z1; s1.z1=s1.b1*v+s1.z2-s1.a1*y; s1.z2=s1.b2*v-s1.a2*y; v=y;
+    y=s2.b0*v+s2.z1; s2.z1=s2.b1*v+s2.z2-s2.a1*y; s2.z2=s2.b2*v-s2.a2*y;
+    const a=Math.abs(y); if(a>mx)mx=a;
+  }
+  return mx;
+}
 /* ===== interpolation parabolique de pic =====
    ajuste une parabole sur (i-1,i,i+1) en dB : exacte pour une fenêtre gaussienne,
    très bonne pour Hann/Blackman. Retourne {f,L} raffinés (fréquence vraie + niveau corrigé). */
@@ -654,6 +711,8 @@ function resetMeasure(){
   S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0}; S.pV={A:0,C:0,Z:0};
   S.eq={A:0,C:0,Z:0}; S.eqT=0;
   S.lafMax=-Infinity; S.lafMin=Infinity;
+  S.lcPeak=-Infinity; S.L10=-99; S.L50=-99; S.L90=-99; S.statT=0;
+  S.delayT=0; S.trigWait=false;
   S.elapsed=0; S.hist=[]; S.histLast=0; S.peakHold=0;
   if(S.bandEnergy)S.bandEnergy.fill(0);
   if(S.bandPowF)S.bandPowF.fill(0);
@@ -761,17 +820,48 @@ function loop(ts){
 
   const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
   const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
+  /* ---- LCpeak : filtre C temporel sur les échantillons nouveaux (état continu) ---- */
+  {
+    if(!S.lcBq&&S.ctx)S.lcBq=designCWeight(S.ctx.sampleRate);
+    if(S.lcBq&&S.tap){
+      const ct=S.ctx.currentTime, fs=S.ctx.sampleRate;
+      let k=Math.round((ct-(S.lcLastCt||ct))*fs); S.lcLastCt=ct;
+      k=Math.max(0,Math.min(S.tap.length,k));
+      if(k>0){
+        const mx=cFilterRun(S.lcBq,S.tap.subarray(S.tap.length-k));
+        if(!warm && S.delayT<=0 && !S.trigWait && mx>0){
+          const Lp=20*Math.log10(mx)+S.offset;
+          if(Lp>S.lcPeak)S.lcPeak=Lp;
+        }
+      }
+    }
+  }
   if(warm){
     /* ARMEMENT : on jette les premières 1,5 s (transitoire de gain iOS + pop d'amorçage).
        Délai fixe = simple et fiable ; l'affichage tourne mais rien n'est intégré. */
     S.warmAge=(S.warmAge||0)+dt;
     if(S.warmAge>=(S.warmMax||1.5)){
       S.warmT=0; S.warmAge=0;
-      S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;
-      ui();
+      S.delayT=S.trigDelay||0;            // phase suivante : départ différé éventuel
+      S.trigWait=!!S.trigLevel;           // puis attente de seuil éventuelle
+      if(S.delayT<=0 && !S.trigWait) beginRun();
     }
     updateNumbers(L); sgTick(); drawActive();
     return;
+  }
+  /* ---- phase DÉPART DIFFÉRÉ : décompte, rien n'est intégré ---- */
+  if(S.delayT>0){
+    S.delayT-=dt;
+    const b=$('modeBadge'); b.textContent='DÉPART DANS '+Math.ceil(S.delayT)+' s'; b.className='badge';
+    if(S.delayT<=0 && !S.trigWait) beginRun();
+    updateNumbers(L); sgTick(); drawActive();
+    return;
+  }
+  /* ---- phase ATTENTE DE SEUIL : démarre quand LAF ≥ seuil ---- */
+  if(S.trigWait){
+    const b=$('modeBadge'); b.textContent='ATTENTE ≥ '+S.trigLevel+' dB'; b.className='badge';
+    if(LAF>=S.trigLevel){ S.trigWait=false; beginRun(); }
+    else { updateNumbers(L); sgTick(); drawActive(); return; }
   }
   if(S.eqT>0.5){ if(LAF>S.lafMax)S.lafMax=LAF; if(LAF<S.lafMin)S.lafMin=LAF; }
   if(L>S.peakHold)S.peakHold=L; else S.peakHold-=dt*2;
@@ -793,6 +883,16 @@ function loop(ts){
 function fmt(v){return (v<=-90||!isFinite(v))?'--.-':v.toFixed(1);}
 function updateNumbers(L){
   $('mainVal').textContent=fmt(L).padStart(5,' ');
+  /* indices statistiques (percentiles du LAF échantillonné à 10 Hz), recalcul 1×/s */
+  const nowS=performance.now();
+  if(S.hist.length>=20 && nowS-S.statT>1000){
+    S.statT=nowS;
+    const v=S.hist.map(p=>p.L).sort((a,b)=>b-a);      // décroissant : L10 = dépassé 10 % du temps
+    const pc=q=>v[Math.min(v.length-1,Math.max(0,Math.round(q*(v.length-1))))];
+    S.L10=pc(0.10); S.L50=pc(0.50); S.L90=pc(0.90);
+  }
+  $('vL10').textContent=fmt(S.L10); $('vL50').textContent=fmt(S.L50); $('vL90').textContent=fmt(S.L90);
+  $('vLCpk').textContent=fmt(S.lcPeak);
   const laeq=S.eqT>0?lvl(S.eq.A/S.eqT):-99, lceq=S.eqT>0?lvl(S.eq.C/S.eqT):-99;
   $('sLAeq').textContent=fmt(laeq); $('sLCeq').textContent=fmt(lceq);
   $('vLAeq').textContent=fmt(laeq); $('vLCeq').textContent=fmt(lceq);
@@ -1379,6 +1479,13 @@ function sgBlit(c){
   }
   g.restore();
   $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(nfmin)+'–'+fmtF(nfmax)+'Hz';
+}
+/* démarre réellement l'intégration : compteurs remis à zéro sur un signal propre */
+function beginRun(){
+  S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;
+  S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;S.lcPeak=-Infinity;
+  S.L10=-99;S.L50=-99;S.L90=-99;S.statT=0;
+  ui();
 }
 /* alimente le spectrogramme (appelé par la boucle même quand un autre écran/menu est affiché) */
 /* cadence réelle des colonnes (ms) et durée couverte par le tampon (s) */
@@ -2238,7 +2345,38 @@ function setTransport(){
   p.setAttribute('aria-label',S.paused?'Reprendre':'Pause');
   p.disabled=!S.running;
 }
+/* ===== menu DÉCLENCHEMENT (appui long sur Démarrer) ===== */
+function renderTrigPop(){
+  const gd=$('tpDelay');gd.innerHTML='';
+  for(const [lbl,val] of [['Off',0],['5 s',5],['10 s',10],['30 s',30]]){
+    const b=document.createElement('button');b.textContent=lbl;
+    if(S.trigDelay===val)b.className='on';
+    b.onclick=()=>{S.trigDelay=val;renderTrigPop();};
+    gd.appendChild(b);
+  }
+  const gl=$('tpLevel');gl.innerHTML='';
+  for(const [lbl,val] of [['Off',null],['60 dB',60],['70 dB',70],['80 dB',80]]){
+    const b=document.createElement('button');b.textContent=lbl;
+    if(S.trigLevel===val)b.className='on';
+    b.onclick=()=>{S.trigLevel=val;renderTrigPop();};
+    gl.appendChild(b);
+  }
+  $('tpLvlV').textContent=S.trigLevel==null?'—':S.trigLevel;
+}
+$('tpClose').onclick=()=>$('trigPop').classList.remove('on');
+$('trigPop').addEventListener('click',e=>{if(e.target.id==='trigPop')$('trigPop').classList.remove('on');});
+$('tpLvlM').onclick=()=>{S.trigLevel=Math.max(30,(S.trigLevel==null?70:S.trigLevel)-5);renderTrigPop();};
+$('tpLvlP').onclick=()=>{S.trigLevel=Math.min(120,(S.trigLevel==null?70:S.trigLevel)+5);renderTrigPop();};
+let startLong=false,startT;
+$('kStart').addEventListener('pointerdown',()=>{
+  startLong=false;
+  if(S.running)return;                          // pas de menu en cours de mesure
+  startT=setTimeout(()=>{startLong=true;renderTrigPop();$('trigPop').classList.add('on');},500);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kStart').addEventListener(ev,()=>clearTimeout(startT)));
 $('kStart').onclick=async function(){
+  if(startLong){startLong=false;return;}       // l'appui long a ouvert le menu, pas de démarrage
+
   if(S.running){stopMeasure(false);return;}
   const coldStart=!S.micReady;                       // micro déjà préchauffé ?
   try{
@@ -2288,7 +2426,8 @@ function stopMeasure(auto){
 $('kCsv').onclick=()=>{
   let csv='SONOMETRE CETIM - export\n';
   csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
-  csv+='LAeq;'+fmt(S.eqT>0?lvl(S.eq.A/S.eqT):-99)+';LCeq;'+fmt(S.eqT>0?lvl(S.eq.C/S.eqT):-99)+';LZeq;'+fmt(S.eqT>0?lvl(S.eq.Z/S.eqT):-99)+';LAFmax;'+fmt(S.lafMax)+';LAFmin;'+fmt(S.lafMin)+'\n\n';
+  csv+='LAeq;'+fmt(S.eqT>0?lvl(S.eq.A/S.eqT):-99)+';LCeq;'+fmt(S.eqT>0?lvl(S.eq.C/S.eqT):-99)+';LZeq;'+fmt(S.eqT>0?lvl(S.eq.Z/S.eqT):-99)+';LAFmax;'+fmt(S.lafMax)+';LAFmin;'+fmt(S.lafMin)+'\n';
+  csv+='LCpeak;'+fmt(S.lcPeak)+';L10;'+fmt(S.L10)+';L50;'+fmt(S.L50)+';L90;'+fmt(S.L90)+'\n\n';
   csv+='SPECTRE Leq (ponderation '+S.weight+')\nfc [Hz];Leq [dB]\n';
   for(let b=0;b<S.bands.length;b++)csv+=S.bands[b]+';'+fmt(S.eqT>0?lvl(S.bandEnergy[b]/S.eqT):-99)+'\n';
   csv+='\nHISTORIQUE (10 Hz)\nt [s];L'+S.weight+S.time+' [dB];L'+S.weight+'eq [dB]\n';
