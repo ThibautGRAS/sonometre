@@ -506,7 +506,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'fft', iirBank:null,            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', iirBank:null,            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -1707,6 +1707,9 @@ function attachZoomPan(id,axis,opts){
         const dX=Math.abs(sprX-anchors.sprX), dY=Math.abs(sprY-anchors.sprY);
         if(Math.max(dX,dY)<8)return;
         pinchAx = opts.yZoom ? (dX>dY?'main':'db') : (dX>dY?'time':'main');
+        if(pinchAx==='main'&&opts.freezeMain&&opts.freezeMain()){
+          if(opts.yZoom&&dY>=4)pinchAx='db'; else {pinchAx=null;return;}   // barres : pas de zoom fréquence
+        }
         pinchMoved=true;
         /* ré-ancrage à l'instant du verrouillage : pas de saut */
         if(pinchAx==='time'){
@@ -1755,6 +1758,7 @@ function attachZoomPan(id,axis,opts){
         else panAx='main';
       }
       if(!moved)return;
+      if(panAx==='main'&&opts.freezeMain&&opts.freezeMain())return;   // barres : figées
       if(panAx==='time'){
         const u=Math.max(0,Math.min(1,uxOf(t,r)));
         applyT(anchB-u*(S.tview.x1-S.tview.x0),S.tview.x1-S.tview.x0);
@@ -1801,6 +1805,7 @@ function attachZoomPan(id,axis,opts){
       const span=(S.tview.x1-S.tview.x0)*(e.deltaY>0?1.15:1/1.15);
       applyT(bx(u)-u*span,span);
     }else{
+      if(opts.freezeMain&&opts.freezeMain())return;                       // barres : figées
       const u=Math.max(0,Math.min(1,uOf(e,r)));
       const span=spanCur(), Vc=Vof(u);
       const ns=span*(e.deltaY>0?1.15:1/1.15);
@@ -1818,6 +1823,7 @@ function attachZoomPan(id,axis,opts){
 
 attachZoomPan('specCv','x',{
   yZoom:true,
+  freezeMain:()=>S.mode!=='fft',      // tiers/octave : barres figées (pas de pan/zoom fréquence)
   onChange:()=>{if(!S.running)drawSpectrum();},
   onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();}
 });
