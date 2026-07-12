@@ -167,7 +167,6 @@
   .key .dot{width:6px;height:6px;border-radius:50%;background:#31446e;margin-top:1px}
   .key.lit .dot{background:var(--green);box-shadow:0 0 6px rgba(47,191,131,.9)}
   .key-start{
-    grid-column:span 2;
     background:linear-gradient(180deg,#FF5A6B 0%,var(--red) 45%,#B21226 100%);
     box-shadow:0 3px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25);
   }
@@ -342,14 +341,12 @@
     <div class="krow">
       <button class="key cfg" id="kDur"><span class="kf">DURÉE</span><span class="kv" id="kDurV">∞</span></button>
       <button class="key cfg" id="kCal" style="grid-column:span 2"><span class="kf">CALIBRATION</span><span class="kv" id="kCalV">Auto · 120.0</span></button>
+      <button class="key" id="kCsv"><span class="kf">EXPORT</span><span class="kv">CSV</span></button>
+    </div>
+    <div class="krow" style="grid-template-columns:1fr 1.4fr 1.4fr">
       <button class="key" id="kReset"><span class="kf">MESURE</span><span class="kv">Réinit</span></button>
-    </div>
-    <div class="krow">
-      <button class="key" id="kCsv" style="grid-column:span 4"><span class="kf">EXPORT</span><span class="kv">CSV</span></button>
-    </div>
-    <div class="krow">
-      <button class="key key-start" id="kStart" style="grid-column:span 2"><span class="kv">▶ DÉMARRER</span></button>
-      <button class="key key-pause" id="kPause" disabled style="grid-column:span 2"><span class="kv">⏸ PAUSE</span></button>
+      <button class="key key-pause" id="kPause" disabled><span class="kv">⏸ PAUSE</span></button>
+      <button class="key key-start" id="kStart"><span class="kv">▶ DÉMARRER</span></button>
     </div>
   </div>
 
@@ -1338,7 +1335,8 @@ function ui(){
   $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':'FFT';
   $('kDurV').textContent=DURL[DURS.indexOf(S.duration)];
-  $('kCalV').textContent=(S.corr==='off'?'Off':S.corr==='generic'?'Auto':'Profil')+' · '+S.offset.toFixed(1);
+  const offd=Math.abs(S.offset-120.0)>=0.05;
+  $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
   $('vCal').textContent=S.offset.toFixed(1)+' dB · '+(S.corr==='off'?'sans corr.':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'));
   $('led').classList.toggle('on',S.running&&!S.paused);
   const badge=$('modeBadge');
@@ -1419,18 +1417,22 @@ function drawCurve(){
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   const w=r.width,h=r.height,padL=22,padB=12;
   g.fillStyle='#050F26';g.fillRect(0,0,w,h);
-  // courbe active
+  // courbe active + écart d'offset par rapport à la référence usine (120 dB)
+  const OFF0=120.0, off=S.offset-OFF0;
+  const hasOff=Math.abs(off)>=0.05;
   const curve = S.corr==='profile'&&S.corrCurve ? S.corrCurve
               : S.corr==='generic' ? (GENERIC[S.device]||GENERIC.iphone)
               : null;
-  $('curveTitle').textContent = S.corr==='profile'?('Profil : '+(S.corrName||'—'))
+  const offTxt=(off>=0?'+':'')+off.toFixed(1)+' dB';
+  $('curveTitle').textContent = (S.corr==='profile'?('Profil : '+(S.corrName||'—'))
                               : S.corr==='generic'?('Générique '+S.device)
-                              : 'Aucune correction active';
+                              : 'Sans courbe')
+                              + (hasOff?' · offset recalé '+offTxt:'');
   const fmin=20,fmax=20000;
   const x2=f=>padL+(Math.log(f/fmin)/Math.log(fmax/fmin))*(w-padL-4);
-  // bornes dB dynamiques
-  let gmin=-3,gmax=3;
-  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){if(v<gmin)gmin=v;if(v>gmax)gmax=v;}}
+  // bornes dB dynamiques : incluent la courbe TOTALE (courbe + offset)
+  let gmin=Math.min(-3,off-1),gmax=Math.max(3,off+1);
+  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){if(v+off<gmin)gmin=v+off;if(v+off>gmax)gmax=v+off;}}
   gmin=Math.floor((gmin-1)/2)*2; gmax=Math.ceil((gmax+1)/2)*2;
   const y2=v=>(1-(v-gmin)/(gmax-gmin))*(h-padB-2)+2;
   // grille + libellés
@@ -1439,22 +1441,30 @@ function drawCurve(){
   for(let v=gmin;v<=gmax;v+= (gmax-gmin)>12?4:2){const y=y2(v);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText((v>0?'+':'')+v,padL-2,y+2.5);}
   // ligne 0 dB accentuée
   g.strokeStyle='rgba(127,216,255,.35)';g.beginPath();g.moveTo(padL,y2(0));g.lineTo(w-2,y2(0));g.stroke();
-  g.textAlign='center';g.fillStyle='#5F7FB8';
+  // ligne pointillée = décalage d'offset seul (recalage 1 kHz / ±0,5)
+  if(hasOff){
+    g.strokeStyle='#FFB454';g.setLineDash([4,3]);g.beginPath();g.moveTo(padL,y2(off));g.lineTo(w-2,y2(off));g.stroke();g.setLineDash([]);
+    g.fillStyle='#FFB454';g.textAlign='left';g.font='bold 7.5px Arial';
+    g.fillText('offset '+offTxt,padL+3,y2(off)-3);
+  }
+  g.textAlign='center';g.fillStyle='#5F7FB8';g.font='7px Arial';
   for(const f of [31.5,125,500,2000,8000]){g.fillText(f>=1000?(f/1000)+'k':f,x2(f),h-3);}
-  if(!curve){g.fillStyle='#5F7FB8';g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);return;}
-  // courbe (interpolée log, comme appliquée réellement)
+  if(!curve&&!hasOff){g.fillStyle='#5F7FB8';g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);$('curveRange').textContent=gmin+'…+'+gmax+' dB';return;}
+  // courbe TOTALE effective (fréquentielle + offset), telle qu'appliquée réellement
   g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.6;
   let st=false;
   for(let px=padL;px<=w-2;px+=2){
     const f=fmin*Math.pow(fmax/fmin,(px-padL)/(w-padL-4));
-    const y=y2(interpCurve(curve,f));
+    const y=y2((curve?interpCurve(curve,f):0)+off);
     st?g.lineTo(px,y):g.moveTo(px,y);st=true;
   }
   g.stroke();
-  // points de mesure du profil
-  const fc=curve.fc, gg=curve.g||curve.gain_dB;
-  g.fillStyle='#7FE9B8';
-  for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(gg[i]),2.2,0,7);g.fill();}}
+  // points de mesure du profil (positionnés sur la courbe totale)
+  if(curve){
+    const fc=curve.fc, gg=curve.g||curve.gain_dB;
+    g.fillStyle='#7FE9B8';
+    for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(gg[i]+off),2.2,0,7);g.fill();}}
+  }
   $('curveRange').textContent=gmin+'…+'+gmax+' dB';
 }
 function renderSweep(){
