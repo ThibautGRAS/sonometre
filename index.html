@@ -189,9 +189,6 @@ if('serviceWorker' in navigator){
   .calhead{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--ice);font-weight:700;flex:0 0 auto;padding-bottom:5px}
   .calx{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--lcd-dim);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer}
   .calbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:4px;padding-right:2px}
-  .micinfo{background:rgba(79,195,255,.06);border:1px solid rgba(79,195,255,.16);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;gap:3px}
-  .microw{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8fa3c4}
-  .microw b{color:#DCE9FF;font-family:var(--mono);font-weight:700;font-size:12px;text-align:right;max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .calbody::-webkit-scrollbar{width:3px}.calbody::-webkit-scrollbar-thumb{background:rgba(79,195,255,.3);border-radius:2px}
   .msub{font-size:9px;letter-spacing:.12em;color:var(--lcd-dim);font-weight:700;padding:6px 2px 2px}
   .crow2{display:flex;gap:5px;align-items:center}
@@ -309,7 +306,7 @@ if('serviceWorker' in navigator){
   .cp-ok{width:64px;height:42px;border-radius:10px;border:1px solid rgba(47,191,131,.45);background:rgba(47,191,131,.15);color:#9EF0C9;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)}
   .cp-full{width:100%;background:rgba(47,191,131,.14);border:1px solid rgba(47,191,131,.4);color:#9EF0C9;border-radius:10px;padding:12px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
 
-  #err{display:none;position:absolute;left:12px;right:12px;top:12px;z-index:9;background:#B21226;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5);white-space:pre-line}
+  #err{display:none;position:absolute;left:12px;right:12px;top:12px;z-index:9;background:#B21226;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5)}
   @media (prefers-reduced-motion:reduce){.badge.rec::before{animation:none}}
 </style>
 </head>
@@ -411,14 +408,6 @@ if('serviceWorker' in navigator){
             <button class="calx" id="calClose">✕ fermer</button>
           </div>
           <div class="calbody">
-            <div class="msub">MICRO ACTIF</div>
-            <div class="micinfo" id="micInfo">
-              <div class="microw"><span>Entrée</span><b id="miLabel">—</b></div>
-              <div class="microw"><span>Échantillonnage</span><b id="miRate">—</b></div>
-              <div class="microw"><span>Canaux</span><b id="miCh">—</b></div>
-            </div>
-            <div class="mrow" id="miSelRow" style="display:none"><span>Choisir l'entrée</span><b id="miSelV">auto</b></div>
-            <div class="mnote" id="miNote" style="margin-bottom:6px">iOS n'expose en général qu'une entrée et choisit le micro automatiquement.</div>
             <div class="mrow" id="cGeneric"><span>Mode générique auto</span><b id="cGenV">activer</b></div>
             <div class="mrow" id="cProfSel"><span>Profil chargé</span><b id="cProfV">aucun</b></div>
             <div class="curvebox">
@@ -599,7 +588,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null, theme:'marine', micDevId:null, micList:[],            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', iirBank:null, theme:'marine',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -617,43 +606,6 @@ const GENERIC={
 };
 function COMP_F_DEF(){return [20,25,31.5,40,50,63,80,100,125,160,200,1000,5000,6300,8000,10000,12500,16000];}
 function COMP_G_DEF(){return [12,10,8,6,4.5,3,2,1.2,0.7,0.3,0,0,0,-0.5,-1.5,-2.5,-3,-2];}
-async function refreshMicInfo(){
-  const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
-  if(tr){
-    const st=tr.getSettings?tr.getSettings():{};
-    $('miLabel').textContent = tr.label || 'Micro (nom masqué)';
-    const rate = st.sampleRate || (S.ctx&&S.ctx.sampleRate) || 0;
-    $('miRate').textContent = rate ? (rate/1000).toFixed(1).replace('.0','')+' kHz' : '—';
-    $('miCh').textContent = st.channelCount ? (st.channelCount===1?'1 (mono)':st.channelCount) : '1 (mono)';
-  }else{
-    $('miLabel').textContent='micro non actif'; $('miRate').textContent='—'; $('miCh').textContent='—';
-  }
-  /* liste des entrées audio : sélecteur seulement s'il y en a plusieurs (surtout Android).
-     enumerateDevices n'acquiert PAS le micro et ne peut pas révoquer la permission. */
-  try{
-    if(!navigator.mediaDevices||!navigator.mediaDevices.enumerateDevices){$('miSelRow').style.display='none';return;}
-    const devs=await navigator.mediaDevices.enumerateDevices();
-    S.micList=devs.filter(d=>d.kind==='audioinput');
-    const many=S.micList.length>1 && S.micList.some(d=>d.label);
-    $('miSelRow').style.display = many?'flex':'none';
-    if(many){
-      const cur=S.micList.find(d=>d.deviceId===S.micDevId);
-      $('miSelV').textContent = cur? (cur.label.length>18?cur.label.slice(0,18)+'…':cur.label) : 'auto';
-      $('miNote').textContent='Plusieurs entrées détectées : touche pour changer de micro.';
-    }else{
-      $('miNote').textContent="iOS n'expose en général qu'une entrée et choisit le micro automatiquement.";
-    }
-  }catch(e){ $('miSelRow').style.display='none'; }
-}
-/* rotation entre les entrées disponibles (Android surtout) */
-$('miSelRow') && ($('miSelRow').onclick=async ()=>{
-  if(S.micList.length<2)return;
-  const ids=S.micList.map(d=>d.deviceId);
-  const i=ids.indexOf(S.micDevId);
-  S.micDevId = ids[(i+1)%ids.length];
-  try{ await acquireMic(); }catch(e){}
-  refreshMicInfo();
-});
 function detectDevice(){
   const u=navigator.userAgent||'';
   if(/iPhone/.test(u))return 'iphone';
@@ -902,18 +854,9 @@ async function initAudio(){
 async function acquireMic(){
   if(S.srcNode){try{S.srcNode.disconnect();}catch(e){}}
   if(S.stream){for(const t of S.stream.getTracks()){try{t.stop();}catch(e){}}}
-  const base={echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1};
-  /* device demandé en contrainte SOUPLE (ideal) : si indisponible/périmé, iOS prend le défaut
-     au lieu d'échouer avec OverconstrainedError (cause du micro qui ne s'acquiert plus) */
-  try{
-    const ac=Object.assign({},base);
-    if(S.micDevId)ac.deviceId={ideal:S.micDevId};
-    S.stream=await navigator.mediaDevices.getUserMedia({audio:ac});
-  }catch(e){
-    /* dernier recours : acquisition SANS aucune contrainte de device */
-    S.micDevId=null;
-    S.stream=await navigator.mediaDevices.getUserMedia({audio:base});
-  }
+  S.stream=await navigator.mediaDevices.getUserMedia({audio:{
+    echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1
+  }});
   S.srcNode=S.ctx.createMediaStreamSource(S.stream);
   S.srcNode.connect(S.analyser);
   S.lcLastCt=S.ctx.currentTime;                 // évite un saut de bloc dans les filtres temporels
@@ -2447,7 +2390,6 @@ function renderCal(){
   $('cGenV').textContent=S.corr==='generic'?'actif ✓':'activer';
   $('cProfV').textContent=S.corr==='profile'?(S.corrName||'chargé'):(S.profiles.length?S.profiles.length+' dispo.':'aucun');
   const ov=$('offView'); if(ov)ov.textContent='Offset actuel : '+S.offset.toFixed(1)+' dB';
-  refreshMicInfo();
   renderSweep();
   drawCurve();
 }
@@ -2725,21 +2667,8 @@ $('kStart').onclick=async function(){
       for(let i=0;i<8;i++){S.analyser.getFloatTimeDomainData(tmp);await new Promise(r=>setTimeout(r,20));}}
   }catch(e){
     const el=$('err');el.style.display='block';
-    let msg;
-    switch(e&&e.name){
-      case 'NotAllowedError': case 'SecurityError':
-        msg="Micro BLOQUÉ pour ce site. Touche « aA » à gauche de l'adresse ▸ Réglages du site ▸ Microphone ▸ Autoriser, puis recharge. (Si raccourci écran d'accueil : supprime-le, autorise dans Safari, recrée-le.)"; break;
-      case 'NotFoundError': case 'OverconstrainedError':
-        msg="Aucun micro disponible"+(S.micDevId?" avec l'entrée choisie. Reviens en entrée « auto » dans Calibration.":"."); 
-        if(S.micDevId){S.micDevId=null;} break;
-      case 'NotReadableError':
-        msg="Micro occupé par une autre app (appel, autre onglet). Ferme-la et réessaie."; break;
-      default:
-        msg="Micro indisponible ("+(e&&e.name||'?')+" · "+(e&&e.message||'')+"). Vérifie l'autorisation micro et l'accès HTTPS.";
-    }
-    el.textContent=msg;
-    setMicStat('off');
-    setTimeout(()=>el.style.display='none',9000);
+    el.textContent="Micro refusé ou indisponible. Autorise le micro (Réglages ▸ Safari ▸ Micro) et ouvre la page en HTTPS. ("+e.message+")";
+    setTimeout(()=>el.style.display='none',6000);
     return;
   }
   S.micReady=true;
@@ -2780,11 +2709,7 @@ function buildCsv(){
   let csv='SONOMETRE CETIM - export\n';
   csv+='Date;'+new Date().toLocaleString('fr-FR')+';Duree [s];'+(S.eqT>0?S.eqT.toFixed(1):'0')+'\n';
   csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
-  const _tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
-  const _mic=_tr&&_tr.label?_tr.label:'micro';
-  const _rate=(S.ctx&&S.ctx.sampleRate)?Math.round(S.ctx.sampleRate)+' Hz':'?';
-  csv+='FFT;'+S.fftN+';Fenetre;'+S.win+';Overlap;'+Math.round(S.overlap*100)+'%;Tiers d octave;'+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+'\n';
-  csv+='Micro;'+_mic+';Echantillonnage;'+_rate+'\n\n';
+  csv+='FFT;'+S.fftN+';Fenetre;'+S.win+';Overlap;'+Math.round(S.overlap*100)+'%;Tiers d octave;'+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+'\n\n';
   const laeq=S.eqT>0?lvl(S.eq.A/S.eqT):-99, lceq=S.eqT>0?lvl(S.eq.C/S.eqT):-99, lzeq=S.eqT>0?lvl(S.eq.Z/S.eqT):-99;
   csv+='INDICES\n';
   csv+='LAeq;'+fmt(laeq)+';LCeq;'+fmt(lceq)+';LZeq;'+fmt(lzeq)+'\n';
@@ -2910,38 +2835,6 @@ function setMicStat(state){
   el.classList.remove('off','ready','prep');
   el.classList.add(state);
 }
-/* toucher l'icône micro : rapport de diagnostic COMPLET + tentative d'activation dans le geste */
-async function micDiagnostic(){
-  const box=$('err'); box.style.display='block'; box.style.textAlign='left';
-  const L=[];
-  L.push('DIAGNOSTIC MICRO');
-  L.push('• Contexte sécurisé (HTTPS): '+(window.isSecureContext?'oui':'NON → micro impossible'));
-  L.push('• getUserMedia dispo: '+(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia?'oui':'NON'));
-  // permission déclarée par l'OS
-  let perm='inconnue';
-  try{ if(navigator.permissions){ const p=await navigator.permissions.query({name:'microphone'}); perm=p.state; } }catch(e){ perm='non interrogeable (Safari)'; }
-  L.push('• Permission OS: '+perm);
-  L.push('• AudioContext: '+(S.ctx?S.ctx.state:'non créé'));
-  const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
-  L.push('• Piste: '+(tr?(tr.readyState+(tr.muted?' / MUETTE':' / ok')):'aucune'));
-  box.textContent=L.join('\n');
-  // tentative d'activation immédiate (on est dans le geste)
-  try{
-    if(!S.ctx)await initAudio(); else await reviveMic(true);
-    if(micAlive()){ setMicStat('ready'); box.textContent=L.join('\n')+'\n→ MICRO ACTIVÉ ✓ '+((S.stream.getAudioTracks()[0]||{}).label||''); }
-    else { setMicStat('off'); box.textContent=L.join('\n')+'\n→ échec. Si permission=denied: « aA » ▸ Réglages du site ▸ Microphone ▸ Autoriser, recharge.'; }
-  }catch(e){
-    setMicStat('off');
-    box.textContent=L.join('\n')+'\n→ ERREUR: '+(e&&e.name||'?')+' '+(e&&e.message||'')
-      +(e&&e.name==='NotAllowedError'?'\n(Permission bloquée: « aA » ▸ Réglages du site ▸ Microphone ▸ Autoriser)':'');
-  }
-  clearTimeout(micDiagnostic._t); micDiagnostic._t=setTimeout(()=>{box.style.display='none';box.style.textAlign='';},12000);
-}
-(function(){
-  const el=$('micStat'); if(!el)return;
-  el.style.cursor='pointer';
-  el.addEventListener('click',micDiagnostic);
-})();
 function armStart(){
   const k=$('kStart');
   if(S.micReady){k.classList.remove('mic-wait');k.disabled=false;}
