@@ -33,6 +33,7 @@ if('serviceWorker' in navigator){
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
   html,body{height:100%}
+  html{background:var(--face2);background:#001238}
   :root{
     --face0:#0C2760; --face1:var(--navy); --face2:#001238;   /* robe du boîtier */
     --ink:#DCE9FF;                                            /* texte façade (entête) */
@@ -65,7 +66,7 @@ if('serviceWorker' in navigator){
     --ice:#0F380F; --red:#8B2C2C;
     --lcd-bg:#9BBC0F; --lcd-bg2:#8BAC0F; --lcd-solid:#9BBC0F;
     --lcd-ink:#0F380F; --lcd-dim:#306230; --lcd-grid:rgba(15,56,15,.22); --lcd-gridline:rgba(15,56,15,.22);
-    --lcd-axis:#306230; --lcd-title:#0F380F; --logo-fill:#0F380F; --cap0:#5A6066; --cap1:#3B4046; --cap-dot:rgba(20,25,30,.35);
+    --lcd-axis:#306230; --lcd-title:#0F380F; --logo-fill:#12234B; --cap0:#5A6066; --cap1:#3B4046; --cap-dot:rgba(20,25,30,.35);
     --key-top:#4E545C; --key-mid:#3B4046; --key-bot:#2A2E34; --key-edge:#16181C; --key-lbl:#9BBC0F; --key-txt:#B8D000;
     --plot-bar-lo:#306230; --plot-bar-mid:#1E4D1E; --plot-bar-hi:#0F380F;
     --plot-line:#0F380F; --plot-line-eq:#8B2C2C; --plot-peak:#0F380F; --plot-cursor:#0F380F}
@@ -328,7 +329,8 @@ if('serviceWorker' in navigator){
   .helpbody ul{margin:0 0 8px;padding-left:18px}
   .helpbody li{font-size:12.5px;line-height:1.5;color:#C9D9F2;margin-bottom:3px}
   .helpbody b{color:#EAF4FF}
-  .helpfoot{margin-top:14px;padding-top:10px;border-top:1px solid rgba(79,195,255,.14);font-size:10px;letter-spacing:.1em;color:#5F7FB8;text-align:center}
+  .helpfoot{margin-top:14px;padding-top:10px;border-top:1px solid rgba(79,195,255,.14);font-size:10px;letter-spacing:.1em;color:#5F7FB8;text-align:center;line-height:1.6}
+  .mcredit{margin-top:10px;padding-top:10px;text-align:center;font-size:10px;letter-spacing:.08em;color:var(--lcd-dim);line-height:1.6;opacity:.8}
   .calpop-in{width:100%;max-width:520px;background:linear-gradient(180deg,#0A1F42,#050F26);border:1px solid rgba(79,195,255,.2);border-radius:16px 16px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom) + 16px);box-shadow:0 -8px 30px rgba(0,0,0,.5)}
   .cp-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.14em;color:var(--ice);font-weight:700;padding-bottom:10px}
   .cp-head button{background:rgba(255,255,255,.08);border:0;color:#fff;border-radius:8px;width:30px;height:30px;font-size:14px;cursor:pointer}
@@ -443,6 +445,7 @@ if('serviceWorker' in navigator){
           <div class="mrow act" id="mClrPeak"><span>Effacer max / min / peak-hold</span><b>⌫</b></div>
           <div class="mrow act red" id="mClrAll"><span>Tout effacer (remise à zéro)</span><b>⌫</b></div>
           <div class="mrow act red" id="mResetPrefs"><span>Réinitialiser les paramètres</span><b>↺</b></div>
+          <div class="mcredit">Sonomètre CETIM · Thibaut Gras · 2026<br>thibaut.gras@cetim.fr</div>
           <div class="mnote">FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s · faire défiler pour voir toutes les options</div>
         </div>
       </div>
@@ -669,7 +672,7 @@ if('serviceWorker' in navigator){
       <h3 class="warn">Précision — à lire</h3>
       <p>Un smartphone n'est pas un instrument certifié. Sans calibration, l'application est fiable en <b>relatif</b> (comparaisons, spectres). Avec calibration au calibreur, elle s'approche d'un sonomètre de classe sur une plage donnée, mais ne peut pas revendiquer une conformité de classe 1 ou 2. À mentionner dans tout rapport.</p>
 
-      <div class="helpfoot">CETIM · Sonomètre — aide intégrée</div>
+      <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
   </div></div>
 
@@ -2354,6 +2357,11 @@ function resetPrefs(){
 function applyTheme(){
   document.body.classList.remove('th-acier','th-clair','th-oled','th-gameboy');
   if(S.theme!=='marine')document.body.classList.add('th-'+S.theme);
+  // le fond de la page (html) suit la robe du thème : pas de barre claire en bas (PWA)
+  try{
+    const face2=getComputedStyle(document.body).getPropertyValue('--face2').trim();
+    if(face2)document.documentElement.style.background=face2;
+  }catch(e){}
   if(typeof refreshTheme==='function'){refreshTheme(); if(typeof drawActive==='function')drawActive(true);}
 }
 $('hHelp').onclick=()=>{ $('helpPop').classList.add('on'); };
