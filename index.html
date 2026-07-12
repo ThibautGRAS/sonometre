@@ -1028,14 +1028,22 @@ async function reviveMic(fromGesture){
   setMicStat(ok?'ready':'off');
   return ok;
 }
+function goBackground(label){
+  if(S.running&&!S.paused){
+    S.paused=true; setTransport();
+    const b=$('modeBadge'); if(b){b.textContent=(label||'ARRIÈRE-PLAN')+' · PAUSE'; b.className='badge';}
+    setMicStat('off');
+    if(typeof ui==='function')ui();
+  }
+}
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible') setTimeout(reviveMic,250);
-  else if(S.running&&!S.paused){ /* iOS suspendra : on fige proprement */ 
-    S.paused=true; setTransport();
-    const b=$('modeBadge'); b.textContent='ARRIÈRE-PLAN · PAUSE'; b.className='badge';
-  }
+  else goBackground('ARRIÈRE-PLAN');
 });
 window.addEventListener('pageshow',()=>setTimeout(reviveMic,250));
+window.addEventListener('pagehide',()=>goBackground('ARRIÈRE-PLAN'));
+window.addEventListener('blur',()=>{ if(document.hidden||document.visibilityState==='hidden') goBackground('ARRIÈRE-PLAN'); });
+document.addEventListener('freeze',()=>goBackground('ARRIÈRE-PLAN'));   // Page Lifecycle API
 /* calcule le spectre courant (magnitude puissance par bin) avec la fenêtre choisie */
 function computeSpectrum(){
   const N=S.fftN, tap=S.tap, an=S.analyser;
@@ -1088,6 +1096,14 @@ function loop(ts){
   if(!S.lastT){S.lastT=ts;return;}
   const dt=Math.min(0.2,(ts-S.lastT)/1000); S.lastT=ts;
   if(S.paused)return;
+  /* filet de sécurité : si on est censé mesurer mais que le micro n'est plus vivant
+     (arrière-plan, écran verrouillé, appel…), on met en pause au lieu d'intégrer du vide */
+  if(S.running && !micAlive()){
+    S.paused=true; setTransport();
+    const b=$('modeBadge'); if(b){b.textContent='MICRO INDISPONIBLE · PAUSE'; b.className='badge';}
+    setMicStat('off');
+    return;
+  }
   /* préchauffage micro : iOS ajuste son gain d'entrée et émet un transitoire (pop) au démarrage,
      qui peut durer ~1 s. On reste en préchauffage tant que le niveau n'est pas STABILISÉ,
      avec un minimum de 0,8 s et un maximum de 3 s de sécurité. Rien n'est intégré pendant ce temps. */
