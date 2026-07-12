@@ -1534,10 +1534,16 @@ function attachZoomPan(id,axis,opts){
     if(mode==='pinch'&&!pinchMoved&&e.touches.length===0&&opts.onTap2){
       opts.onTap2();                       // tap deux doigts immobile
     }else if(mode==='pan'&&!moved&&opts.onTap){
-      const u=(anchV-TF(Math.max(F_LOW(),S.fview.min)))/spanCur();
       const r=cv.getBoundingClientRect();
-      const uxpos=Math.max(0,Math.min(1,((sX-r.left)-26)/Math.max(1,r.width-26-padR-4)));  // position horizontale (0..1)
-      opts.onTap(TFi(anchV),axis==='x'?u:1-u,uxpos);   // fréquence + position temps du tap
+      /* position brute NON clampée : un tap hors du tracé (marge gauche, colorbar,
+         axe du bas, bande du haut) est IGNORÉ au lieu de déplacer le curseur */
+      const rawUx=((sX-r.left)-26)/Math.max(1,r.width-26-padR-4);
+      const ry=sY-r.top;
+      const inPlot = rawUx>=0 && rawUx<=1 && ry>=14 && ry<=r.height-13;
+      if(inPlot){
+        const u=(anchV-TF(Math.max(F_LOW(),S.fview.min)))/spanCur();
+        opts.onTap(TFi(anchV),axis==='x'?u:1-u,rawUx);   // fréquence + position temps du tap
+      }
     }
     if(e.touches.length===0){mode=null;anchors=null;}
   });
@@ -1637,6 +1643,19 @@ attachZoomPan('specCv','x',{
 attachZoomPan('sgramCv','y',{time:true,padR:30,
   onChange:()=>{if(!S.running||S.paused)drawSgram();},
   onTap:(f,uy,ux)=>{                        // un doigt : viseur figé sur le max local d'une zone
+    /* tap SUR le curseur existant (±5 % du cadre) = le fermer */
+    if(S.sgCursor&&S.sgCursor.col!=null&&SG.Wp>1){
+      const colFrac=S.sgCursor.col/(SG.Wp-1);
+      const uxCur=(colFrac-S.tview.x0)/Math.max(1e-6,S.tview.x1-S.tview.x0);
+      const V0=TF(Math.max(F_LOW(),S.fview.min)), V1=TF(Math.min(S.fview.max,nyq()));
+      const uyCur=(TF(S.sgCursor.f)-V0)/Math.max(1e-6,V1-V0);
+      const uyTap=(TF(f)-V0)/Math.max(1e-6,V1-V0);
+      if(Math.abs(ux-uxCur)<0.05 && Math.abs(uyTap-uyCur)<0.05){
+        S.sgCursor=null;
+        if(!S.running||S.paused)drawSgram();
+        return;
+      }
+    }
     pinCursorAt(f,ux);
     if(!S.running||S.paused)drawSgram();
   },
