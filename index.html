@@ -2714,8 +2714,21 @@ $('kStart').onclick=async function(){
       for(let i=0;i<8;i++){S.analyser.getFloatTimeDomainData(tmp);await new Promise(r=>setTimeout(r,20));}}
   }catch(e){
     const el=$('err');el.style.display='block';
-    el.textContent="Micro refusé ou indisponible. Autorise le micro (Réglages ▸ Safari ▸ Micro) et ouvre la page en HTTPS. ("+e.message+")";
-    setTimeout(()=>el.style.display='none',6000);
+    let msg;
+    switch(e&&e.name){
+      case 'NotAllowedError': case 'SecurityError':
+        msg="Micro BLOQUÉ pour ce site. Touche « aA » à gauche de l'adresse ▸ Réglages du site ▸ Microphone ▸ Autoriser, puis recharge. (Si raccourci écran d'accueil : supprime-le, autorise dans Safari, recrée-le.)"; break;
+      case 'NotFoundError': case 'OverconstrainedError':
+        msg="Aucun micro disponible"+(S.micDevId?" avec l'entrée choisie. Reviens en entrée « auto » dans Calibration.":"."); 
+        if(S.micDevId){S.micDevId=null;} break;
+      case 'NotReadableError':
+        msg="Micro occupé par une autre app (appel, autre onglet). Ferme-la et réessaie."; break;
+      default:
+        msg="Micro indisponible ("+(e&&e.name||'?')+" · "+(e&&e.message||'')+"). Vérifie l'autorisation micro et l'accès HTTPS.";
+    }
+    el.textContent=msg;
+    setMicStat('off');
+    setTimeout(()=>el.style.display='none',9000);
     return;
   }
   S.micReady=true;
@@ -2886,6 +2899,27 @@ function setMicStat(state){
   el.classList.remove('off','ready','prep');
   el.classList.add(state);
 }
+/* toucher l'icône micro (surtout quand elle est rouge) : tente d'activer et explique l'état */
+(function(){
+  const el=$('micStat'); if(!el)return;
+  el.style.cursor='pointer';
+  el.addEventListener('click',async ()=>{
+    const box=$('err');
+    try{
+      if(!S.ctx)await initAudio(); else await reviveMic(true);
+      if(micAlive()){ setMicStat(S.running?'ready':'ready'); box.style.display='block';
+        box.textContent='Micro actif ✓ ('+((S.stream.getAudioTracks()[0]||{}).label||'entrée')+')'; setTimeout(()=>box.style.display='none',3000); }
+      else { setMicStat('off'); box.style.display='block';
+        box.textContent="Micro non actif. S'il ne demande jamais l'autorisation : elle est bloquée. Touche « aA » ▸ Réglages du site ▸ Microphone ▸ Autoriser, puis recharge."; setTimeout(()=>box.style.display='none',9000); }
+    }catch(e){
+      setMicStat('off'); box.style.display='block';
+      box.textContent=(e&&e.name==='NotAllowedError')
+        ? "Micro BLOQUÉ. Touche « aA » ▸ Réglages du site ▸ Microphone ▸ Autoriser, puis recharge."
+        : "Micro indisponible ("+(e&&e.name||'?')+").";
+      setTimeout(()=>box.style.display='none',9000);
+    }
+  });
+})();
 function armStart(){
   const k=$('kStart');
   if(S.micReady){k.classList.remove('mic-wait');k.disabled=false;}
