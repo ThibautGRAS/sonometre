@@ -189,6 +189,9 @@ if('serviceWorker' in navigator){
   .calhead{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--ice);font-weight:700;flex:0 0 auto;padding-bottom:5px}
   .calx{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--lcd-dim);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer}
   .calbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:4px;padding-right:2px}
+  .micinfo{background:rgba(79,195,255,.06);border:1px solid rgba(79,195,255,.16);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;gap:3px}
+  .microw{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8fa3c4}
+  .microw b{color:#DCE9FF;font-family:var(--mono);font-weight:700;font-size:12px;text-align:right;max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .calbody::-webkit-scrollbar{width:3px}.calbody::-webkit-scrollbar-thumb{background:rgba(79,195,255,.3);border-radius:2px}
   .msub{font-size:9px;letter-spacing:.12em;color:var(--lcd-dim);font-weight:700;padding:6px 2px 2px}
   .crow2{display:flex;gap:5px;align-items:center}
@@ -408,6 +411,13 @@ if('serviceWorker' in navigator){
             <button class="calx" id="calClose">✕ fermer</button>
           </div>
           <div class="calbody">
+            <div class="msub">MICRO ACTIF</div>
+            <div class="micinfo">
+              <div class="microw"><span>Entrée</span><b id="miLabel">—</b></div>
+              <div class="microw"><span>Échantillonnage</span><b id="miRate">—</b></div>
+              <div class="microw"><span>Canaux</span><b id="miCh">—</b></div>
+            </div>
+            <div class="mnote" style="margin-bottom:6px">Information seule. iOS masque souvent le nom précis et choisit le micro automatiquement.</div>
             <div class="mrow" id="cGeneric"><span>Mode générique auto</span><b id="cGenV">activer</b></div>
             <div class="mrow" id="cProfSel"><span>Profil chargé</span><b id="cProfV">aucun</b></div>
             <div class="curvebox">
@@ -2385,7 +2395,20 @@ function applyProfile(p){
 }
 
 /* ===== Rendu de l'écran calibration ===== */
+function showMicInfo(){
+  const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  if(tr){
+    const st=tr.getSettings?tr.getSettings():{};
+    $('miLabel').textContent=tr.label||'Micro (nom masqué)';
+    const rate=st.sampleRate||(S.ctx&&S.ctx.sampleRate)||0;
+    $('miRate').textContent=rate?(rate/1000).toFixed(1).replace('.0','')+' kHz':'—';
+    $('miCh').textContent=st.channelCount?(st.channelCount===1?'1 (mono)':st.channelCount):'1 (mono)';
+  }else{
+    $('miLabel').textContent='micro non actif'; $('miRate').textContent='—'; $('miCh').textContent='—';
+  }
+}
 function renderCal(){
+  showMicInfo();
   $('calDev').textContent='Appareil détecté : '+({iphone:'iPhone',ipad:'iPad',android:'Android',desktop:'Ordinateur'}[S.device]||S.device);
   $('cGenV').textContent=S.corr==='generic'?'actif ✓':'activer';
   $('cProfV').textContent=S.corr==='profile'?(S.corrName||'chargé'):(S.profiles.length?S.profiles.length+' dispo.':'aucun');
@@ -2709,7 +2732,11 @@ function buildCsv(){
   let csv='SONOMETRE CETIM - export\n';
   csv+='Date;'+new Date().toLocaleString('fr-FR')+';Duree [s];'+(S.eqT>0?S.eqT.toFixed(1):'0')+'\n';
   csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
-  csv+='FFT;'+S.fftN+';Fenetre;'+S.win+';Overlap;'+Math.round(S.overlap*100)+'%;Tiers d octave;'+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+'\n\n';
+  const _tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  const _mic=_tr&&_tr.label?_tr.label:'micro';
+  const _rate=(S.ctx&&S.ctx.sampleRate)?Math.round(S.ctx.sampleRate)+' Hz':'?';
+  csv+='FFT;'+S.fftN+';Fenetre;'+S.win+';Overlap;'+Math.round(S.overlap*100)+'%;Tiers d octave;'+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+'\n';
+  csv+='Micro;'+_mic+';Echantillonnage;'+_rate+'\n\n';
   const laeq=S.eqT>0?lvl(S.eq.A/S.eqT):-99, lceq=S.eqT>0?lvl(S.eq.C/S.eqT):-99, lzeq=S.eqT>0?lvl(S.eq.Z/S.eqT):-99;
   csv+='INDICES\n';
   csv+='LAeq;'+fmt(laeq)+';LCeq;'+fmt(lceq)+';LZeq;'+fmt(lzeq)+'\n';
