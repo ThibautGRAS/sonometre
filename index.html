@@ -900,6 +900,14 @@ function drawSpectrum(){
     }else{
       names=S.bands; pw=pwT; peak=S.bandPeak;
     }
+    /* filtrer selon la fenêtre de fréquence choisie dans ÉCHELLES (S.fview) */
+    const fLo=S.fview.min, fHi=Math.min(S.fview.max,nyq());
+    const notFull=!(fLo<=F_LOW()+0.01 && fHi>=nyq()-1);
+    if(notFull){
+      const nn=[],np=[],npk=[];
+      for(let b=0;b<names.length;b++){ if(names[b]>=fLo/1.03 && names[b]<=fHi*1.03){nn.push(names[b]);np.push(pw[b]);npk.push(peak[b]);} }
+      if(nn.length){names=nn;pw=np;peak=npk;}
+    }
     const nb=names.length;
     let dLo=Infinity,dHi=-Infinity;
     for(let b=0;b<nb;b++){
@@ -910,7 +918,7 @@ function drawSpectrum(){
     grid(g,w,h,sc,padL,10);
     const bw=(w-padL-4)/nb;
     g.textAlign='center';
-    const labelSet=S.mode==='oct'?names:[31.5,125,500,2000,8000];
+    const labelSet=(S.mode==='oct'||nb<=12)?names:[31.5,125,500,2000,8000];
     for(let b=0;b<nb;b++){
       const L=lvl(pw[b]), x=padL+b*bw, y=y2(L,h,sc), y0=y2(sc.lo,h,sc);
       g.fillStyle=L>85?'#EF3346':L>70?'#FFB454':'#2E9BFF';
@@ -2249,6 +2257,15 @@ setMicStat('off');
 $('kStart').classList.add('mic-wait');
 ui();
 requestAnimationFrame(()=>sizeAll());
+
+/* ===== retour haptique sur les boutons =====
+   navigator.vibrate fonctionne sur Android/Chrome ; iOS Safari ne le supporte pas
+   (Apple ne l'expose pas au web). On tente quand même : sans effet si indisponible. */
+function haptic(ms){ try{ if(navigator.vibrate)navigator.vibrate(ms); }catch(e){} }
+document.addEventListener('pointerdown',e=>{
+  const b=e.target.closest('.key,.cp-presets button,.cp-fine button,.cp-ok,.cp-row button,.mrow');
+  if(b && !b.classList.contains('locked') && !b.disabled) haptic(12);
+},{passive:true});
 
 /* ===== pré-chauffage du micro dès la première interaction =====
    iOS exige un geste pour autoriser le micro : on l'initialise au premier tap n'importe où,
