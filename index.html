@@ -18,6 +18,20 @@
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
   html,body{height:100%}
+  :root{
+    --face0:#0C2760; --face1:var(--navy); --face2:#001238;   /* robe du boîtier */
+    --ink:#DCE9FF;                                            /* texte façade (entête) */
+    --plate0:#020D26; --plate1:rgba(3,18,50,.33);             /* platine clavier */
+    --vig:rgba(0,0,0,.28);                                    /* vignettage */
+  }
+  /* Acier : robe gris-bleu, touches marine inchangées (charte) */
+  body.th-acier{--face0:#4A5568; --face1:#334052; --face2:#222C3C; --vig:rgba(0,0,0,.32)}
+  /* Clair labo : robe claire, texte marine, vignettage doux */
+  body.th-clair{--face0:#F4F7FB; --face1:#DFE7F2; --face2:#C3CFE0; --ink:#0A1F42;
+    --plate0:#B9C6D9; --plate1:rgba(140,160,190,.25); --vig:rgba(30,50,90,.14)}
+  /* OLED : noir profond (économie batterie), accents inchangés */
+  body.th-oled{--face0:#0A0A0C; --face1:#000; --face2:#000;
+    --plate0:#000; --plate1:rgba(10,16,28,.6); --vig:rgba(0,0,0,.5)}
   body{
     position:fixed;inset:0;overflow:hidden;             /* écran fixe : aucun scroll */
     font-family:var(--font);color:#fff;
@@ -26,7 +40,7 @@
       linear-gradient(105deg, transparent 38%, rgba(255,255,255,.045) 47%, rgba(255,255,255,.02) 52%, transparent 62%),
       repeating-linear-gradient(90deg, rgba(255,255,255,.028) 0 1px, transparent 1px 3px),
       repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 7px),
-      linear-gradient(180deg,#0C2760 0%,var(--navy) 30%,#001238 100%);
+      linear-gradient(180deg,var(--face0) 0%,var(--face1) 30%,var(--face2) 100%);
     display:flex;flex-direction:column;
     padding:calc(env(safe-area-inset-top) + 6px) calc(env(safe-area-inset-right) + 10px)
             calc(env(safe-area-inset-bottom) + 8px) calc(env(safe-area-inset-left) + 10px);
@@ -34,13 +48,14 @@
   }
 
   body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
-    background:radial-gradient(120% 100% at 50% 45%, transparent 62%, rgba(0,0,0,.28) 100%)}
+    background:radial-gradient(120% 100% at 50% 45%, transparent 62%, var(--vig) 100%)}
 
   /* ---------- entête ---------- */
   header{display:flex;align-items:center;justify-content:space-between;padding:2px 18px 8px 20px;flex:0 0 auto}
   .brandwrap{display:flex;align-items:center;gap:11px}
+  .logofill{fill:var(--ink)}
   .logo{height:24px;width:auto;display:block}
-  .wordmark{font-family:var(--font);font-size:14px;font-weight:400;letter-spacing:.16em;color:#DCE9FF;text-transform:uppercase;padding-left:11px;border-left:2px solid var(--red);line-height:1}
+  .wordmark{font-family:var(--font);font-size:14px;font-weight:400;letter-spacing:.16em;color:var(--ink);text-transform:uppercase;padding-left:11px;border-left:2px solid var(--red);line-height:1}
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}
   .micstat .micic{width:20px;height:20px}
@@ -185,7 +200,7 @@
   /* ---------- CLAVIER PHYSIQUE ---------- */
   .keypad{flex:0 0 auto;display:flex;flex-direction:column;gap:7px;
     margin-top:10px;padding:9px 8px 10px;border-radius:16px;
-    background:linear-gradient(180deg,#020D26,#03123255);
+    background:linear-gradient(180deg,var(--plate0),var(--plate1));
     box-shadow:inset 0 2px 6px rgba(0,0,0,.55), inset 0 -1px 0 rgba(255,255,255,.05), 0 1px 0 rgba(255,255,255,.06)}
   .krow{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
   .key{
@@ -282,7 +297,7 @@
   <header>
     <div class="brandwrap">
       <svg class="logo" viewBox="0 0 320 64" aria-label="CETIM">
-        <g fill="#fff">
+        <g class="logofill">
           <rect x="4"  y="16" width="36" height="15" rx="2"/>
           <rect x="4"  y="34" width="19" height="15" rx="2"/>
           <path d="M48 6 h30 a12 12 0 0 1 12 12 v31 h-15 V21 h-27 z"/>
@@ -356,6 +371,7 @@
           <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
           <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
+          <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
           <div class="mrow" id="mDbScale"><span>Échelles dB / fréquence</span><b>Auto</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
@@ -540,7 +556,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null,            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', iirBank:null, theme:'marine',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -862,6 +878,7 @@ function loop(ts){
      qui peut durer ~1 s. On reste en préchauffage tant que le niveau n'est pas STABILISÉ,
      avec un minimum de 0,8 s et un maximum de 3 s de sécurité. Rien n'est intégré pendant ce temps. */
   const warm = S.warmT>0;
+  const idle = warm || S.delayT>0 || S.trigWait;    // aucune intégration tant que la mesure n'a pas VRAIMENT commencé
   S.elapsed+=dt;
 
   const mag=computeSpectrum();
@@ -922,15 +939,15 @@ function loop(ts){
       S.pS[k]=aS*S.pS[k]+(1-aS)*p;
       S.pV[k]=aV*S.pV[k]+(1-aV)*p;
     }
-    if(!warm) S.eq[k]+=p*dt;                    // Leq : pas d'intégration pendant le préchauffage
+    if(!idle) S.eq[k]+=p*dt;                    // Leq : intègre seulement après le déclenchement effectif
   }
-  if(!warm) S.eqT+=dt;
+  if(!idle) S.eqT+=dt;
   const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
   for(let b=0;b<nb;b++){
     S.bandPowF[b]=aF*S.bandPowF[b]+(1-aF)*bp[b];
     S.bandPowS[b]=aS*S.bandPowS[b]+(1-aS)*bp[b];
     S.bandPowV[b]=aV*S.bandPowV[b]+(1-aV)*bp[b];
-    if(!warm){
+    if(!idle){
       S.bandEnergy[b]+=bp[b]*dt;
       const Lb=lvl(pick(S.bandPowF[b],S.bandPowS[b],S.bandPowV[b]));
       if(Lb>S.bandPeak[b])S.bandPeak[b]=Lb; else S.bandPeak[b]-=dt*3;
@@ -2019,6 +2036,7 @@ function ui(){
   $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
   $('mPeakInterp').querySelector('b').textContent=S.peakInterp?'Oui':'Non';
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
+  $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
   $('mDbScale').querySelector('b').textContent=(S.dbAuto?'dB auto':('dB '+S.dbMin+'–'+S.dbMax))+' ▸';
   $('kDynV').textContent=S.dbAuto?'Auto':(S.dbMin+'–'+S.dbMax);
   $('kWV').textContent=S.weight;
@@ -2081,6 +2099,18 @@ $('mSgSpeed').onclick=()=>{
   ui();
 };
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
+const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir']];
+function applyTheme(){
+  document.body.classList.remove('th-acier','th-clair','th-oled');
+  if(S.theme!=='marine')document.body.classList.add('th-'+S.theme);
+  try{localStorage.setItem('sono_theme',S.theme);}catch(e){}
+}
+$('mTheme').onclick=()=>{
+  const i=THEMES.findIndex(t=>t[0]===S.theme);
+  S.theme=THEMES[(i+1)%THEMES.length][0];
+  applyTheme(); ui();
+};
+try{const t=localStorage.getItem('sono_theme');if(t&&THEMES.some(x=>x[0]===t)){S.theme=t;applyTheme();}}catch(e){}
 $('mToctSrc').onclick=()=>{
   S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
   S.iirBank=null;                                        // (re)construit au prochain passage
