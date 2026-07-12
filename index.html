@@ -291,6 +291,16 @@ if('serviceWorker' in navigator){
   /* popover CALIBRATION */
   .calpop{display:none;position:fixed;inset:0;z-index:20;background:rgba(0,10,30,.55);align-items:flex-end;justify-content:center}
   .calpop.on{display:flex}
+  .helppop{max-height:86vh;display:flex;flex-direction:column}
+  .helpbody{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-right:4px}
+  .helpbody h3{font-size:13px;color:var(--ice);letter-spacing:.06em;margin:14px 0 5px;font-weight:700}
+  .helpbody h3.warn{color:#FFB454}
+  .helpbody h3:first-child{margin-top:2px}
+  .helpbody p{font-size:12.5px;line-height:1.55;color:#C9D9F2;margin:0 0 6px}
+  .helpbody ul{margin:0 0 8px;padding-left:18px}
+  .helpbody li{font-size:12.5px;line-height:1.5;color:#C9D9F2;margin-bottom:3px}
+  .helpbody b{color:#EAF4FF}
+  .helpfoot{margin-top:14px;padding-top:10px;border-top:1px solid rgba(79,195,255,.14);font-size:10px;letter-spacing:.1em;color:#5F7FB8;text-align:center}
   .calpop-in{width:100%;max-width:520px;background:linear-gradient(180deg,#0A1F42,#050F26);border:1px solid rgba(79,195,255,.2);border-radius:16px 16px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom) + 16px);box-shadow:0 -8px 30px rgba(0,0,0,.5)}
   .cp-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.14em;color:var(--ice);font-weight:700;padding-bottom:10px}
   .cp-head button{background:rgba(255,255,255,.08);border:0;color:#fff;border-radius:8px;width:30px;height:30px;font-size:14px;cursor:pointer}
@@ -399,6 +409,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
           <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
+          <div class="mrow" id="mHelp"><span>Aide &amp; guide d'utilisation</span><b>ouvrir</b></div>
           <div class="mrow" id="mDbScale"><span>Échelles dB / fréquence</span><b>Auto</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
@@ -570,6 +581,71 @@ if('serviceWorker' in navigator){
   </div></div>
 
   <!-- menu EXPORT -->
+  <!-- page AIDE -->
+  <div id="helpPop" class="calpop"><div class="calpop-in helppop">
+    <div class="cp-head">AIDE &amp; GUIDE <button id="hpClose">✕</button></div>
+    <div class="helpbody">
+      <h3>Démarrer</h3>
+      <p>Autorise le microphone au premier lancement, puis appuie sur <b>▶</b>. Un court « INIT MICRO… » précède la mesure (le temps que le micro se stabilise). <b>■</b> arrête, <b>⏸</b> met en pause.</p>
+
+      <h3>Écrans</h3>
+      <p>La touche <b>ÉCRAN</b> fait défiler : Spectre → Spectrogramme → Évolution → Valeurs. <b>Appui long</b> sur cette touche ouvre le <b>mode expert</b> (réglages FFT, fenêtre, interpolation, source des tiers d'octave, thème, cette aide).</p>
+      <ul>
+        <li><b>Spectre</b> : niveau par fréquence (bandes fines FFT, ou tiers d'octave / octave selon la touche ANALYSE).</li>
+        <li><b>Spectrogramme</b> : carte temps (horizontal) × fréquence (vertical), l'intensité en couleur.</li>
+        <li><b>Évolution</b> : niveau global au cours du temps.</li>
+        <li><b>Valeurs</b> : indices chiffrés ; <b>glisse vers la gauche</b> pour une seconde page (LAE, Δ LF, etc.).</li>
+      </ul>
+
+      <h3>Réglages rapides</h3>
+      <ul>
+        <li><b>POND.</b> : pondération A (oreille humaine), C (basses fréquences, crêtes), Z (linéaire).</li>
+        <li><b>TEMPS</b> : Fast (0,125 s), Slow (1 s), V-Slow (10 s).</li>
+        <li><b>ANALYSE</b> : tiers d'octave, octave, ou FFT bandes fines.</li>
+        <li><b>DURÉE</b> : mesure libre (∞) ou calibrée sur une durée.</li>
+        <li><b>ÉCHELLES</b> : menu contextuel selon l'écran (plages dB, fréquence, temps, couleurs). Appui long = tout en automatique.</li>
+      </ul>
+
+      <h3>Gestes sur les graphes</h3>
+      <ul>
+        <li><b>Pincer</b> horizontal/vertical : zoom fréquence, temps ou dB.</li>
+        <li><b>Glisser</b> : déplacer la vue.</li>
+        <li><b>Toucher</b> : poser un curseur de lecture (fréquence + niveau). Toucher le curseur le referme.</li>
+        <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
+      </ul>
+
+      <h3>Indices</h3>
+      <ul>
+        <li><b>LAeq</b> : niveau équivalent (énergie moyenne) sur la durée mesurée — le résultat principal.</li>
+        <li><b>LCpeak</b> : crête pondérée C (réglementaire en bruit au travail).</li>
+        <li><b>LAFmax / LAFmin</b> : niveaux extrêmes.</li>
+        <li><b>L10 / L50 / L90</b> : niveaux dépassés 10 %, 50 %, 90 % du temps (statistique environnementale).</li>
+        <li><b>LAE (SEL)</b> : niveau d'exposition, ramené à 1 s — pour comparer des événements de durées différentes.</li>
+        <li><b>Δ LF</b> : LCeq − LAeq, indicateur de contenu basse fréquence.</li>
+      </ul>
+
+      <h3>Déclenchement</h3>
+      <p><b>Appui long sur ▶</b> : départ différé (pour poser le téléphone) et/ou seuil de niveau. La mesure ne commence qu'au déclenchement — rien n'est intégré avant.</p>
+
+      <h3>Calibration</h3>
+      <p>Écran Calibration (menu expert). <b>Offset</b> : place un calibreur acoustique (94 ou 114 dB) sur le micro, saisis la référence, cale. <b>Correction fréquentielle</b> : balaye les tiers d'octave face à un sonomètre étalon pour bâtir une courbe, enregistrable en profil. La calibration est propre à chaque appareil.</p>
+
+      <h3>Tiers d'octave : FFT ou filtres IEC</h3>
+      <p>Deux méthodes commutables dans le menu expert. <b>Synthèse FFT</b> : rapide, somme d'énergie des raies. <b>Filtres IEC 61260</b> : banc de filtres Butterworth par bande, plus fidèle au gabarit normalisé (surtout en basses fréquences), coût de calcul un peu plus élevé.</p>
+
+      <h3>Export</h3>
+      <p>Touche <b>EXPORT</b> : partage (feuille iOS : Mail, AirDrop, Fichiers…) ou téléchargement, en <b>CSV</b> (métadonnées + indices + spectre + historique) ou en <b>image PNG</b> titrée du graphe affiché.</p>
+
+      <h3>Hors ligne</h3>
+      <p>Après un premier chargement connecté, l'application s'ouvre sans réseau. Installe-la sur l'écran d'accueil (Partager ▸ Sur l'écran d'accueil) pour un usage comme une vraie application.</p>
+
+      <h3 class="warn">Précision — à lire</h3>
+      <p>Un smartphone n'est pas un instrument certifié. Sans calibration, l'application est fiable en <b>relatif</b> (comparaisons, spectres). Avec calibration au calibreur, elle s'approche d'un sonomètre de classe sur une plage donnée, mais ne peut pas revendiquer une conformité de classe 1 ou 2. À mentionner dans tout rapport.</p>
+
+      <div class="helpfoot">CETIM · Sonomètre — aide intégrée</div>
+    </div>
+  </div></div>
+
   <div id="expPop" class="calpop"><div class="calpop-in">
     <div class="cp-head">EXPORTER / PARTAGER <button id="epClose">✕</button></div>
     <div class="exp-list">
@@ -2209,6 +2285,9 @@ function applyTheme(){
   if(S.theme!=='marine')document.body.classList.add('th-'+S.theme);
   try{localStorage.setItem('sono_theme',S.theme);}catch(e){}
 }
+$('mHelp').onclick=()=>{ $('helpPop').classList.add('on'); };
+$('hpClose').onclick=()=>$('helpPop').classList.remove('on');
+$('helpPop').addEventListener('click',e=>{if(e.target.id==='helpPop')$('helpPop').classList.remove('on');});
 $('mTheme').onclick=()=>{
   const i=THEMES.findIndex(t=>t[0]===S.theme);
   S.theme=THEMES[(i+1)%THEMES.length][0];
