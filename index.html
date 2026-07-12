@@ -309,7 +309,7 @@ if('serviceWorker' in navigator){
   .cp-ok{width:64px;height:42px;border-radius:10px;border:1px solid rgba(47,191,131,.45);background:rgba(47,191,131,.15);color:#9EF0C9;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)}
   .cp-full{width:100%;background:rgba(47,191,131,.14);border:1px solid rgba(47,191,131,.4);color:#9EF0C9;border-radius:10px;padding:12px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
 
-  #err{display:none;position:absolute;left:12px;right:12px;top:12px;z-index:9;background:#B21226;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  #err{display:none;position:absolute;left:12px;right:12px;top:12px;z-index:9;background:#B21226;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5);white-space:pre-line}
   @media (prefers-reduced-motion:reduce){.badge.rec::before{animation:none}}
 </style>
 </head>
@@ -2899,26 +2899,37 @@ function setMicStat(state){
   el.classList.remove('off','ready','prep');
   el.classList.add(state);
 }
-/* toucher l'icône micro (surtout quand elle est rouge) : tente d'activer et explique l'état */
+/* toucher l'icône micro : rapport de diagnostic COMPLET + tentative d'activation dans le geste */
+async function micDiagnostic(){
+  const box=$('err'); box.style.display='block'; box.style.textAlign='left';
+  const L=[];
+  L.push('DIAGNOSTIC MICRO');
+  L.push('• Contexte sécurisé (HTTPS): '+(window.isSecureContext?'oui':'NON → micro impossible'));
+  L.push('• getUserMedia dispo: '+(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia?'oui':'NON'));
+  // permission déclarée par l'OS
+  let perm='inconnue';
+  try{ if(navigator.permissions){ const p=await navigator.permissions.query({name:'microphone'}); perm=p.state; } }catch(e){ perm='non interrogeable (Safari)'; }
+  L.push('• Permission OS: '+perm);
+  L.push('• AudioContext: '+(S.ctx?S.ctx.state:'non créé'));
+  const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  L.push('• Piste: '+(tr?(tr.readyState+(tr.muted?' / MUETTE':' / ok')):'aucune'));
+  box.textContent=L.join('\n');
+  // tentative d'activation immédiate (on est dans le geste)
+  try{
+    if(!S.ctx)await initAudio(); else await reviveMic(true);
+    if(micAlive()){ setMicStat('ready'); box.textContent=L.join('\n')+'\n→ MICRO ACTIVÉ ✓ '+((S.stream.getAudioTracks()[0]||{}).label||''); }
+    else { setMicStat('off'); box.textContent=L.join('\n')+'\n→ échec. Si permission=denied: « aA » ▸ Réglages du site ▸ Microphone ▸ Autoriser, recharge.'; }
+  }catch(e){
+    setMicStat('off');
+    box.textContent=L.join('\n')+'\n→ ERREUR: '+(e&&e.name||'?')+' '+(e&&e.message||'')
+      +(e&&e.name==='NotAllowedError'?'\n(Permission bloquée: « aA » ▸ Réglages du site ▸ Microphone ▸ Autoriser)':'');
+  }
+  clearTimeout(micDiagnostic._t); micDiagnostic._t=setTimeout(()=>{box.style.display='none';box.style.textAlign='';},12000);
+}
 (function(){
   const el=$('micStat'); if(!el)return;
   el.style.cursor='pointer';
-  el.addEventListener('click',async ()=>{
-    const box=$('err');
-    try{
-      if(!S.ctx)await initAudio(); else await reviveMic(true);
-      if(micAlive()){ setMicStat(S.running?'ready':'ready'); box.style.display='block';
-        box.textContent='Micro actif ✓ ('+((S.stream.getAudioTracks()[0]||{}).label||'entrée')+')'; setTimeout(()=>box.style.display='none',3000); }
-      else { setMicStat('off'); box.style.display='block';
-        box.textContent="Micro non actif. S'il ne demande jamais l'autorisation : elle est bloquée. Touche « aA » ▸ Réglages du site ▸ Microphone ▸ Autoriser, puis recharge."; setTimeout(()=>box.style.display='none',9000); }
-    }catch(e){
-      setMicStat('off'); box.style.display='block';
-      box.textContent=(e&&e.name==='NotAllowedError')
-        ? "Micro BLOQUÉ. Touche « aA » ▸ Réglages du site ▸ Microphone ▸ Autoriser, puis recharge."
-        : "Micro indisponible ("+(e&&e.name||'?')+").";
-      setTimeout(()=>box.style.display='none',9000);
-    }
-  });
+  el.addEventListener('click',micDiagnostic);
 })();
 function armStart(){
   const k=$('kStart');
