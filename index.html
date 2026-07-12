@@ -628,6 +628,11 @@ function loop(ts){
   if(!S.lastT){S.lastT=ts;return;}
   const dt=Math.min(0.2,(ts-S.lastT)/1000); S.lastT=ts;
   if(S.paused)return;
+  /* préchauffage micro : iOS ajuste son gain d'entrée et émet un transitoire au démarrage.
+     On laisse tourner l'affichage mais on n'intègre RIEN (Leq, max, historique) pendant ce délai,
+     et on amorce le recalage Parseval sans le figer sur le pop initial. */
+  const warm = S.warmT>0;
+  if(warm) S.warmT-=dt;
   S.elapsed+=dt;
 
   const mag=computeSpectrum();
@@ -671,17 +676,19 @@ function loop(ts){
     S.pF[k]=aF*S.pF[k]+(1-aF)*p;
     S.pS[k]=aS*S.pS[k]+(1-aS)*p;
     S.pV[k]=aV*S.pV[k]+(1-aV)*p;
-    S.eq[k]+=p*dt;
+    if(!warm) S.eq[k]+=p*dt;                    // Leq : pas d'intégration pendant le préchauffage
   }
-  S.eqT+=dt;
+  if(!warm) S.eqT+=dt;
   const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
   for(let b=0;b<nb;b++){
     S.bandPowF[b]=aF*S.bandPowF[b]+(1-aF)*bp[b];
     S.bandPowS[b]=aS*S.bandPowS[b]+(1-aS)*bp[b];
     S.bandPowV[b]=aV*S.bandPowV[b]+(1-aV)*bp[b];
-    S.bandEnergy[b]+=bp[b]*dt;
-    const Lb=lvl(pick(S.bandPowF[b],S.bandPowS[b],S.bandPowV[b]));
-    if(Lb>S.bandPeak[b])S.bandPeak[b]=Lb; else S.bandPeak[b]-=dt*3;
+    if(!warm){
+      S.bandEnergy[b]+=bp[b]*dt;
+      const Lb=lvl(pick(S.bandPowF[b],S.bandPowS[b],S.bandPowV[b]));
+      if(Lb>S.bandPeak[b])S.bandPeak[b]=Lb; else S.bandPeak[b]-=dt*3;
+    }
   }
   /* lissage du spectre FFT par bin (mêmes constantes) : Fast/Slow/V-Slow agissent aussi sur les bandes fines */
   for(let i=1;i<n;i++){
@@ -695,6 +702,12 @@ function loop(ts){
 
   const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
   const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
+  if(warm){
+    /* fin du préchauffage : on repart proprement (chrono, historique) sur un micro stabilisé */
+    if(S.warmT<=0){S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;ui();}
+    updateNumbers(L); sgTick(); drawActive();
+    return;
+  }
   if(S.eqT>0.5){ if(LAF>S.lafMax)S.lafMax=LAF; if(LAF<S.lafMin)S.lafMin=LAF; }
   if(L>S.peakHold)S.peakHold=L; else S.peakHold-=dt*2;
 
@@ -1473,7 +1486,8 @@ function ui(){
   $('vCal').textContent=S.offset.toFixed(1)+' dB · '+(S.corr==='off'?'sans corr.':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'));
   $('led').classList.toggle('on',S.running&&!S.paused);
   const badge=$('modeBadge');
-  if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
+  if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
+  else if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
   else if(S.paused){badge.textContent='⏸ PAUSE';badge.className='badge';}
   ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
   $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
@@ -1849,6 +1863,9 @@ $('kStart').onclick=async function(){
   }
   resetMeasure();
   S.running=true;S.paused=false;S.lastT=0;
+  S.warmT=0.6;                 // 0,6 s de préchauffage micro (transitoire iOS ignoré)
+  S.K=0;                       // recalage Parseval réamorcé
+  S.badgeWarm=true;
   setTransport();
   setLocks();
   try{S.wake=await navigator.wakeLock?.request('screen');}catch(e){}
