@@ -628,6 +628,11 @@ function resetMeasure(){
   if(S.binPowS)S.binPowS.fill(0);
   if(S.binPowV)S.binPowV.fill(0);
   if(S.bandPeak)S.bandPeak.fill(-99);
+  /* spectrogramme : vider le tampon de données et les curseurs/zoom associés */
+  if(SG.cols)SG.cols.fill(null);
+  SG.colSeq=0; SG.vScaleKey=''; SG.vViewKey=''; SG.vSeq=-1;
+  S.sgCursor=null; S.histCursor=null;
+  S.tview={x0:0,x1:1}; S.histView=null;
   updateNumbers(-99); drawActive();
 }
 /* effacements ciblés (mode expert) */
@@ -769,11 +774,18 @@ function updateNumbers(L){
 /* ================= Canvas : dimensionnés UNE fois ================= */
 const CV={};
 function sizeCanvas(id){
-  const cv=$(id), r=cv.parentElement.getBoundingClientRect();
+  const cv=$(id);
+  let r=cv.parentElement.getBoundingClientRect();
+  /* si le pane est masqué (display:none), son rect est nul : on se rabat sur la graphzone,
+     pour que le spectrogramme puisse être dimensionné et accumuler même hors écran */
+  if(r.width<10||r.height<10){
+    const gz=document.querySelector('.graphzone');
+    if(gz){const gr=gz.getBoundingClientRect(); r={width:gr.width, height:Math.max(10,gr.height-22)};}
+  }
   if(r.width<10||r.height<10)return;
   const dpr=Math.min(2,window.devicePixelRatio||1);
   const W=Math.round(r.width*dpr), H=Math.round(r.height*dpr);
-  if(cv.width===W&&cv.height===H)return;          // inchangé : ne pas effacer
+  if(cv.width===W&&cv.height===H){ if(!CV[id]){const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);CV[id]={g,w:r.width,h:r.height,dpr};} return; }
   cv.width=W; cv.height=H;
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   CV[id]={g,w:r.width,h:r.height,dpr};
@@ -1281,7 +1293,8 @@ function sgBlit(c){
 /* alimente le spectrogramme (appelé par la boucle même quand un autre écran/menu est affiché) */
 function sgTick(){
   if(!S.binHz)return;
-  if(!SG.init&&CV.sgramCv)sgSetup(CV.sgramCv);        // re-cartographie après changement de paramètre
+  if(!CV.sgramCv)sizeCanvas('sgramCv');               // dimensionne même si l'écran n'est pas affiché
+  if(!SG.init&&CV.sgramCv)sgSetup(CV.sgramCv);        // (re)cartographie
   if(!SG.init||!SG.map||!SG.map.length)return;
   const now=performance.now();
   const fs=S.ctx?S.ctx.sampleRate:48000;
