@@ -795,7 +795,7 @@ const LUT=(()=>{
    Le calcul et le stockage couvrent toujours 20 Hz(0)–Nyquist dans un canvas
    hors-écran haute résolution. Le zoom n'est qu'un recadrage à l'affichage :
    aucune donnée n'est perdue en dehors de la fenêtre. */
-const SG={init:false,buf:null,bg:null,map:null,last:0,W:0,H:0,padL:0,axH:0,bufH:0,fsc:'log'};
+const SG={init:false,buf:null,bg:null,map:null,last:0,W:0,H:0,padL:0,axH:0,bufH:0,fsc:'log',cols:null,colHz:null};
 function sgFull(){return {lo:S.fscale==='lin'?0:20, hi:nyq()};}
 function sgSetup(c){
   const cv=$('sgramCv');
@@ -808,17 +808,22 @@ function sgSetup(c){
   SG.buf.width=Wp; SG.buf.height=SG.bufH;
   SG.bg=SG.buf.getContext('2d');
   SG.bg.fillStyle='#000080'; SG.bg.fillRect(0,0,Wp,SG.bufH);
+  /* tampon de DONNÉES dB : une colonne (à la résolution bufH) par colonne pixel du tampon */
+  SG.cols=new Array(Wp);          // chaque entrée = Float32Array(bufH) de niveaux dB, ou null
+  SG.colHz=new Array(Wp);         // fréquence associée à chaque ligne (identique pour toutes)
   /* carte lignes du tampon → bins FFT, sur TOUTE la bande */
   const full=sgFull(), V0=TF(full.lo), V1=TF(full.hi);
   SG.V0f=V0; SG.V1f=V1;
-  SG.map=[];
+  SG.map=[]; const fline=new Float32Array(SG.bufH);
   if(S.binHz){
     for(let r=0;r<SG.bufH;r++){
       const fT=TFi(V1-(r/SG.bufH)*(V1-V0)), fB=TFi(V1-((r+1)/SG.bufH)*(V1-V0));
       const i0=Math.max(1,Math.round(fB/S.binHz)), i1=Math.max(i0,Math.round(fT/S.binHz));
       SG.map.push([i0,Math.min(S.fftDb?S.fftDb.length-1:i1,i1)]);
+      fline[r]=TFi(V1-((r+0.5)/SG.bufH)*(V1-V0));   // fréquence au centre de la ligne
     }
   }
+  SG.flineHz=fline;
   SG.init=true;
 }
 function sgColumn(){
@@ -838,30 +843,23 @@ function sgColumn(){
     const L=lvl(pm*K); col[r]=L;
     if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
   }
-  /* curseur : met à jour fréquence + niveau du pic suivi */
-  if(S.sgCursor){
-    const nb=S.fftDb.length;
-    const pAt=i=>{let p=Math.pow(10,S.fftDb[i]/10);if(!isFinite(p))p=0;if(S.corr!=='off')p*=S.compGain[i];if(wSel)p*=wSel[i];return p;};
-    if(S.sgCursor.mode==='auto'){
-      /* suit le maximum global de la colonne */
-      let bestI=1,bestP=-Infinity;
-      for(let i=1;i<nb;i++){const p=pAt(i);if(p>bestP){bestP=p;bestI=i;}}
-      S.sgCursor.f=S.freqs[bestI]; S.sgCursor.L=lvl(bestP*K);
-    }else{
-      /* accroche la raie locale : cherche le max dans une fenêtre autour de la fréquence courante,
-         puis se recale sur le pic (le curseur "glisse" et reste sur la raie même si elle dérive) */
-      const fc=S.sgCursor.f||1000;
-      const half=Math.max(3, Math.round(fc*0.06/S.binHz));   // ±6 % autour de la cible
-      const ic=Math.max(1,Math.min(nb-1,Math.round(fc/S.binHz)));
-      let bestI=ic,bestP=-Infinity;
-      for(let i=Math.max(1,ic-half);i<=Math.min(nb-1,ic+half);i++){const p=pAt(i);if(p>bestP){bestP=p;bestI=i;}}
-      S.sgCursor.f=S.freqs[bestI]; S.sgCursor.L=lvl(bestP*K);
-    }
-  }
   autoRange(sc,dLo,dHi);
   const bg=SG.bg;
-  bg.drawImage(SG.buf,1,0,Wp-1,Hb,0,0,Wp-1,Hb);      // défilement du tampon
-  /* si l'utilisateur regarde le passé, la fenêtre suit le défilement pour rester stable */
+  bg.drawImage(SG.buf,1,0,Wp-1,Hb,0,0,Wp-1,Hb);      // défilement visuel du tampon
+  /* défilement du tampon de DONNÉES (colonnes dB) : décale d'une case vers la gauche */
+  for(let x=0;x<Wp-1;x++)SG.cols[x]=SG.cols[x+1];
+  SG.cols[Wp-1]=col;                                  // nouvelle colonne à droite (instant présent)
+  /* mode auto : suit le max de la colonne courante */
+  if(S.sgCursor&&S.sgCursor.mode==='auto'){
+    let bestR=0,bestL=-Infinity;
+    for(let r=0;r<Hb;r++)if(col[r]>bestL){bestL=col[r];bestR=r;}
+    S.sgCursor.f=SG.flineHz[bestR]; S.sgCursor.L=bestL; S.sgCursor.col=Wp-1;
+  }
+  /* le viseur figé et la fenêtre temporelle suivent le défilement pour rester sur la même zone */
+  if(S.sgCursor&&S.sgCursor.mode==='pin'&&S.sgCursor.col!=null){
+    S.sgCursor.col-=1;
+    if(S.sgCursor.col<0)S.sgCursor=null;              // sorti du tampon par la gauche
+  }
   if(S.tview.x1<0.9999){
     const d=1/Wp;
     let x0=S.tview.x0-d, x1=S.tview.x1-d;
@@ -904,41 +902,49 @@ function sgBlit(c){
   g.textAlign='left';  g.fillText(ft(agoL),padL+3*c.dpr,H-4*c.dpr);
   g.textAlign='center';g.fillText(ft(agoM)+'  ·  pincer ↕ fréq / ↔ temps',padL+Wp/2,H-4*c.dpr);
   g.textAlign='right'; g.fillText(ft(agoR),W-3*c.dpr,H-4*c.dpr);
-  /* curseur : viseur (pin) = cercle sur la raie ; suivi (auto) = ligne pointillée */
+  /* curseur : viseur (pin) = cercle figé sur une zone ; suivi (auto) = ligne pointillée au présent */
   if(S.sgCursor&&S.sgCursor.f){
     const f=S.sgCursor.f;
-    if(f>=nfmin&&f<=nfmax){
+    const isPin=S.sgCursor.mode==='pin';
+    /* position horizontale : pin = colonne figée reprojetée dans la fenêtre ; auto = bord droit */
+    let xc=W-8*c.dpr, visible=(f>=nfmin&&f<=nfmax);
+    if(isPin){
+      const Wp=W-padL, colFrac=S.sgCursor.col/(SG.buf.width-1);
+      const inWin=(colFrac-S.tview.x0)/Math.max(1e-6,(S.tview.x1-S.tview.x0));
+      xc=padL+inWin*Wp;
+      if(inWin<0||inWin>1)visible=false;              // hors de la fenêtre temporelle affichée
+    }
+    if(visible){
       const yy=((V1n-TF(f))/(V1n-V0n))*Hu;
-      const xr=W-8*c.dpr;                    // bord droit = instant présent
-      const isPin=S.sgCursor.mode==='pin';
-      const col=isPin?'#7FE9B8':'#FF6B7A';
-      g.strokeStyle=col;g.fillStyle=col;
+      const cl=isPin?'#FFFFFF':'#FF6B7A';
+      g.strokeStyle=cl;g.fillStyle=cl;
       if(isPin){
-        /* viseur : cercle + croix centrés sur la raie accrochée */
+        /* viseur : double cercle + croix, centré sur le point figé (temps, fréquence) */
         g.lineWidth=1.6*c.dpr;
-        g.beginPath();g.arc(xr,yy,6*c.dpr,0,7);g.stroke();
+        g.beginPath();g.arc(xc,yy,8*c.dpr,0,7);g.stroke();
+        g.beginPath();g.arc(xc,yy,3*c.dpr,0,7);g.stroke();
         g.lineWidth=1*c.dpr;
-        g.beginPath();g.moveTo(padL,yy);g.lineTo(xr-8*c.dpr,yy);g.stroke();
-        /* petite croix au centre du cercle */
         g.beginPath();
-        g.moveTo(xr-9*c.dpr,yy);g.lineTo(xr-3*c.dpr,yy);
-        g.moveTo(xr+3*c.dpr,yy);g.lineTo(xr+9*c.dpr,yy);
-        g.moveTo(xr,yy-9*c.dpr);g.lineTo(xr,yy-3*c.dpr);
-        g.moveTo(xr,yy+3*c.dpr);g.lineTo(xr,yy+9*c.dpr);
+        g.moveTo(xc-12*c.dpr,yy);g.lineTo(xc-8*c.dpr,yy);
+        g.moveTo(xc+8*c.dpr,yy);g.lineTo(xc+12*c.dpr,yy);
+        g.moveTo(xc,yy-12*c.dpr);g.lineTo(xc,yy-8*c.dpr);
+        g.moveTo(xc,yy+8*c.dpr);g.lineTo(xc,yy+12*c.dpr);
         g.stroke();
       }else{
         g.lineWidth=1*c.dpr;g.setLineDash([4*c.dpr,3*c.dpr]);
         g.beginPath();g.moveTo(padL,yy);g.lineTo(W-1,yy);g.stroke();g.setLineDash([]);
         g.beginPath();g.arc(W-6*c.dpr,yy,3*c.dpr,0,7);g.fill();
       }
+      /* étiquette : au-dessus du viseur pour pin, en haut à gauche pour auto */
       const txt=(isPin?'◎ ':'↗ ')+fmtF(f)+' Hz · '+fmt(S.sgCursor.L)+' dB';
       g.font='bold '+(11*c.dpr)+'px Arial';
       const tw=g.measureText(txt).width+10*c.dpr;
-      const lx=Math.max(padL+2*c.dpr,Math.min(W-tw-2*c.dpr,padL+4*c.dpr));
-      const ly=Math.max(2,Math.min(Hu-16*c.dpr,yy-9*c.dpr));
+      let lx,ly;
+      if(isPin){lx=Math.max(padL+2*c.dpr,Math.min(W-tw-2*c.dpr,xc-tw/2));ly=Math.max(2,yy-24*c.dpr);}
+      else{lx=Math.max(padL+2*c.dpr,Math.min(W-tw-2*c.dpr,padL+4*c.dpr));ly=Math.max(2,Math.min(Hu-16*c.dpr,yy-9*c.dpr));}
       g.fillStyle='#08306B';g.fillRect(lx,ly,tw,15*c.dpr);
-      g.strokeStyle=isPin?'rgba(127,233,184,.6)':'rgba(255,107,122,.6)';g.lineWidth=1;g.strokeRect(lx+.5,ly+.5,tw-1,15*c.dpr-1);
-      g.fillStyle=isPin?'#CFF7E4':'#FFD6DB';g.textAlign='left';g.fillText(txt,lx+5*c.dpr,ly+11*c.dpr);
+      g.strokeStyle=isPin?'rgba(255,255,255,.7)':'rgba(255,107,122,.6)';g.lineWidth=1;g.strokeRect(lx+.5,ly+.5,tw-1,15*c.dpr-1);
+      g.fillStyle=isPin?'#FFFFFF':'#FFD6DB';g.textAlign='left';g.fillText(txt,lx+5*c.dpr,ly+11*c.dpr);
     }
   }
   g.restore();
@@ -1091,7 +1097,9 @@ function attachZoomPan(id,axis,opts){
       opts.onTap2();                       // tap deux doigts immobile
     }else if(mode==='pan'&&!moved&&opts.onTap){
       const u=(anchV-TF(Math.max(F_LOW(),S.fview.min)))/spanCur();
-      opts.onTap(TFi(anchV),axis==='x'?u:1-u);   // tap un doigt : fréquence visée
+      const r=cv.getBoundingClientRect();
+      const uxpos=Math.max(0,Math.min(1,((sX-r.left)-26)/Math.max(1,r.width-26-4)));  // position horizontale (0..1 dans la fenêtre)
+      opts.onTap(TFi(anchV),axis==='x'?u:1-u,uxpos);   // fréquence + position temps du tap
     }
     if(e.touches.length===0){mode=null;anchors=null;}
   });
@@ -1126,27 +1134,36 @@ attachZoomPan('specCv','x',{
 });
 attachZoomPan('sgramCv','y',{time:true,
   onChange:()=>{if(!S.running||S.paused)drawSgram();},
-  onTap:(f)=>{                              // un doigt : viseur accroché près de la fréquence tapée
-    S.sgCursor={mode:'pin',f:f,L:-99};
-    if(S.running&&S.binHz)snapCursorNow();
+  onTap:(f,uy,ux)=>{                        // un doigt : viseur figé sur le max local d'une zone
+    pinCursorAt(f,ux);
     if(!S.running||S.paused)drawSgram();
   },
   onTap2:()=>{                              // deux doigts : suivi automatique du max global
-    S.sgCursor=(S.sgCursor&&S.sgCursor.mode==='auto')?null:{mode:'auto',f:0,L:-99};
+    S.sgCursor=(S.sgCursor&&S.sgCursor.mode==='auto')?null:{mode:'auto',f:0,L:-99,col:null};
     if(!S.running||S.paused)drawSgram();
   }
 });
-/* recale immédiatement le viseur sur la raie locale (sans attendre la prochaine colonne) */
-function snapCursorNow(){
-  if(!S.sgCursor||!S.fftDb)return;
-  const K=S.K||1, nb=S.fftDb.length, wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
-  const pAt=i=>{let p=Math.pow(10,S.fftDb[i]/10);if(!isFinite(p))p=0;if(S.corr!=='off')p*=S.compGain[i];if(wSel)p*=wSel[i];return p;};
-  const fc=S.sgCursor.f||1000;
-  const half=Math.max(3,Math.round(fc*0.06/S.binHz));
-  const ic=Math.max(1,Math.min(nb-1,Math.round(fc/S.binHz)));
-  let bestI=ic,bestP=-Infinity;
-  for(let i=Math.max(1,ic-half);i<=Math.min(nb-1,ic+half);i++){const p=pAt(i);if(p>bestP){bestP=p;bestI=i;}}
-  S.sgCursor.f=S.freqs[bestI]; S.sgCursor.L=lvl(bestP*K);
+/* pose un viseur figé : max d'amplitude dans une fenêtre temps×fréquence autour du point tapé */
+function pinCursorAt(fTap,ux){
+  if(!SG.cols||!SG.flineHz){S.sgCursor={mode:'pin',f:fTap,L:-99,col:null};return;}
+  const Wp=SG.buf.width, Hb=SG.bufH;
+  /* colonne visée dans le tampon : ux est dans la fenêtre temporelle courante (tview) */
+  const colFrac=S.tview.x0+ux*(S.tview.x1-S.tview.x0);
+  const colTap=Math.round(colFrac*(Wp-1));
+  /* demi-fenêtres de recherche : ±Δt colonnes, ±Δf autour de la fréquence tapée */
+  const dCol=Math.max(2,Math.round(Wp*0.03));                  // ~3 % de la largeur en temps
+  const V0=SG.V0f,V1=SG.V1f;
+  const vTap=TF(fTap), dV=(V1-V0)*0.05;                        // ±5 % de la hauteur en fréquence
+  let r0=Hb,r1=0;
+  for(let r=0;r<Hb;r++){const v=TF(SG.flineHz[r]);if(Math.abs(v-vTap)<=dV){if(r<r0)r0=r;if(r>r1)r1=r;}}
+  if(r0>r1){r0=r1=Math.round((1-(vTap-V0)/(V1-V0))*Hb);}
+  let bestL=-Infinity,bestR=r0,bestC=colTap;
+  for(let x=Math.max(0,colTap-dCol);x<=Math.min(Wp-1,colTap+dCol);x++){
+    const c=SG.cols[x]; if(!c)continue;
+    for(let r=r0;r<=r1;r++){if(c[r]>bestL){bestL=c[r];bestR=r;bestC=x;}}
+  }
+  if(bestL<=-Infinity){S.sgCursor={mode:'pin',f:fTap,L:-99,col:colTap};return;}
+  S.sgCursor={mode:'pin',f:SG.flineHz[bestR],L:bestL,col:bestC};
 }
 
 /* ================= UI ================= */
