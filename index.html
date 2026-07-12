@@ -112,6 +112,12 @@
   #paneVal{overflow:hidden}
   .valtable{display:grid;grid-template-columns:1fr 1fr;gap:6px;height:100%;align-content:start}
   .valtable .cell{background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:8px;text-align:center}
+  .valtable .cell.hero{grid-column:span 2;padding:12px 8px}
+  .valtable .cell.hero .v{font-size:44px}
+  .valtable .cell.hero .k{font-size:12px;letter-spacing:.2em}
+  .valsec{grid-column:span 2;display:flex;justify-content:space-around;gap:6px;flex-wrap:wrap;
+    font-size:11px;color:#5F7FB8;padding:6px 4px;border-top:1px solid rgba(79,195,255,.10);margin-top:2px}
+  .valsec b{color:#BFD9F5;font-family:var(--mono);font-weight:700}
   .valtable .k{font-size:10px;letter-spacing:.06em;color:var(--lcd-dim);font-weight:700}
   .valtable .v{font-family:var(--mono);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lcd-ink);text-shadow:0 0 8px rgba(79,195,255,.3)}
   .valtable .v.red{color:#FF6B7A;text-shadow:0 0 8px rgba(239,51,70,.5)}
@@ -286,16 +292,18 @@
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
         <div class="valtable">
-          <div class="cell"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
-          <div class="cell"><div class="k">LCeq</div><div class="v" id="vLCeq">--.-</div></div>
-          <div class="cell"><div class="k">LZeq</div><div class="v" id="vLZeq">--.-</div></div>
-          <div class="cell"><div class="k">LAFmax</div><div class="v red" id="vMax">--.-</div></div>
-          <div class="cell"><div class="k">LAFmin</div><div class="v" id="vMin">--.-</div></div>
+          <div class="cell hero"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
           <div class="cell"><div class="k">LCpeak</div><div class="v red" id="vLCpk">--.-</div></div>
+          <div class="cell"><div class="k">LAFmax</div><div class="v red" id="vMax">--.-</div></div>
           <div class="cell"><div class="k">L10</div><div class="v" id="vL10">--.-</div></div>
-          <div class="cell"><div class="k">L50</div><div class="v" id="vL50">--.-</div></div>
           <div class="cell"><div class="k">L90</div><div class="v" id="vL90">--.-</div></div>
-          <div class="cell"><div class="k">OFFSET CAL. / COMP</div><div class="v" id="vCal" style="font-size:16px">120.0 dB · off</div></div>
+          <div class="valsec">
+            <span>LCeq <b id="vLCeq">--.-</b></span>
+            <span>LZeq <b id="vLZeq">--.-</b></span>
+            <span>L50 <b id="vL50">--.-</b></span>
+            <span>LAFmin <b id="vMin">--.-</b></span>
+          </div>
+          <div class="valsec" style="margin-top:2px"><span>CAL. <b id="vCal">120.0 dB · off</b></span></div>
         </div>
       </div>
       <div class="gpane" id="paneMenu">
