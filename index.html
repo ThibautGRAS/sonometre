@@ -711,7 +711,7 @@ function loop(ts){
     /* ARMEMENT : on jette les premières 1,5 s (transitoire de gain iOS + pop d'amorçage).
        Délai fixe = simple et fiable ; l'affichage tourne mais rien n'est intégré. */
     S.warmAge=(S.warmAge||0)+dt;
-    if(S.warmAge>=1.5){
+    if(S.warmAge>=(S.warmMax||1.5)){
       S.warmT=0; S.warmAge=0;
       S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;
       ui();
@@ -1994,19 +1994,27 @@ function setTransport(){
 }
 $('kStart').onclick=async function(){
   if(S.running){stopMeasure(false);return;}
+  const firstEver=!S.everStarted;
   try{
     if(!S.ctx)await initAudio();
     if(S.ctx.state==='suspended')await S.ctx.resume();
+    /* attendre que le contexte soit RÉELLEMENT actif (autorisation micro juste accordée) */
+    for(let i=0;i<40 && S.ctx.state!=='running';i++)await new Promise(r=>setTimeout(r,25));
+    /* purge : consommer quelques trames temporelles pour vider le tampon d'amorçage du flux */
+    if(S.analyser){const tmp=new Float32Array(S.analyser.fftSize);
+      for(let i=0;i<8;i++){S.analyser.getFloatTimeDomainData(tmp);await new Promise(r=>setTimeout(r,20));}}
   }catch(e){
     const el=$('err');el.style.display='block';
     el.textContent="Micro refusé ou indisponible. Autorise le micro (Réglages ▸ Safari ▸ Micro) et ouvre la page en HTTPS. ("+e.message+")";
     setTimeout(()=>el.style.display='none',6000);
     return;
   }
+  S.everStarted=true;
   resetMeasure();
   S.running=true;S.paused=false;S.lastT=0;
-  S.warmT=1;                   // flag préchauffage actif (levé par la stabilisation du niveau)
-  S.warmAge=0; S.warmStable=0; S.warmPrev=null;
+  S.warmT=1;                   // armement actif
+  S.warmAge=0;
+  S.warmMax=firstEver?2.5:1.5; // micro « froid » au 1er lancement : armement plus long
   S.K=0;                       // recalage Parseval réamorcé
   S.badgeWarm=true;
   setTransport();
