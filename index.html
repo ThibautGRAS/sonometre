@@ -189,6 +189,9 @@ if('serviceWorker' in navigator){
   .calhead{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--ice);font-weight:700;flex:0 0 auto;padding-bottom:5px}
   .calx{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--lcd-dim);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer}
   .calbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:4px;padding-right:2px}
+  .micinfo{background:rgba(79,195,255,.06);border:1px solid rgba(79,195,255,.16);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;gap:3px}
+  .microw{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8fa3c4}
+  .microw b{color:#DCE9FF;font-family:var(--mono);font-weight:700;font-size:12px;text-align:right;max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .calbody::-webkit-scrollbar{width:3px}.calbody::-webkit-scrollbar-thumb{background:rgba(79,195,255,.3);border-radius:2px}
   .msub{font-size:9px;letter-spacing:.12em;color:var(--lcd-dim);font-weight:700;padding:6px 2px 2px}
   .crow2{display:flex;gap:5px;align-items:center}
@@ -408,6 +411,14 @@ if('serviceWorker' in navigator){
             <button class="calx" id="calClose">✕ fermer</button>
           </div>
           <div class="calbody">
+            <div class="msub">MICRO ACTIF</div>
+            <div class="micinfo" id="micInfo">
+              <div class="microw"><span>Entrée</span><b id="miLabel">—</b></div>
+              <div class="microw"><span>Échantillonnage</span><b id="miRate">—</b></div>
+              <div class="microw"><span>Canaux</span><b id="miCh">—</b></div>
+            </div>
+            <div class="mrow" id="miSelRow" style="display:none"><span>Choisir l'entrée</span><b id="miSelV">auto</b></div>
+            <div class="mnote" id="miNote" style="margin-bottom:6px">iOS n'expose en général qu'une entrée et choisit le micro automatiquement.</div>
             <div class="mrow" id="cGeneric"><span>Mode générique auto</span><b id="cGenV">activer</b></div>
             <div class="mrow" id="cProfSel"><span>Profil chargé</span><b id="cProfV">aucun</b></div>
             <div class="curvebox">
@@ -588,7 +599,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null, theme:'marine',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', iirBank:null, theme:'marine', micDevId:null, micList:[],            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -606,6 +617,41 @@ const GENERIC={
 };
 function COMP_F_DEF(){return [20,25,31.5,40,50,63,80,100,125,160,200,1000,5000,6300,8000,10000,12500,16000];}
 function COMP_G_DEF(){return [12,10,8,6,4.5,3,2,1.2,0.7,0.3,0,0,0,-0.5,-1.5,-2.5,-3,-2];}
+async function refreshMicInfo(){
+  const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  if(tr){
+    const st=tr.getSettings?tr.getSettings():{};
+    $('miLabel').textContent = tr.label || 'Micro (nom masqué)';
+    const rate = st.sampleRate || (S.ctx&&S.ctx.sampleRate) || 0;
+    $('miRate').textContent = rate ? (rate/1000).toFixed(1).replace('.0','')+' kHz' : '—';
+    $('miCh').textContent = st.channelCount ? (st.channelCount===1?'1 (mono)':st.channelCount) : '1 (mono)';
+  }else{
+    $('miLabel').textContent='micro non actif'; $('miRate').textContent='—'; $('miCh').textContent='—';
+  }
+  /* liste des entrées audio : sélecteur seulement s'il y en a plusieurs (surtout Android) */
+  try{
+    const devs=await navigator.mediaDevices.enumerateDevices();
+    S.micList=devs.filter(d=>d.kind==='audioinput');
+    const many=S.micList.length>1 && S.micList.some(d=>d.label);
+    $('miSelRow').style.display = many?'flex':'none';
+    if(many){
+      const cur=S.micList.find(d=>d.deviceId===S.micDevId);
+      $('miSelV').textContent = cur? (cur.label.length>18?cur.label.slice(0,18)+'…':cur.label) : 'auto';
+      $('miNote').textContent='Plusieurs entrées détectées : touche pour changer de micro.';
+    }else{
+      $('miNote').textContent="iOS n'expose en général qu'une entrée et choisit le micro automatiquement.";
+    }
+  }catch(e){ $('miSelRow').style.display='none'; }
+}
+/* rotation entre les entrées disponibles (Android surtout) */
+$('miSelRow') && ($('miSelRow').onclick=async ()=>{
+  if(S.micList.length<2)return;
+  const ids=S.micList.map(d=>d.deviceId);
+  const i=ids.indexOf(S.micDevId);
+  S.micDevId = ids[(i+1)%ids.length];
+  try{ await acquireMic(); }catch(e){}
+  refreshMicInfo();
+});
 function detectDevice(){
   const u=navigator.userAgent||'';
   if(/iPhone/.test(u))return 'iphone';
@@ -854,9 +900,9 @@ async function initAudio(){
 async function acquireMic(){
   if(S.srcNode){try{S.srcNode.disconnect();}catch(e){}}
   if(S.stream){for(const t of S.stream.getTracks()){try{t.stop();}catch(e){}}}
-  S.stream=await navigator.mediaDevices.getUserMedia({audio:{
-    echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1
-  }});
+  const ac={echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1};
+  if(S.micDevId)ac.deviceId={exact:S.micDevId};
+  S.stream=await navigator.mediaDevices.getUserMedia({audio:ac});
   S.srcNode=S.ctx.createMediaStreamSource(S.stream);
   S.srcNode.connect(S.analyser);
   S.lcLastCt=S.ctx.currentTime;                 // évite un saut de bloc dans les filtres temporels
@@ -2390,6 +2436,7 @@ function renderCal(){
   $('cGenV').textContent=S.corr==='generic'?'actif ✓':'activer';
   $('cProfV').textContent=S.corr==='profile'?(S.corrName||'chargé'):(S.profiles.length?S.profiles.length+' dispo.':'aucun');
   const ov=$('offView'); if(ov)ov.textContent='Offset actuel : '+S.offset.toFixed(1)+' dB';
+  refreshMicInfo();
   renderSweep();
   drawCurve();
 }
@@ -2709,7 +2756,11 @@ function buildCsv(){
   let csv='SONOMETRE CETIM - export\n';
   csv+='Date;'+new Date().toLocaleString('fr-FR')+';Duree [s];'+(S.eqT>0?S.eqT.toFixed(1):'0')+'\n';
   csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
-  csv+='FFT;'+S.fftN+';Fenetre;'+S.win+';Overlap;'+Math.round(S.overlap*100)+'%;Tiers d octave;'+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+'\n\n';
+  const _tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  const _mic=_tr&&_tr.label?_tr.label:'micro';
+  const _rate=(S.ctx&&S.ctx.sampleRate)?Math.round(S.ctx.sampleRate)+' Hz':'?';
+  csv+='FFT;'+S.fftN+';Fenetre;'+S.win+';Overlap;'+Math.round(S.overlap*100)+'%;Tiers d octave;'+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+'\n';
+  csv+='Micro;'+_mic+';Echantillonnage;'+_rate+'\n\n';
   const laeq=S.eqT>0?lvl(S.eq.A/S.eqT):-99, lceq=S.eqT>0?lvl(S.eq.C/S.eqT):-99, lzeq=S.eqT>0?lvl(S.eq.Z/S.eqT):-99;
   csv+='INDICES\n';
   csv+='LAeq;'+fmt(laeq)+';LCeq;'+fmt(lceq)+';LZeq;'+fmt(lzeq)+'\n';
