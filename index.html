@@ -2107,7 +2107,7 @@ function ui(){
   const badge=$('modeBadge');
   if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
   else if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
-  else if(S.paused){badge.textContent='⏸ PAUSE';badge.className='badge';}
+  else if(S.paused){badge.textContent='PAUSE';badge.className='badge';}
   ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
   $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
   $('bottomStrip').style.visibility = S.screen==='val' ? 'hidden' : 'visible';   // redondant sur Valeurs
