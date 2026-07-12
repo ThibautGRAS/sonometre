@@ -132,6 +132,11 @@
   .cbtn.go{background:rgba(47,191,131,.15);border-color:rgba(47,191,131,.45);color:#9EF0C9}
   .cin{width:64px;background:rgba(0,0,0,.28);border:1px solid var(--line);color:#fff;border-radius:7px;height:34px;text-align:center;font-family:var(--mono);font-size:15px;font-weight:700}
   .cunit{font-size:10px;color:var(--lcd-dim);flex:0 0 auto}
+  .curvebox{background:#050F26;border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:5px 6px 2px;position:relative}
+  .curvelbl{display:flex;justify-content:space-between;font-size:8.5px;font-weight:700;color:var(--lcd-dim);font-family:var(--mono);padding-bottom:2px}
+  .curvelbl span:first-child{color:var(--ice)}
+  #curveCv{width:100%;height:96px;display:block}
+
   .sweepgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
   .scell{background:rgba(79,195,255,.06);border:1px solid rgba(79,195,255,.12);border-radius:6px;padding:4px 2px;text-align:center;cursor:pointer;font-family:var(--mono)}
   .scell .sf{font-size:8px;color:var(--lcd-dim);font-weight:700}
@@ -260,6 +265,10 @@
           <div class="calbody">
             <div class="mrow" id="cGeneric"><span>Mode générique auto</span><b id="cGenV">activer</b></div>
             <div class="mrow" id="cProfSel"><span>Profil chargé</span><b id="cProfV">aucun</b></div>
+            <div class="curvebox">
+              <div class="curvelbl"><span id="curveTitle">Courbe de correction</span><span id="curveRange"></span></div>
+              <canvas id="curveCv"></canvas>
+            </div>
             <div class="crow2">
               <button class="cbtn" id="cImport">Importer JSON</button>
               <button class="cbtn" id="cExport">Exporter JSON</button>
@@ -1150,6 +1159,54 @@ function renderCal(){
   $('cProfV').textContent=S.corr==='profile'?(S.corrName||'chargé'):(S.profiles.length?S.profiles.length+' dispo.':'aucun');
   const ov=$('offView'); if(ov)ov.textContent='Offset actuel : '+S.offset.toFixed(1)+' dB';
   renderSweep();
+  drawCurve();
+}
+/* graphe de la courbe de correction active (dB ajoutés vs fréquence, axe log) */
+function drawCurve(){
+  const cv=$('curveCv'); if(!cv||S.screen!=='cal')return;
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const r=cv.getBoundingClientRect(); if(r.width<10)return;
+  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  const w=r.width,h=r.height,padL=22,padB=12;
+  g.fillStyle='#050F26';g.fillRect(0,0,w,h);
+  // courbe active
+  const curve = S.corr==='profile'&&S.corrCurve ? S.corrCurve
+              : S.corr==='generic' ? (GENERIC[S.device]||GENERIC.iphone)
+              : null;
+  $('curveTitle').textContent = S.corr==='profile'?('Profil : '+(S.corrName||'—'))
+                              : S.corr==='generic'?('Générique '+S.device)
+                              : 'Aucune correction active';
+  const fmin=20,fmax=20000;
+  const x2=f=>padL+(Math.log(f/fmin)/Math.log(fmax/fmin))*(w-padL-4);
+  // bornes dB dynamiques
+  let gmin=-3,gmax=3;
+  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){if(v<gmin)gmin=v;if(v>gmax)gmax=v;}}
+  gmin=Math.floor((gmin-1)/2)*2; gmax=Math.ceil((gmax+1)/2)*2;
+  const y2=v=>(1-(v-gmin)/(gmax-gmin))*(h-padB-2)+2;
+  // grille + libellés
+  g.strokeStyle='rgba(79,195,255,.12)';g.fillStyle='#5F7FB8';g.font='7px Arial';g.lineWidth=1;
+  g.textAlign='right';
+  for(let v=gmin;v<=gmax;v+= (gmax-gmin)>12?4:2){const y=y2(v);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText((v>0?'+':'')+v,padL-2,y+2.5);}
+  // ligne 0 dB accentuée
+  g.strokeStyle='rgba(127,216,255,.35)';g.beginPath();g.moveTo(padL,y2(0));g.lineTo(w-2,y2(0));g.stroke();
+  g.textAlign='center';g.fillStyle='#5F7FB8';
+  for(const f of [31.5,125,500,2000,8000]){g.fillText(f>=1000?(f/1000)+'k':f,x2(f),h-3);}
+  if(!curve){g.fillStyle='#5F7FB8';g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);return;}
+  // courbe (interpolée log, comme appliquée réellement)
+  g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.6;
+  let st=false;
+  for(let px=padL;px<=w-2;px+=2){
+    const f=fmin*Math.pow(fmax/fmin,(px-padL)/(w-padL-4));
+    const y=y2(interpCurve(curve,f));
+    st?g.lineTo(px,y):g.moveTo(px,y);st=true;
+  }
+  g.stroke();
+  // points de mesure du profil
+  const fc=curve.fc, gg=curve.g||curve.gain_dB;
+  g.fillStyle='#7FE9B8';
+  for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(gg[i]),2.2,0,7);g.fill();}}
+  $('curveRange').textContent=gmin+'…+'+gmax+' dB';
 }
 function renderSweep(){
   const grid=$('sweepGrid'); grid.innerHTML='';
