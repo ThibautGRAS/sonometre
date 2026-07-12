@@ -860,8 +860,8 @@ function sgFull(){return {lo:S.fscale==='lin'?0:20, hi:nyq()};}
 function sgSetup(c){
   const cv=$('sgramCv');
   SG.W=cv.width; SG.H=cv.height;
-  SG.padL=Math.round(26*c.dpr); SG.axH=Math.round(13*c.dpr);
-  const Hu=SG.H-SG.axH, Wp=SG.W-SG.padL;
+  SG.padL=Math.round(26*c.dpr); SG.axH=Math.round(13*c.dpr); SG.padR=Math.round(30*c.dpr);
+  const Hu=SG.H-SG.axH, Wp=SG.W-SG.padL-SG.padR;
   SG.fsc=S.fscale;
   SG.bufH=Math.min(1600,Math.max(Hu,2*Hu));
   if(!SG.buf)SG.buf=document.createElement('canvas');
@@ -941,7 +941,8 @@ function sgColumn(){
 }
 function sgBlit(c){
   /* affiche la fenêtre courante (zoom fréq. vertical + zoom temps horizontal) depuis le tampon */
-  const g=c.g, W=SG.W, H=SG.H, padL=SG.padL, Hu=H-SG.axH, Wp=W-padL;
+  const g=c.g, W=SG.W, H=SG.H, padL=SG.padL, padR=SG.padR||0, Hu=H-SG.axH, Wp=W-padL-padR;
+  const Wr=W-padR;                                    // bord droit de la zone spectrogramme (= présent)
   const nfmin=Math.max(F_LOW(),S.fview.min), nfmax=Math.min(S.fview.max,nyq());
   const V0n=TF(Math.max(nfmin,S.fscale==='lin'?0:20)), V1n=TF(nfmax);
   const sy=(SG.V1f-V1n)/(SG.V1f-SG.V0f)*SG.bufH;
@@ -966,15 +967,34 @@ function sgBlit(c){
   const ft=t=>t<0.05?'0 s':'−'+(t<10?t.toFixed(1):Math.round(t))+' s';
   g.textAlign='left';  g.fillText(ft(agoL),padL+3*c.dpr,H-4*c.dpr);
   g.textAlign='center';g.fillText(ft(agoM)+'  ·  pincer ↕ fréq / ↔ temps',padL+Wp/2,H-4*c.dpr);
-  g.textAlign='right'; g.fillText(ft(agoR),W-3*c.dpr,H-4*c.dpr);
+  g.textAlign='right'; g.fillText(ft(agoR),Wr-3*c.dpr,H-4*c.dpr);
+  /* ===== COLORBAR dB (jet) à droite ===== */
+  {
+    const sc=S.scale.sgram, cbx=Wr+6*c.dpr, cbw=10*c.dpr, cbTop=2, cbBot=Hu;
+    g.fillStyle='#050F26';g.fillRect(Wr,0,padR,H);
+    const grad=g.createLinearGradient(0,cbTop,0,cbBot);   // haut = max, bas = min
+    for(let s=0;s<=10;s++){const t=s/10;const i=Math.round((1-t)*255)*3;
+      grad.addColorStop(t,'rgb('+LUT[i]+','+LUT[i+1]+','+LUT[i+2]+')');}
+    g.fillStyle=grad;g.fillRect(cbx,cbTop,cbw,cbBot-cbTop);
+    g.strokeStyle='rgba(255,255,255,.25)';g.lineWidth=1;g.strokeRect(cbx+.5,cbTop+.5,cbw-1,cbBot-cbTop-1);
+    g.fillStyle='#8FB2E8';g.font=(8*c.dpr)+'px Arial';g.textAlign='left';
+    const step=(sc.hi-sc.lo)>60?20:(sc.hi-sc.lo)>25?10:5;
+    for(let d=Math.ceil(sc.lo/step)*step;d<=sc.hi;d+=step){
+      const y=cbTop+(1-(d-sc.lo)/(sc.hi-sc.lo))*(cbBot-cbTop);
+      g.fillText(Math.round(d),cbx+cbw+2*c.dpr,y+3*c.dpr);
+    }
+    /* libellé "dB" en haut de la colorbar */
+    g.save();g.translate(cbx+cbw+padR*0.62,cbTop+(cbBot-cbTop)/2);g.rotate(Math.PI/2);
+    g.textAlign='center';g.fillStyle='#5F7FB8';g.fillText('dB',0,0);g.restore();
+  }
   /* curseur : viseur (pin) = cercle figé sur une zone ; suivi (auto) = ligne pointillée au présent */
   if(S.sgCursor&&S.sgCursor.f){
     const f=S.sgCursor.f;
     const isPin=S.sgCursor.mode==='pin';
     /* position horizontale : pin = colonne figée reprojetée dans la fenêtre ; auto = bord droit */
-    let xc=W-8*c.dpr, visible=(f>=nfmin&&f<=nfmax);
+    let xc=Wr-8*c.dpr, visible=(f>=nfmin&&f<=nfmax);
     if(isPin){
-      const Wp=W-padL, colFrac=S.sgCursor.col/(SG.buf.width-1);
+      const colFrac=S.sgCursor.col/(SG.buf.width-1);
       const inWin=(colFrac-S.tview.x0)/Math.max(1e-6,(S.tview.x1-S.tview.x0));
       xc=padL+inWin*Wp;
       if(inWin<0||inWin>1)visible=false;              // hors de la fenêtre temporelle affichée
@@ -997,16 +1017,16 @@ function sgBlit(c){
         g.stroke();
       }else{
         g.lineWidth=1*c.dpr;g.setLineDash([4*c.dpr,3*c.dpr]);
-        g.beginPath();g.moveTo(padL,yy);g.lineTo(W-1,yy);g.stroke();g.setLineDash([]);
-        g.beginPath();g.arc(W-6*c.dpr,yy,3*c.dpr,0,7);g.fill();
+        g.beginPath();g.moveTo(padL,yy);g.lineTo(Wr-1,yy);g.stroke();g.setLineDash([]);
+        g.beginPath();g.arc(Wr-6*c.dpr,yy,3*c.dpr,0,7);g.fill();
       }
       /* étiquette : au-dessus du viseur pour pin, en haut à gauche pour auto */
       const txt=(isPin?'◎ ':'↗ ')+fmtF(f)+' Hz · '+fmt(S.sgCursor.L)+' dB';
       g.font='bold '+(11*c.dpr)+'px Arial';
       const tw=g.measureText(txt).width+10*c.dpr;
       let lx,ly;
-      if(isPin){lx=Math.max(padL+2*c.dpr,Math.min(W-tw-2*c.dpr,xc-tw/2));ly=Math.max(2,yy-24*c.dpr);}
-      else{lx=Math.max(padL+2*c.dpr,Math.min(W-tw-2*c.dpr,padL+4*c.dpr));ly=Math.max(2,Math.min(Hu-16*c.dpr,yy-9*c.dpr));}
+      if(isPin){lx=Math.max(padL+2*c.dpr,Math.min(Wr-tw-2*c.dpr,xc-tw/2));ly=Math.max(2,yy-24*c.dpr);}
+      else{lx=Math.max(padL+2*c.dpr,Math.min(Wr-tw-2*c.dpr,padL+4*c.dpr));ly=Math.max(2,Math.min(Hu-16*c.dpr,yy-9*c.dpr));}
       g.fillStyle='#08306B';g.fillRect(lx,ly,tw,15*c.dpr);
       g.strokeStyle=isPin?'rgba(255,255,255,.7)':'rgba(255,107,122,.6)';g.lineWidth=1;g.strokeRect(lx+.5,ly+.5,tw-1,15*c.dpr-1);
       g.fillStyle=isPin?'#FFFFFF':'#FFD6DB';g.textAlign='left';g.fillText(txt,lx+5*c.dpr,ly+11*c.dpr);
@@ -1054,11 +1074,11 @@ function resetView(){
   S.cursor=null; drawActive();
 }
 function attachZoomPan(id,axis,opts){
-  const cv=$(id), padL=26, axH=13;
+  const cv=$(id), padL=26, axH=13, padR=(opts&&opts.padR)||0;
   const uOf=(t,r)=>axis==='x'
-    ? ((t.clientX-r.left)-padL)/Math.max(1,r.width-padL-4)
+    ? ((t.clientX-r.left)-padL)/Math.max(1,r.width-padL-padR-4)
     : (t.clientY-r.top)/Math.max(1,r.height-axH);
-  const uxOf=(t,r)=>((t.clientX-r.left)-padL)/Math.max(1,r.width-padL-4);
+  const uxOf=(t,r)=>((t.clientX-r.left)-padL)/Math.max(1,r.width-padL-padR-4);
   const Vof=u=>{const V0=TF(Math.max(F_LOW(),S.fview.min)),V1=TF(S.fview.max);
     return axis==='x'?V0+u*(V1-V0):V1-u*(V1-V0);};
   const spanCur=()=>TF(S.fview.max)-TF(Math.max(F_LOW(),S.fview.min));
@@ -1163,7 +1183,7 @@ function attachZoomPan(id,axis,opts){
     }else if(mode==='pan'&&!moved&&opts.onTap){
       const u=(anchV-TF(Math.max(F_LOW(),S.fview.min)))/spanCur();
       const r=cv.getBoundingClientRect();
-      const uxpos=Math.max(0,Math.min(1,((sX-r.left)-26)/Math.max(1,r.width-26-4)));  // position horizontale (0..1 dans la fenêtre)
+      const uxpos=Math.max(0,Math.min(1,((sX-r.left)-26)/Math.max(1,r.width-26-padR-4)));  // position horizontale (0..1)
       opts.onTap(TFi(anchV),axis==='x'?u:1-u,uxpos);   // fréquence + position temps du tap
     }
     if(e.touches.length===0){mode=null;anchors=null;}
@@ -1197,7 +1217,7 @@ attachZoomPan('specCv','x',{
   onChange:()=>{if(!S.running)drawSpectrum();},
   onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();}
 });
-attachZoomPan('sgramCv','y',{time:true,
+attachZoomPan('sgramCv','y',{time:true,padR:30,
   onChange:()=>{if(!S.running||S.paused)drawSgram();},
   onTap:(f,uy,ux)=>{                        // un doigt : viseur figé sur le max local d'une zone
     pinCursorAt(f,ux);
