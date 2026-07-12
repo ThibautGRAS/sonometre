@@ -1994,14 +1994,12 @@ function setTransport(){
 }
 $('kStart').onclick=async function(){
   if(S.running){stopMeasure(false);return;}
-  const firstEver=!S.everStarted;
+  const coldStart=!S.micReady;                       // micro déjà préchauffé ?
   try{
     if(!S.ctx)await initAudio();
     if(S.ctx.state==='suspended')await S.ctx.resume();
-    /* attendre que le contexte soit RÉELLEMENT actif (autorisation micro juste accordée) */
     for(let i=0;i<40 && S.ctx.state!=='running';i++)await new Promise(r=>setTimeout(r,25));
-    /* purge : consommer quelques trames temporelles pour vider le tampon d'amorçage du flux */
-    if(S.analyser){const tmp=new Float32Array(S.analyser.fftSize);
+    if(coldStart && S.analyser){const tmp=new Float32Array(S.analyser.fftSize);
       for(let i=0;i<8;i++){S.analyser.getFloatTimeDomainData(tmp);await new Promise(r=>setTimeout(r,20));}}
   }catch(e){
     const el=$('err');el.style.display='block';
@@ -2009,13 +2007,13 @@ $('kStart').onclick=async function(){
     setTimeout(()=>el.style.display='none',6000);
     return;
   }
-  S.everStarted=true;
+  S.everStarted=true; S.micReady=true;
   resetMeasure();
   S.running=true;S.paused=false;S.lastT=0;
   S.warmT=1;                   // armement actif
   S.warmAge=0;
-  S.warmMax=firstEver?2.5:1.5; // micro « froid » au 1er lancement : armement plus long
-  S.K=0;                       // recalage Parseval réamorcé
+  S.warmMax=coldStart?2.5:0.6; // micro froid → armement long ; déjà chaud → court
+  S.K=0;
   S.badgeWarm=true;
   setTransport();
   setLocks();
@@ -2062,6 +2060,30 @@ loadProfiles();
 setLocks();
 ui();
 requestAnimationFrame(()=>sizeAll());
+
+/* ===== pré-chauffage du micro dès la première interaction =====
+   iOS exige un geste pour autoriser le micro : on l'initialise au premier tap n'importe où,
+   puis on garde le pipeline actif (chaud) pour que le transitoire d'amorçage se produise
+   AVANT toute mesure. Résultat : Démarrer donne une mesure propre immédiatement. */
+async function prewarmMic(){
+  if(S.ctx||S.prewarming)return;
+  S.prewarming=true;
+  try{
+    await initAudio();
+    if(S.ctx.state==='suspended')await S.ctx.resume();
+    /* petite boucle de fond : consomme le flux pour établir/stabiliser le gain d'entrée */
+    const tmp=new Float32Array(S.analyser.fftSize);
+    let n=0;
+    const keep=()=>{ if(S.running)return; if(S.analyser)S.analyser.getFloatTimeDomainData(tmp);
+      if(++n<200)setTimeout(keep,50); };  // ~10 s d'entretien puis on laisse dormir
+    keep();
+    S.micReady=true;
+    const b=$('modeBadge'); if(!S.running){b.textContent='PRÊT';b.className='badge';}
+  }catch(e){ /* refus micro : la demande sera refaite au Démarrer */ }
+  S.prewarming=false;
+}
+['pointerdown','touchstart'].forEach(ev=>window.addEventListener(ev,prewarmMic,{once:true,passive:true}));
+
 </script>
 </body>
 </html>
