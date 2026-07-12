@@ -525,15 +525,22 @@ function configureAnalyser(){
     const i0=Math.max(1,Math.ceil(lo/S.binHz)), i1=Math.min(n-1,Math.floor(hi/S.binHz));
     if(i1>=i0){ S.bands.push(fc); S.bandBins.push([i0,i1]); }
   }
-  S.bandPowF=new Float32Array(S.bands.length);
-  S.bandPowS=new Float32Array(S.bands.length);
-  S.bandPowV=new Float32Array(S.bands.length);
-  S.binPowF=new Float32Array(n);
-  S.binPowS=new Float32Array(n);
-  S.binPowV=new Float32Array(n);
-  S.bandEnergy=new Float64Array(S.bands.length);
-  S.bandPeak=new Float32Array(S.bands.length).fill(-99);
-  SG.init=false;
+  /* préservation : on ne remet à zéro que ce qui change réellement de dimension,
+     pour qu'un changement de paramètre en cours de route n'efface pas les courbes */
+  const nb=S.bands.length;
+  if(!S.bandPowF||S.bandPowF.length!==nb){
+    S.bandPowF=new Float32Array(nb);
+    S.bandPowS=new Float32Array(nb);
+    S.bandPowV=new Float32Array(nb);
+    S.bandEnergy=new Float64Array(nb);
+    S.bandPeak=new Float32Array(nb).fill(-99);
+  }
+  if(!S.binPowF||S.binPowF.length!==n){
+    S.binPowF=new Float32Array(n);
+    S.binPowS=new Float32Array(n);
+    S.binPowV=new Float32Array(n);
+  }
+  SG.init=false;                       // recartographie bins→lignes (les données sgram sont préservées par sgSetup)
 }
 async function initAudio(){
   S.ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -579,7 +586,7 @@ function resetMeasure(){
   updateNumbers(-99); drawActive();
 }
 /* effacements ciblés (mode expert) */
-function clearSgram(){ SG.init=false; if(SG.bg&&SG.buf){SG.bg.fillStyle='#000080';SG.bg.fillRect(0,0,SG.buf.width,SG.buf.height);} drawActive(); }
+function clearSgram(){ if(SG.cols)SG.cols.fill(null); SG.colSeq=0; SG.vScaleKey=''; SG.vSeq=-1; S.sgCursor=null; drawActive(); }
 function clearHist(){ S.hist=[]; S.histLast=0; drawActive(); }
 function clearPeak(){ S.lafMax=-Infinity; S.lafMin=Infinity; S.peakHold=0; if(S.bandPeak)S.bandPeak.fill(-99); updateNumbers(-99); drawActive(); }
 
@@ -668,6 +675,7 @@ function loop(ts){
   }
   if(S.duration>0 && S.elapsed>=S.duration){stopMeasure(true);}
 
+  sgTick();                 // le spectrogramme continue même si un autre écran ou le menu est affiché
   updateNumbers(L);
   drawActive();
 }
@@ -884,6 +892,7 @@ const SG={init:false,buf:null,bg:null,map:null,last:0,W:0,H:0,padL:0,axH:0,bufH:
 function sgFull(){return {lo:S.fscale==='lin'?0:20, hi:nyq()};}
 function sgSetup(c){
   const cv=$('sgramCv');
+  const sameGeom = SG.W===cv.width && SG.H===cv.height && SG.fsc===S.fscale && SG.cols;
   SG.W=cv.width; SG.H=cv.height;
   SG.padL=Math.round(26*c.dpr); SG.axH=Math.round(13*c.dpr); SG.padR=Math.round(30*c.dpr);
   const Hu=SG.H-SG.axH, Wp=SG.W-SG.padL-SG.padR;
@@ -892,11 +901,13 @@ function sgSetup(c){
   if(!SG.buf)SG.buf=document.createElement('canvas');
   SG.buf.width=Wp; SG.buf.height=SG.bufH;
   SG.bg=SG.buf.getContext('2d');
-  SG.bg.fillStyle='#000080'; SG.bg.fillRect(0,0,Wp,SG.bufH);
-  /* tampon de DONNÉES dB : une colonne (à la résolution bufH) par colonne pixel du tampon */
-  SG.cols=new Array(Wp);          // chaque entrée = Float32Array(bufH) de niveaux dB, ou null
-  SG.colHz=new Array(Wp);         // fréquence associée à chaque ligne (identique pour toutes)
-  /* carte lignes du tampon → bins FFT, sur TOUTE la bande */
+  /* tampon de DONNÉES dB : PRÉSERVÉ si la géométrie n'a pas changé (changement de
+     paramètre DSP en cours de mesure) — sinon réalloué */
+  if(!(sameGeom&&SG.cols.length===Wp)){
+    SG.cols=new Array(Wp);
+    SG.colHz=new Array(Wp);
+  }
+  /* carte lignes du tampon → bins FFT, sur TOUTE la bande (recalculée : binHz a pu changer) */
   const full=sgFull(), V0=TF(full.lo), V1=TF(full.hi);
   SG.V0f=V0; SG.V1f=V1;
   SG.map=[]; const fline=new Float32Array(SG.bufH);
@@ -912,7 +923,8 @@ function sgSetup(c){
   if(!SG.view)SG.view=document.createElement('canvas');
   SG.view.width=Wp; SG.view.height=Hu;
   SG.vg=SG.view.getContext('2d');
-  SG.colSeq=0; SG.vScaleKey=''; SG.vViewKey=''; SG.vSeq=-1;
+  if(!sameGeom)SG.colSeq=0;
+  SG.vScaleKey=''; SG.vViewKey=''; SG.vSeq=-1;      // force un re-rendu complet depuis les données
   SG.init=true;
 }
 function sgColumn(){
@@ -1111,17 +1123,21 @@ function sgBlit(c){
   g.restore();
   $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(nfmin)+'–'+fmtF(nfmax)+'Hz';
 }
+/* alimente le spectrogramme (appelé par la boucle même quand un autre écran/menu est affiché) */
+function sgTick(){
+  if(!S.binHz)return;
+  if(!SG.init&&CV.sgramCv)sgSetup(CV.sgramCv);        // re-cartographie après changement de paramètre
+  if(!SG.init||!SG.map||!SG.map.length)return;
+  const now=performance.now();
+  const fs=S.ctx?S.ctx.sampleRate:48000;
+  const hopMs=S.fftN*(1-S.overlap)/fs*1000;
+  const interval=Math.max(16,Math.min(S.colMs,hopMs));
+  if(now-SG.last>=interval){SG.last=now;sgColumn();}
+}
 function drawSgram(){
   const c=CV.sgramCv; if(!c)return;
   const cv=$('sgramCv');
   if(!SG.init||SG.W!==cv.width||SG.H!==cv.height||SG.fsc!==S.fscale)sgSetup(c);
-  if(S.running&&!S.paused&&S.binHz&&SG.map&&SG.map.length){
-    const now=performance.now();
-    const fs=S.ctx?S.ctx.sampleRate:48000;
-    const hopMs=S.fftN*(1-S.overlap)/fs*1000;      // temps d'avance d'une trame avec recouvrement
-    const interval=Math.max(16,Math.min(S.colMs,hopMs));
-    if(now-SG.last>=interval){SG.last=now;sgColumn();}
-  }
   sgBlit(c);
 }
 
@@ -1368,16 +1384,22 @@ function ui(){
 }
 
 /* ================= Touches ================= */
-/* ÉCRAN : appui court = cycle des affichages, appui long (0,5 s) = MODE EXPERT */
+/* ÉCRAN : appui court = cycle des affichages, appui long (0,5 s) = MODE EXPERT (bascule) */
 let scrT,scrLong=false;
 $('kScreen').addEventListener('pointerdown',()=>{
   scrLong=false;
-  scrT=setTimeout(()=>{scrLong=true;S.screen='menu';ui();},500);
+  scrT=setTimeout(()=>{
+    scrLong=true;
+    if(S.screen==='menu'||S.screen==='cal'){S.screen=S.prevScreen||'spec';}   // referme le menu
+    else{S.prevScreen=S.screen;S.screen='menu';}                              // ouvre le menu
+    ui();
+  },500);
 });
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kScreen').addEventListener(ev,()=>clearTimeout(scrT)));
 $('kScreen').addEventListener('click',()=>{
   if(scrLong){scrLong=false;return;}
-  S.screen=S.screen==='menu'?'spec':S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':'spec';
+  if(S.screen==='menu'||S.screen==='cal'){S.screen=S.prevScreen||'spec';}     // sortie du menu : écran précédent
+  else S.screen=S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':'spec';
   if(S.screen!=='sgram')S.sgCursor=null;
   ui();requestAnimationFrame(()=>{sizeAll();});
 });
