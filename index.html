@@ -21,12 +21,18 @@
   body{
     position:fixed;inset:0;overflow:hidden;             /* écran fixe : aucun scroll */
     font-family:var(--font);color:#fff;
-    background:linear-gradient(180deg,#0C2760 0%,var(--navy) 30%,#001238 100%);
+    background:
+      radial-gradient(140% 90% at 50% 0%, rgba(255,255,255,.05), transparent 55%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px),
+      linear-gradient(180deg,#0C2760 0%,var(--navy) 30%,#001238 100%);
     display:flex;flex-direction:column;
     padding:calc(env(safe-area-inset-top) + 6px) calc(env(safe-area-inset-right) + 10px)
             calc(env(safe-area-inset-bottom) + 8px) calc(env(safe-area-inset-left) + 10px);
     max-width:560px;margin:0 auto;
   }
+
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
+    background:radial-gradient(120% 100% at 50% 45%, transparent 62%, rgba(0,0,0,.28) 100%)}
 
   /* ---------- entête ---------- */
   header{display:flex;align-items:center;justify-content:space-between;padding:2px 18px 8px 20px;flex:0 0 auto}
@@ -51,6 +57,8 @@
     background:radial-gradient(circle at 35% 30%, #5a6b8f, #1b2a4d 70%);
     box-shadow:inset 0 1px 2px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.08)}
   .screw::after{content:"";position:absolute;left:2px;right:2px;top:4px;height:1.6px;background:rgba(0,0,0,.65);transform:rotate(38deg)}
+  .screw::before{content:"";position:absolute;left:2px;top:1.5px;width:2.5px;height:2.5px;border-radius:50%;
+    background:rgba(255,255,255,.5);filter:blur(.4px)}
   .screw.tl{top:calc(env(safe-area-inset-top) + 8px);left:6px}
   .screw.tr{top:calc(env(safe-area-inset-top) + 8px);right:6px}
   .screw.bl{bottom:calc(env(safe-area-inset-bottom) + 6px);left:6px}
@@ -173,18 +181,28 @@
   .progress .p{height:100%;width:0%;background:var(--red);box-shadow:0 0 6px rgba(239,51,70,.7)}
 
   /* ---------- CLAVIER PHYSIQUE ---------- */
-  .keypad{flex:0 0 auto;display:flex;flex-direction:column;gap:7px;padding-top:10px}
+  .keypad{flex:0 0 auto;display:flex;flex-direction:column;gap:7px;
+    margin-top:10px;padding:9px 8px 10px;border-radius:16px;
+    background:linear-gradient(180deg,#020D26,#03123255);
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.55), inset 0 -1px 0 rgba(255,255,255,.05), 0 1px 0 rgba(255,255,255,.06)}
   .krow{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
   .key{
     border:0;border-radius:12px;min-height:52px;cursor:pointer;color:#fff;
     background:linear-gradient(180deg,#123573 0%,var(--key) 45%,#07204F 100%);
-    box-shadow:0 3px 0 #041233, inset 0 1px 0 var(--key-hi);
+    box-shadow:0 3px 0 #041233, 0 5px 8px rgba(0,0,0,.35), inset 0 1px 0 var(--key-hi);
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     font-family:var(--font);
+    overflow:hidden;
   }
-  .key:active{transform:translateY(2px);box-shadow:0 1px 0 #041233, inset 0 1px 0 var(--key-hi)}
-  .key .kf{font-size:8px;letter-spacing:.14em;color:#8fa3c4;font-weight:700}
-  .key .kv{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+  /* reflet spéculaire diagonal sur le capuchon (comme le biseau de l'écran) */
+  .key::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:linear-gradient(118deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.035) 22%, transparent 38%)}
+  .key:active{transform:translateY(2px);box-shadow:0 1px 0 #041233, 0 2px 4px rgba(0,0,0,.35), inset 0 1px 0 var(--key-hi)}
+  .key:active::before{opacity:.5}
+  .key .kf{font-size:8px;letter-spacing:.14em;color:#8fa3c4;font-weight:700;
+    text-shadow:0 -1px 0 rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.07)}   /* gravure */
+  .key .kv{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;
+    text-shadow:0 -1px 0 rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.06)}
   .key .kv small{font-size:10px;color:#B9C7E2}
   .key .dot{width:6px;height:6px;border-radius:50%;background:#31446e;margin-top:1px}
   .key.lit .dot{background:var(--green);box-shadow:0 0 6px rgba(47,191,131,.9)}
