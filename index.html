@@ -1036,14 +1036,15 @@ function goBackground(label){
     if(typeof ui==='function')ui();
   }
 }
+/* On ne se fie qu'à visibilitychange, qui n'est émis QUE lorsque l'app est réellement
+   passée en arrière-plan (stable) — pas pendant le geste de bascule (App Switcher),
+   où blur/pagehide partent de façon transitoire et feraient clignoter PAUSE à tort.
+   Le filet de sécurité dans loop() couvre les cas où le micro meurt sans event. */
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible') setTimeout(reviveMic,250);
   else goBackground('ARRIÈRE-PLAN');
 });
 window.addEventListener('pageshow',()=>setTimeout(reviveMic,250));
-window.addEventListener('pagehide',()=>goBackground('ARRIÈRE-PLAN'));
-window.addEventListener('blur',()=>{ if(document.hidden||document.visibilityState==='hidden') goBackground('ARRIÈRE-PLAN'); });
-document.addEventListener('freeze',()=>goBackground('ARRIÈRE-PLAN'));   // Page Lifecycle API
 /* calcule le spectre courant (magnitude puissance par bin) avec la fenêtre choisie */
 function computeSpectrum(){
   const N=S.fftN, tap=S.tap, an=S.analyser;
@@ -1097,13 +1098,18 @@ function loop(ts){
   const dt=Math.min(0.2,(ts-S.lastT)/1000); S.lastT=ts;
   if(S.paused)return;
   /* filet de sécurité : si on est censé mesurer mais que le micro n'est plus vivant
-     (arrière-plan, écran verrouillé, appel…), on met en pause au lieu d'intégrer du vide */
+     (arrière-plan, écran verrouillé, appel…), on met en pause au lieu d'intégrer du vide.
+     Tolérance : on attend ~0,4 s de micro mort d'affilée pour ne pas réagir à un simple
+     hoquet transitoire pendant le geste de bascule de l'app. */
   if(S.running && !micAlive()){
-    S.paused=true; setTransport();
-    const b=$('modeBadge'); if(b){b.textContent='MICRO INDISPONIBLE · PAUSE'; b.className='badge';}
-    setMicStat('off');
-    return;
-  }
+    S.micDeadT=(S.micDeadT||0)+dt;
+    if(S.micDeadT>0.4){
+      S.paused=true; setTransport();
+      const b=$('modeBadge'); if(b){b.textContent='MICRO INDISPONIBLE · PAUSE'; b.className='badge';}
+      setMicStat('off'); S.micDeadT=0;
+    }
+    return;                                   // ne rien intégrer tant que le micro n'est pas revenu
+  } else { S.micDeadT=0; }
   /* préchauffage micro : iOS ajuste son gain d'entrée et émet un transitoire (pop) au démarrage,
      qui peut durer ~1 s. On reste en préchauffage tant que le niveau n'est pas STABILISÉ,
      avec un minimum de 0,8 s et un maximum de 3 s de sécurité. Rien n'est intégré pendant ce temps. */
