@@ -819,26 +819,45 @@ function drawSpectrum(){
   const padL=26, sc=S.scale.spec, K=S.K||1;
   if(!S.bands.length){grid(g,w,h,sc,padL,10);return;}
 
-  if(S.mode==='toct'){
-    const nb=S.bands.length, pw=S.time==='F'?S.bandPowF:S.time==='S'?S.bandPowS:S.bandPowV;
+  if(S.mode==='toct'||S.mode==='oct'){
+    /* octave : agrège les tiers par groupes centrés sur les fréquences normalisées (…31.5,63,125,250,500,1k…) */
+    let names, pw, peak;
+    const pwT=S.time==='F'?S.bandPowF:S.time==='S'?S.bandPowS:S.bandPowV;
+    if(S.mode==='oct'){
+      const OCT=[16,31.5,63,125,250,500,1000,2000,4000,8000,16000];
+      names=[]; pw=[]; peak=[];
+      for(const fc of OCT){
+        // somme des tiers dont la fréquence centrale est dans [fc/√2, fc·√2]
+        let s=0,pk=-99,any=false;
+        for(let b=0;b<S.bands.length;b++){
+          const f=S.bands[b];
+          if(f>=fc/1.4142&&f<fc*1.4142){s+=pwT[b];if(S.bandPeak[b]>pk)pk=S.bandPeak[b];any=true;}
+        }
+        if(any){names.push(fc);pw.push(s);peak.push(pk);}
+      }
+    }else{
+      names=S.bands; pw=pwT; peak=S.bandPeak;
+    }
+    const nb=names.length;
     let dLo=Infinity,dHi=-Infinity;
     for(let b=0;b<nb;b++){
       const L=lvl(pw[b]); if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
-      if(S.bandPeak[b]>dHi)dHi=S.bandPeak[b];
+      if(peak[b]>dHi)dHi=peak[b];
     }
     autoRange(sc,dLo,dHi);
     grid(g,w,h,sc,padL,10);
     const bw=(w-padL-4)/nb;
     g.textAlign='center';
+    const labelSet=S.mode==='oct'?names:[31.5,125,500,2000,8000];
     for(let b=0;b<nb;b++){
       const L=lvl(pw[b]), x=padL+b*bw, y=y2(L,h,sc), y0=y2(sc.lo,h,sc);
       g.fillStyle=L>85?'#EF3346':L>70?'#FFB454':'#2E9BFF';
       g.fillRect(x+1,y,Math.max(1,bw-2),Math.max(0,y0-y));
-      const Lp=S.bandPeak[b];
+      const Lp=peak[b];
       if(Lp>sc.lo){g.fillStyle='#BFE9FF';g.fillRect(x+1,y2(Lp,h,sc)-1,Math.max(1,bw-2),2);}
-      if([31.5,125,500,2000,8000].includes(S.bands[b])){
+      if(labelSet.includes(names[b])){
         g.fillStyle='#5F7FB8';
-        g.fillText(S.bands[b]>=1000?(S.bands[b]/1000)+'k':S.bands[b],x+bw/2,h-4);
+        g.fillText(names[b]>=1000?(names[b]/1000)+'k':names[b],x+bw/2,h-4);
       }
     }
     /* curseur : bande sélectionnée */
@@ -847,7 +866,7 @@ function drawSpectrum(){
       const x=padL+b*bw, L=lvl(pw[b]);
       g.strokeStyle='#BFE9FF';g.lineWidth=1.5;
       g.strokeRect(x+0.5,y2(Math.max(L,sc.lo),h,sc)-0.5,Math.max(1,bw-2)+1,Math.max(1,y2(sc.lo,h,sc)-y2(Math.max(L,sc.lo),h,sc))+1);
-      cursorLabel(g,w,x+bw/2,fmtF(S.bands[b])+'Hz · '+fmt(L)+' dB');
+      cursorLabel(g,w,x+bw/2,fmtF(names[b])+'Hz · '+fmt(L)+' dB');
     }
     $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
   }else{
@@ -1296,6 +1315,14 @@ function attachZoomPan(id,axis,opts){
         /* axe décidé au premier mouvement : on mémorise l'écartement initial */
         pinchAx=null;
         anchors={sprX:Math.abs(t[0].clientX-t[1].clientX),sprY:Math.abs(t[0].clientY-t[1].clientY)};
+      }else if(opts.yZoom){
+        /* spectre : axe (fréquence horizontale OU dB vertical) décidé au premier mouvement */
+        pinchAx=null;
+        const u1=uOf(t[0],r),u2=uOf(t[1],r);
+        anchors={sprX:Math.abs(t[0].clientX-t[1].clientX),sprY:Math.abs(t[0].clientY-t[1].clientY),
+                 u1,u2,V1:Vof(u1),V2:Vof(u2),
+                 dbLo:S.dbMin,dbHi:S.dbMax,
+                 yc:1-((t[0].clientY+t[1].clientY)/2-r.top)/Math.max(1,r.height-axH)};
       }else{
         pinchAx='main';
         const u1=uOf(t[0],r),u2=uOf(t[1],r);
@@ -1325,16 +1352,30 @@ function attachZoomPan(id,axis,opts){
         const sprX=Math.abs(t[0].clientX-t[1].clientX), sprY=Math.abs(t[0].clientY-t[1].clientY);
         const dX=Math.abs(sprX-anchors.sprX), dY=Math.abs(sprY-anchors.sprY);
         if(Math.max(dX,dY)<8)return;
-        pinchAx=dX>dY?'time':'main';
+        pinchAx = opts.yZoom ? (dX>dY?'main':'db') : (dX>dY?'time':'main');
         pinchMoved=true;
         /* ré-ancrage à l'instant du verrouillage : pas de saut */
         if(pinchAx==='time'){
           const u1=uxOf(t[0],r),u2=uxOf(t[1],r);
           anchors={u1,u2,B1:bx(u1),B2:bx(u2)};
+        }else if(pinchAx==='db'){
+          anchors={sprY0:sprY,dbLo:S.dbMin,dbHi:S.dbMax};
         }else{
           const u1=uOf(t[0],r),u2=uOf(t[1],r);
           anchors={u1,u2,V1:Vof(u1),V2:Vof(u2)};
         }
+        return;
+      }
+      if(pinchAx==='db'){
+        /* zoom vertical dB : l'écartement vertical dilate/comprime la fenêtre dB autour de son centre */
+        const sprY=Math.abs(t[0].clientY-t[1].clientY);
+        const ratio=Math.max(0.2,Math.min(5,anchors.sprY0/Math.max(4,sprY)));  // écarter = réduire la plage
+        const c=(anchors.dbLo+anchors.dbHi)/2, half=(anchors.dbHi-anchors.dbLo)/2*ratio;
+        let lo=Math.round(c-half), hi=Math.round(c+half);
+        if(hi-lo<10){const m=(lo+hi)/2;lo=Math.round(m-5);hi=Math.round(m+5);}
+        lo=Math.max(-20,lo); hi=Math.min(140,hi);
+        S.dbAuto=false; S.dbMin=lo; S.dbMax=hi;
+        ui(); opts.onChange&&opts.onChange();
         return;
       }
       if(pinchAx==='time'){
@@ -1406,6 +1447,7 @@ function attachZoomPan(id,axis,opts){
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 
 attachZoomPan('specCv','x',{
+  yZoom:true,
   onChange:()=>{if(!S.running)drawSpectrum();},
   onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();}
 });
@@ -1469,7 +1511,7 @@ function ui(){
   $('mainLbl').textContent='L'+S.weight+S.time;
   $('unitLbl').textContent='dB('+S.weight+')';
   $('gTitle').textContent=S.screen==='spec'
-    ? 'SPECTRE · '+(S.mode==='toct'?"TIERS D'OCTAVE":'BANDES FINES')+' · POND. '+S.weight
+    ? 'SPECTRE · '+(S.mode==='toct'?"TIERS D'OCTAVE":S.mode==='oct'?'OCTAVE':'BANDES FINES')+' · POND. '+S.weight
     : S.screen==='sgram' ? 'SPECTROGRAMME · POND. '+S.weight
     : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq'
     : S.screen==='menu' ? 'MODE EXPERT · TRAITEMENT DU SIGNAL'
@@ -1489,7 +1531,7 @@ function ui(){
   $('kDynV').textContent=S.dbAuto?'Auto':(S.dbMin+'–'+S.dbMax);
   $('kWV').textContent=S.weight;
   $('kTV').textContent=TIME_LBL[S.time];
-  $('kModeV').textContent=S.mode==='toct'?'1/3 oct':'FFT';
+  $('kModeV').textContent=S.mode==='toct'?'1/3 oct':S.mode==='oct'?'1/1 oct':'FFT';
   $('kDurV').textContent=DURL[DURS.indexOf(S.duration)];
   const offd=Math.abs(S.offset-120.0)>=0.05;
   $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
@@ -1806,7 +1848,7 @@ $('mClrAll').onclick=function(){clearSgram();resetMeasure();flashDone(this);};
 
 $('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();drawActive();};
 $('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER.length];ui();drawActive();};
-$('kMode').onclick=()=>{S.mode=S.mode==='toct'?'fft':'toct';ui();drawActive();};
+$('kMode').onclick=()=>{S.mode=S.mode==='toct'?'oct':S.mode==='oct'?'fft':'toct';S.cursor=null;ui();drawActive();};
 $('kDur').onclick=()=>{S.duration=DURS[(DURS.indexOf(S.duration)+1)%DURS.length];ui();updateNumbers(-99);};
 
 /* ===== Popover CALIBRATION global (Auto + presets + fin ±0.5 + avancé) ===== */
@@ -1841,7 +1883,7 @@ $('kReset').onclick=()=>{if(S.running)stopMeasure(false);resetMeasure();$('modeB
 /* verrouille/déverrouille les réglages qui biaiseraient une mesure en cours */
 function setLocks(){
   const active=S.running;                 // verrouillé dès qu'une mesure tourne (y compris en pause)
-  ['kW','kT','kMode','kDur','kCal'].forEach(id=>$(id).classList.toggle('locked',active));
+  ['kW','kT','kDur','kCal'].forEach(id=>$(id).classList.toggle('locked',active));
 }
 
 /* icônes transport universelles */
