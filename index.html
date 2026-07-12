@@ -168,24 +168,32 @@
   .key .kv small{font-size:10px;color:#B9C7E2}
   .key .dot{width:6px;height:6px;border-radius:50%;background:#31446e;margin-top:1px}
   .key.lit .dot{background:var(--green);box-shadow:0 0 6px rgba(47,191,131,.9)}
+  /* ---- transport universel : ▶ ■ ⏸ ---- */
+  .tico{width:26px;height:26px;display:block;fill:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
   .key-start{
+    background:linear-gradient(180deg,#43D97A 0%,#22A855 45%,#137A39 100%);
+    box-shadow:0 3px 0 #0A4A22, inset 0 1px 0 rgba(255,255,255,.28);
+  }
+  .key-start:active{transform:translateY(2px);box-shadow:0 1px 0 #0A4A22, inset 0 1px 0 rgba(255,255,255,.28)}
+  .key-start.running{
     background:linear-gradient(180deg,#FF5A6B 0%,var(--red) 45%,#B21226 100%);
     box-shadow:0 3px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25);
   }
-  .key-start:active{box-shadow:0 1px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25)}
-  .key-start.running{background:linear-gradient(180deg,#5f6b85 0%,#3c4a6e 45%,#232c44 100%);box-shadow:0 3px 0 #10182b, inset 0 1px 0 rgba(255,255,255,.15)}
-  .key-start .kv{font-size:16px;letter-spacing:.08em}
+  .key-start.running:active{box-shadow:0 1px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25)}
+  .key-pause{
+    background:linear-gradient(180deg,#FFC24B 0%,#E09A22 45%,#9A6410 100%);
+    box-shadow:0 3px 0 #5E3C08, inset 0 1px 0 rgba(255,255,255,.30);
+  }
+  .key-pause:active{transform:translateY(2px);box-shadow:0 1px 0 #5E3C08, inset 0 1px 0 rgba(255,255,255,.30)}
+  .key-pause.resume{
+    background:linear-gradient(180deg,#43D97A 0%,#22A855 45%,#137A39 100%);
+    box-shadow:0 3px 0 #0A4A22, inset 0 1px 0 rgba(255,255,255,.28);
+  }
   /* touche désactivée (réglage bloqué pendant la mesure) */
   .key[disabled],.key.locked{opacity:.4;pointer-events:none;filter:saturate(.4)}
   .key.locked::after{content:"🔒";position:absolute;top:5px;right:7px;font-size:9px;opacity:.7}
   .key{position:relative}
-  .key-pause{
-    background:linear-gradient(180deg,#2E6FC7 0%,#1B4E9E 45%,#0E3170 100%);
-    box-shadow:0 3px 0 #081F47, inset 0 1px 0 rgba(255,255,255,.22);
-  }
-  .key-pause:active{transform:translateY(2px);box-shadow:0 1px 0 #081F47, inset 0 1px 0 rgba(255,255,255,.22)}
-  .key-pause .kv{font-size:16px;letter-spacing:.08em}
-  .key-pause.resume{background:linear-gradient(180deg,#3E86E0 0%,#2E6FC7 45%,#1B4E9E 100%)}
+
 
   /* popover CALIBRATION */
   .calpop{display:none;position:fixed;inset:0;z-index:20;background:rgba(0,10,30,.55);align-items:flex-end;justify-content:center}
@@ -347,8 +355,8 @@
     </div>
     <div class="krow" style="grid-template-columns:1fr 1.4fr 1.4fr">
       <button class="key" id="kReset"><span class="kf">MESURE</span><span class="kv">Réinit</span></button>
-      <button class="key key-pause" id="kPause" disabled><span class="kv">⏸ PAUSE</span></button>
-      <button class="key key-start" id="kStart"><span class="kv">▶ DÉMARRER</span></button>
+      <button class="key key-pause" id="kPause" disabled aria-label="Pause"><span class="kv"><svg class="tico" viewBox="0 0 24 24"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg></span></button>
+      <button class="key key-start" id="kStart" aria-label="Démarrer"><span class="kv"><svg class="tico" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></span></button>
     </div>
   </div>
 
@@ -1698,6 +1706,22 @@ function setLocks(){
   ['kW','kT','kMode','kDur','kCal'].forEach(id=>$(id).classList.toggle('locked',active));
 }
 
+/* icônes transport universelles */
+const ICO={
+  play:'<svg class="tico" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>',
+  stop:'<svg class="tico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  pause:'<svg class="tico" viewBox="0 0 24 24"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>'
+};
+function setTransport(){
+  $('kStart').querySelector('.kv').innerHTML=S.running?ICO.stop:ICO.play;
+  $('kStart').classList.toggle('running',S.running);
+  $('kStart').setAttribute('aria-label',S.running?'Arrêter':'Démarrer');
+  const p=$('kPause');
+  p.querySelector('.kv').innerHTML=S.paused?ICO.play:ICO.pause;
+  p.classList.toggle('resume',S.paused);
+  p.setAttribute('aria-label',S.paused?'Reprendre':'Pause');
+  p.disabled=!S.running;
+}
 $('kStart').onclick=async function(){
   if(S.running){stopMeasure(false);return;}
   try{
@@ -1711,8 +1735,7 @@ $('kStart').onclick=async function(){
   }
   resetMeasure();
   S.running=true;S.paused=false;S.lastT=0;
-  this.classList.add('running');this.querySelector('.kv').textContent='■ ARRÊTER';
-  $('kPause').disabled=false;$('kPause').classList.remove('resume');$('kPause').querySelector('.kv').textContent='⏸ PAUSE';
+  setTransport();
   setLocks();
   try{S.wake=await navigator.wakeLock?.request('screen');}catch(e){}
   cancelAnimationFrame(S.raf);S.raf=requestAnimationFrame(loop);
@@ -1721,17 +1744,14 @@ $('kStart').onclick=async function(){
 $('kPause').onclick=()=>{
   if(!S.running)return;
   S.paused=!S.paused;
-  const k=$('kPause');
-  k.classList.toggle('resume',S.paused);
-  k.querySelector('.kv').textContent=S.paused?'▶ REPRENDRE':'⏸ PAUSE';
+  setTransport();
   S.lastT=0;                               // repartir proprement sans compter le temps de pause
   ui();
 };
 function stopMeasure(auto){
   S.running=false;S.paused=false;
   cancelAnimationFrame(S.raf);
-  const k=$('kStart');k.classList.remove('running');k.querySelector('.kv').textContent='▶ DÉMARRER';
-  $('kPause').disabled=true;$('kPause').classList.remove('resume');$('kPause').querySelector('.kv').textContent='⏸ PAUSE';
+  setTransport();
   setLocks();
   try{S.wake?.release();S.wake=null;}catch(e){}
   const badge=$('modeBadge');
