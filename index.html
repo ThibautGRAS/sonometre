@@ -93,7 +93,7 @@
   /* zone graphique fixe : les 3 affichages sont superposés, un seul visible */
   .graphzone{flex:1 1 auto;min-height:0;position:relative;margin-top:6px;border-top:1px solid var(--lcd-grid);padding-top:6px}
   .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--ice);z-index:2;text-shadow:0 0 8px rgba(79,195,255,.4)}
-  .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2}
+  .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--ice);z-index:2;cursor:pointer;background:rgba(79,195,255,.10);border:1px solid rgba(79,195,255,.22);border-radius:6px;padding:2px 6px}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
   .gpane.on{display:block}
   canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
@@ -274,7 +274,7 @@
           <div class="mrow" id="mRes"><span>Résolution · bande</span><b>2.9 Hz</b></div>
           <div class="mrow" id="mOverlap"><span>Recouvrement (overlap)</span><b>50 %</b></div>
           <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
-          <div class="mrow" id="mDbScale"><span>Échelle dB graphiques</span><b>Auto</b></div>
+          <div class="mrow" id="mDbScale"><span>Échelles dB / fréquence</span><b>Auto</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
           <div class="mrow act" id="mClrHist"><span>Effacer l'évolution temporelle</span><b>⌫</b></div>
@@ -364,6 +364,25 @@
     <button class="cp-full" id="cpFull">Calibration avancée (profils, balayage…)</button>
   </div></div>
 
+  <!-- popover ÉCHELLES / DYNAMIQUE -->
+  <div id="dynPop" class="calpop"><div class="calpop-in">
+    <div class="cp-head">ÉCHELLES D'AFFICHAGE <button id="dpClose">✕</button></div>
+    <div class="cp-row"><span>Niveaux dB (Y)</span><button id="dpDbMode">Auto</button></div>
+    <div class="cp-fine" id="dpDbRow">
+      <button id="dpDbMinM">−</button><span id="dpDbMin" style="flex:0 0 64px">20</span><button id="dpDbMinP">+</button>
+      <span style="flex:1;font-size:11px;color:#5F7FB8">min · max</span>
+      <button id="dpDbMaxM">−</button><span id="dpDbMax" style="flex:0 0 64px">110</span><button id="dpDbMaxP">+</button>
+    </div>
+    <div class="cp-row"><span>Fréquence (X)</span><button id="dpFMode">Pleine bande</button></div>
+    <div class="cp-fine" id="dpFRow">
+      <input class="cin" id="dpFMin" type="number" inputmode="numeric" min="1" step="10" value="20" style="width:78px">
+      <span style="flex:1;text-align:center;font-size:11px;color:#5F7FB8">→ Hz →</span>
+      <input class="cin" id="dpFMax" type="number" inputmode="numeric" min="10" step="100" value="20000" style="width:78px">
+      <button id="dpFApply" style="width:88px">Appliquer</button>
+    </div>
+    <div class="mnote" style="margin-top:6px">Affichage uniquement — modifiable pendant la mesure. Le pincement à deux doigts reste actif.</div>
+  </div></div>
+
 
 <script>
 "use strict";
@@ -382,7 +401,7 @@ const S = {
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1},
-  fscale:'log', fftN:16384, nSmooth:0, colMs:50, dbAuto:true,
+  fscale:'log', fftN:16384, nSmooth:0, colMs:50, dbAuto:true, dbMin:20, dbMax:110,
   win:'blackman', overlap:0.5,
   tap:null, ring:null, ringW:0, winCoef:null, winSum2:1, re:null, im:null, mag:null,
   device:'', corr:'off', corrCurve:null, profiles:[], sweep:null,
@@ -687,7 +706,7 @@ window.addEventListener('orientationchange',()=>setTimeout(sizeAll,250));
 
 /* ===== échelle auto : expansion rapide, contraction très lente (anti-scintillement) ===== */
 function autoRange(sc,dLo,dHi,minSpan){
-  if(!S.dbAuto){sc.lo=20;sc.hi=110;return sc;}
+  if(!S.dbAuto){sc.lo=S.dbMin;sc.hi=S.dbMax;return sc;}
   if(!isFinite(dLo)||!isFinite(dHi)||dHi<=-90)return sc;
   minSpan=minSpan||40;
   let tLo=Math.floor((dLo-4)/5)*5, tHi=Math.ceil((dHi+4)/5)*5;
@@ -1330,7 +1349,7 @@ function ui(){
   $('mRes').querySelector('b').textContent=(res<1?res.toFixed(2):res.toFixed(1))+' Hz';
   $('mOverlap').querySelector('b').textContent=Math.round(S.overlap*100)+' %';
   $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
-  $('mDbScale').querySelector('b').textContent=S.dbAuto?'Auto':'Fixe 20–110';
+  $('mDbScale').querySelector('b').textContent=(S.dbAuto?'dB auto':('dB '+S.dbMin+'–'+S.dbMax))+' ▸';
   $('kWV').textContent=S.weight;
   $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':'FFT';
@@ -1383,7 +1402,42 @@ $('mSgSpeed').onclick=()=>{
   S.colMs=opts[(opts.indexOf(S.colMs)+1)%opts.length];
   ui();
 };
-$('mDbScale').onclick=()=>{S.dbAuto=!S.dbAuto;ui();drawActive();};
+/* ===== Popover ÉCHELLES / DYNAMIQUE (affichage seul, réglable en temps réel) ===== */
+function renderDynPop(){
+  $('dpDbMode').textContent=S.dbAuto?'Auto':'Manuel';
+  $('dpDbRow').style.opacity=S.dbAuto?0.35:1;
+  $('dpDbRow').style.pointerEvents=S.dbAuto?'none':'auto';
+  $('dpDbMin').textContent=S.dbMin;
+  $('dpDbMax').textContent=S.dbMax;
+  const full=S.fview.min<=F_LOW()+0.01&&S.fview.max>=nyq()-1;
+  $('dpFMode').textContent=full?'Pleine bande':'Plage définie';
+  $('dpFMin').value=Math.round(S.fview.min);
+  $('dpFMax').value=Math.round(Math.min(S.fview.max,nyq()));
+}
+function openDynPop(){renderDynPop();$('dynPop').classList.add('on');}
+$('gScale').onclick=openDynPop;
+$('dpClose').onclick=()=>$('dynPop').classList.remove('on');
+$('dynPop').addEventListener('click',e=>{if(e.target.id==='dynPop')$('dynPop').classList.remove('on');});
+$('dpDbMode').onclick=()=>{S.dbAuto=!S.dbAuto;ui();drawActive();renderDynPop();};
+function dbStep(which,d){
+  if(which==='min'){S.dbMin=Math.max(-20,Math.min(S.dbMax-10,S.dbMin+d));}
+  else{S.dbMax=Math.max(S.dbMin+10,Math.min(140,S.dbMax+d));}
+  S.dbAuto=false; drawActive(); renderDynPop();
+}
+$('dpDbMinM').onclick=()=>dbStep('min',-5);
+$('dpDbMinP').onclick=()=>dbStep('min',5);
+$('dpDbMaxM').onclick=()=>dbStep('max',-5);
+$('dpDbMaxP').onclick=()=>dbStep('max',5);
+$('dpFMode').onclick=()=>{resetView();drawActive();renderDynPop();};
+$('dpFApply').onclick=()=>{
+  let a=parseFloat($('dpFMin').value),b=parseFloat($('dpFMax').value);
+  if(!isFinite(a)||!isFinite(b)){alert('Bornes invalides.');return;}
+  a=Math.max(1,a); b=Math.min(nyq(),b);
+  if(b-a<5){alert('Plage trop étroite (min 5 Hz).');return;}
+  S.fview={min:a,max:b};
+  drawActive(); renderDynPop();
+};
+$('mDbScale').onclick=openDynPop;
 $('mCalib').onclick=()=>{S.screen='cal';ui();requestAnimationFrame(renderCal);};
 $('calClose').onclick=()=>{S.screen='menu';ui();};
 
