@@ -849,11 +849,16 @@ function sgColumn(){
   /* défilement du tampon de DONNÉES (colonnes dB) : décale d'une case vers la gauche */
   for(let x=0;x<Wp-1;x++)SG.cols[x]=SG.cols[x+1];
   SG.cols[Wp-1]=col;                                  // nouvelle colonne à droite (instant présent)
-  /* mode auto : suit le max de la colonne courante */
+  /* mode auto : suit le max de la colonne courante, DANS la fenêtre de fréquence affichée */
   if(S.sgCursor&&S.sgCursor.mode==='auto'){
-    let bestR=0,bestL=-Infinity;
-    for(let r=0;r<Hb;r++)if(col[r]>bestL){bestL=col[r];bestR=r;}
-    S.sgCursor.f=SG.flineHz[bestR]; S.sgCursor.L=bestL; S.sgCursor.col=Wp-1;
+    const nfmin=Math.max(F_LOW(),S.fview.min), nfmax=Math.min(S.fview.max,nyq());
+    let bestR=-1,bestL=-Infinity;
+    for(let r=0;r<Hb;r++){
+      const fr=SG.flineHz[r];
+      if(fr<nfmin||fr>nfmax)continue;
+      if(col[r]>bestL){bestL=col[r];bestR=r;}
+    }
+    if(bestR>=0){S.sgCursor.f=SG.flineHz[bestR]; S.sgCursor.L=bestL; S.sgCursor.col=Wp-1;}
   }
   /* le viseur figé et la fenêtre temporelle suivent le défilement pour rester sur la même zone */
   if(S.sgCursor&&S.sgCursor.mode==='pin'&&S.sgCursor.col!=null){
@@ -1148,12 +1153,17 @@ function pinCursorAt(fTap,ux){
   if(!SG.cols||!SG.flineHz){S.sgCursor={mode:'pin',f:fTap,L:-99,col:null};return;}
   const Wp=SG.buf.width, Hb=SG.bufH;
   /* colonne visée dans le tampon : ux est dans la fenêtre temporelle courante (tview) */
-  const colFrac=S.tview.x0+ux*(S.tview.x1-S.tview.x0);
+  const tspan=S.tview.x1-S.tview.x0;
+  const colFrac=S.tview.x0+ux*tspan;
   const colTap=Math.round(colFrac*(Wp-1));
-  /* demi-fenêtres de recherche : ±Δt colonnes, ±Δf autour de la fréquence tapée */
-  const dCol=Math.max(2,Math.round(Wp*0.03));                  // ~3 % de la largeur en temps
+  /* demi-fenêtre TEMPS : fraction de la portion affichée (se resserre quand on zoome en temps) */
+  const dCol=Math.max(2,Math.round(Wp*tspan*0.06));
+  /* demi-fenêtre FRÉQUENCE : fraction de la plage AFFICHÉE (se resserre quand on zoome en fréq.),
+     ce qui permet d'accrocher les pics/minima locaux au lieu d'une grosse raie voisine */
   const V0=SG.V0f,V1=SG.V1f;
-  const vTap=TF(fTap), dV=(V1-V0)*0.05;                        // ±5 % de la hauteur en fréquence
+  const nfmin=Math.max(F_LOW(),S.fview.min), nfmax=Math.min(S.fview.max,nyq());
+  const Vwin=Math.abs(TF(nfmax)-TF(nfmin));
+  const vTap=TF(fTap), dV=Vwin*0.08;                          // ±8 % de la hauteur AFFICHÉE
   let r0=Hb,r1=0;
   for(let r=0;r<Hb;r++){const v=TF(SG.flineHz[r]);if(Math.abs(v-vTap)<=dV){if(r<r0)r0=r;if(r>r1)r1=r;}}
   if(r0>r1){r0=r1=Math.round((1-(vTap-V0)/(V1-V0))*Hb);}
