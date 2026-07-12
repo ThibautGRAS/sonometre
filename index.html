@@ -37,18 +37,19 @@ if('serviceWorker' in navigator){
     --plate0:#020D26; --plate1:rgba(3,18,50,.33);             /* platine clavier */
     --vig:rgba(0,0,0,.28);                                    /* vignettage */
     --logo-fill:#fff;                                        /* couleur du logo (blanc par défaut) */
+    --cap0:#0E3070; --cap1:#04153A; --cap-dot:rgba(255,255,255,.25);   /* capsule haut-parleur */
   }
   /* Acier : robe gris-bleu, touches marine inchangées (charte) */
   body.th-acier{--face0:#4A5568; --face1:#334052; --face2:#222C3C; --vig:rgba(0,0,0,.32);
-    --lcd-bg:#0B0E14; --lcd-bg2:#141922; --lcd-solid:#0B0E14; --lcd-grid:rgba(180,200,230,.13); --lcd-gridline:rgba(180,200,230,.13); --lcd-axis:#8090A8; --lcd-dim:#8090A8; --lcd-title:#9FB6D8}
+    --lcd-bg:#0B0E14; --lcd-bg2:#141922; --lcd-solid:#0B0E14; --lcd-grid:rgba(180,200,230,.13); --lcd-gridline:rgba(180,200,230,.13); --lcd-axis:#8090A8; --lcd-dim:#8090A8; --lcd-title:#9FB6D8; --cap0:#2A3240; --cap1:#161C24; --cap-dot:rgba(200,215,235,.22)}
   /* Clair labo : robe claire, texte marine, vignettage doux */
   body.th-clair{--face0:#F4F7FB; --face1:#DFE7F2; --face2:#C3CFE0; --ink:#0A1F42;
     --plate0:#B9C6D9; --plate1:rgba(140,160,190,.25); --vig:rgba(30,50,90,.14); --logo-fill:#12234B;
-    --lcd-bg:#12233F; --lcd-bg2:#1B3255; --lcd-solid:#14243F; --lcd-grid:rgba(150,190,240,.16); --lcd-gridline:rgba(150,190,240,.16); --lcd-axis:#8FB0D8; --lcd-dim:#8FB0D8}
+    --lcd-bg:#12233F; --lcd-bg2:#1B3255; --lcd-solid:#14243F; --lcd-grid:rgba(150,190,240,.16); --lcd-gridline:rgba(150,190,240,.16); --lcd-axis:#8FB0D8; --lcd-dim:#8FB0D8; --cap0:#C7D2E2; --cap1:#9DAAC0; --cap-dot:rgba(40,60,95,.30)}
   /* OLED : noir profond (économie batterie), accents inchangés */
   body.th-oled{--face0:#0A0A0C; --face1:#000; --face2:#000;
     --plate0:#000; --plate1:rgba(10,16,28,.6); --vig:rgba(0,0,0,.5);
-    --lcd-bg:#000; --lcd-bg2:#05070C; --lcd-solid:#000; --lcd-grid:rgba(120,150,190,.16); --lcd-gridline:rgba(120,150,190,.16); --lcd-axis:#6E8CC0}
+    --lcd-bg:#000; --lcd-bg2:#05070C; --lcd-solid:#000; --lcd-grid:rgba(120,150,190,.16); --lcd-gridline:rgba(120,150,190,.16); --lcd-axis:#6E8CC0; --cap0:#0A0A0C; --cap1:#000; --cap-dot:rgba(160,180,210,.20)}
   /* Game Boy : écran vert monochrome, façade grise, accents verts */
   body.th-gameboy{--face0:#9AA0A6; --face1:#7E858C; --face2:#5A6066; --ink:#2B3038; --vig:rgba(0,0,0,.30);
     --plate0:#4A4F55; --plate1:rgba(60,66,72,.5);
@@ -56,7 +57,7 @@ if('serviceWorker' in navigator){
     --ice:#0F380F; --red:#8B2C2C;
     --lcd-bg:#9BBC0F; --lcd-bg2:#8BAC0F; --lcd-solid:#9BBC0F;
     --lcd-ink:#0F380F; --lcd-dim:#306230; --lcd-grid:rgba(15,56,15,.22); --lcd-gridline:rgba(15,56,15,.22);
-    --lcd-axis:#306230; --lcd-title:#0F380F; --logo-fill:#0F380F}
+    --lcd-axis:#306230; --lcd-title:#0F380F; --logo-fill:#0F380F; --cap0:#5A6066; --cap1:#3B4046; --cap-dot:rgba(20,25,30,.35)}
   body{
     position:fixed;inset:0;overflow:hidden;             /* écran fixe : aucun scroll */
     font-family:var(--font);color:#fff;
@@ -113,9 +114,9 @@ if('serviceWorker' in navigator){
   .miccap i{
     width:92px;height:15px;border-radius:0 0 14px 14px;border:1px solid var(--line);border-top:0;
     background:
-      radial-gradient(circle, rgba(255,255,255,.25) 1px, transparent 1.4px) 3px 3px/6px 6px repeat-x,
-      radial-gradient(circle, rgba(255,255,255,.25) 1px, transparent 1.4px) 6px 8px/6px 6px repeat-x,
-      linear-gradient(180deg,#0E3070,#04153A);
+      radial-gradient(circle, var(--cap-dot) 1px, transparent 1.4px) 3px 3px/6px 6px repeat-x,
+      radial-gradient(circle, var(--cap-dot) 1px, transparent 1.4px) 6px 8px/6px 6px repeat-x,
+      linear-gradient(180deg,var(--cap0),var(--cap1));
     box-shadow:inset 0 -3px 7px rgba(0,0,0,.55);
   }
 
