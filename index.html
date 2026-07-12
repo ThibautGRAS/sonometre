@@ -288,6 +288,7 @@
           <div class="mrow" id="mRes"><span>Résolution · bande</span><b>2.9 Hz</b></div>
           <div class="mrow" id="mOverlap"><span>Recouvrement (overlap)</span><b>50 %</b></div>
           <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
+          <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
           <div class="mrow" id="mDbScale"><span>Échelles dB / fréquence</span><b>Auto</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
@@ -421,7 +422,7 @@ const S = {
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1},
   fscale:'log', fftN:16384, nSmooth:0, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true,
-  win:'blackman', overlap:0.5,
+  win:'blackman', overlap:0.5, peakInterp:true,
   tap:null, ring:null, ringW:0, winCoef:null, winSum2:1, re:null, im:null, mag:null,
   device:'', corr:'off', corrCurve:null, profiles:[], sweep:null,
   scale:{spec:{lo:30,hi:90}, hist:{lo:30,hi:90}, sgram:{lo:0,hi:60}}
@@ -468,6 +469,19 @@ const FFT_SIZES=[2048,4096,8192,16384,32768];
 const OVERLAPS=[0,0.5,0.75];
 
 /* ===== FFT radix-2 itérative (in-place) ===== */
+/* ===== interpolation parabolique de pic =====
+   ajuste une parabole sur (i-1,i,i+1) en dB : exacte pour une fenêtre gaussienne,
+   très bonne pour Hann/Blackman. Retourne {f,L} raffinés (fréquence vraie + niveau corrigé). */
+function parabolicPeak(getDb, i, binHz){
+  if(!S.peakInterp||i<1) return {f:i*binHz, L:getDb(i)};
+  const ym1=getDb(i-1), y0=getDb(i), yp1=getDb(i+1);
+  const den=(ym1-2*y0+yp1);
+  if(!isFinite(den)||Math.abs(den)<1e-9) return {f:i*binHz, L:y0};
+  let delta=0.5*(ym1-yp1)/den;                 // décalage sub-bin ∈ [-0.5,0.5]
+  if(!isFinite(delta)||Math.abs(delta)>0.5) delta=0;
+  const Lpk=y0-0.25*(ym1-yp1)*delta;           // amplitude au sommet (corrige le scalloping)
+  return {f:(i+delta)*binHz, L:Lpk};
+}
 function fft(re,im){
   const n=re.length;
   for(let i=1,j=0;i<n;i++){
@@ -840,16 +854,21 @@ function drawSpectrum(){
     g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.3;
     pts.forEach((pt,i)=>{const y=y2(pt[1],h,sc); i?g.lineTo(pt[0],y):g.moveTo(pt[0],y);});
     g.stroke();
-    /* curseur : ligne + fréquence/niveau au bin le plus proche */
+    /* curseur : cherche le pic local près du point visé, puis interpolation parabolique */
     if(S.cursor&&S.cursor.f>=fmin&&S.cursor.f<=fmax&&S.binHz){
-      const ic=Math.max(1,Math.min(S.fftDb.length-1,Math.round(S.cursor.f/S.binHz)));
-      let p=binPow?binPow[ic]:0; if(!isFinite(p))p=0;
-      if(wSel)p*=wSel[ic];
-      const L=lvl(p), x=x2(S.freqs[ic]);
+      const n=S.fftDb.length;
+      const getDb=k=>{let p=binPow?binPow[Math.max(1,Math.min(n-1,k))]:0;if(!isFinite(p)||p<=0)return -180;if(wSel)p*=wSel[Math.max(1,Math.min(n-1,k))];return 10*Math.log10(p);};
+      let ic=Math.max(1,Math.min(n-1,Math.round(S.cursor.f/S.binHz)));
+      // accroche le maximum local dans une petite fenêtre (±0,5 % ou ≥2 bins) autour du tap
+      const half=Math.max(2,Math.round(ic*0.02));
+      let bi=ic,bv=-Infinity;
+      for(let k=Math.max(1,ic-half);k<=Math.min(n-1,ic+half);k++){const v=getDb(k);if(v>bv){bv=v;bi=k;}}
+      const pk=parabolicPeak(getDb,bi,S.binHz);
+      const L=pk.L+S.offset, x=x2(pk.f);
       g.strokeStyle='#BFE9FF';g.lineWidth=1;g.setLineDash([3,3]);
       g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
       g.fillStyle='#BFE9FF';g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
-      cursorLabel(g,w,x,fmtF(S.freqs[ic])+'Hz · '+fmt(L)+' dB');
+      cursorLabel(g,w,x,fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+(S.peakInterp?' ⟂':''));
     }
     $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz';
   }
@@ -977,7 +996,7 @@ function sgColumn(){
       if(fr<nfmin||fr>nfmax)continue;
       if(col[r]>bestL){bestL=col[r];bestR=r;}
     }
-    if(bestR>=0){S.sgCursor.f=SG.flineHz[bestR]; S.sgCursor.L=bestL; S.sgCursor.col=Wp-1;}
+    if(bestR>=0){const rr=refineRow(col,bestR,Hb);S.sgCursor.f=rr.f; S.sgCursor.L=rr.L; S.sgCursor.col=Wp-1;}
   }
   /* le viseur figé et la fenêtre temporelle suivent le défilement pour rester sur la même zone */
   if(S.sgCursor&&S.sgCursor.mode==='pin'&&S.sgCursor.col!=null){
@@ -1403,7 +1422,23 @@ function pinCursorAt(fTap,ux){
     for(let r=r0;r<=r1;r++){if(c[r]>bestL){bestL=c[r];bestR=r;bestC=x;}}
   }
   if(bestL<=-Infinity){S.sgCursor={mode:'pin',f:fTap,L:-99,col:colTap};return;}
-  S.sgCursor={mode:'pin',f:SG.flineHz[bestR],L:bestL,col:bestC};
+  /* interpolation parabolique dans le domaine des lignes (fréquence sub-ligne) */
+  const colA=SG.cols[bestC];
+  const rr=refineRow(colA,bestR,Hb);
+  S.sgCursor={mode:'pin',f:rr.f,L:rr.L,col:bestC};
+}
+/* raffine (ligne, niveau) par parabole sur la colonne dB du spectrogramme */
+function refineRow(col,r,Hb){
+  if(!S.peakInterp||!col||r<1||r>=Hb-1) return {f:SG.flineHz[r],L:col?col[r]:-99};
+  const ym1=col[r-1],y0=col[r],yp1=col[r+1];
+  const den=(ym1-2*y0+yp1);
+  if(!isFinite(den)||Math.abs(den)<1e-9) return {f:SG.flineHz[r],L:y0};
+  let delta=0.5*(ym1-yp1)/den; if(!isFinite(delta)||Math.abs(delta)>0.5)delta=0;
+  const Lpk=y0-0.25*(ym1-yp1)*delta;
+  // fréquence interpolée entre les lignes voisines (flineHz est monotone)
+  const ra=Math.max(0,Math.min(Hb-1,r+delta)), r0=Math.floor(ra), fr=ra-r0;
+  const f=SG.flineHz[r0]*(1-fr)+SG.flineHz[Math.min(Hb-1,r0+1)]*fr;
+  return {f,L:Lpk};
 }
 
 /* ================= UI ================= */
@@ -1426,6 +1461,7 @@ function ui(){
   $('mRes').querySelector('b').textContent=(res<1?res.toFixed(2):res.toFixed(1))+' Hz';
   $('mOverlap').querySelector('b').textContent=Math.round(S.overlap*100)+' %';
   $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
+  $('mPeakInterp').querySelector('b').textContent=S.peakInterp?'Oui':'Non';
   $('mDbScale').querySelector('b').textContent=(S.dbAuto?'dB auto':('dB '+S.dbMin+'–'+S.dbMax))+' ▸';
   $('kDynV').textContent=S.dbAuto?'Auto':(S.dbMin+'–'+S.dbMax);
   $('kWV').textContent=S.weight;
@@ -1486,6 +1522,7 @@ $('mSgSpeed').onclick=()=>{
   S.colMs=opts[(opts.indexOf(S.colMs)+1)%opts.length];
   ui();
 };
+$('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
 /* ===== Popover ÉCHELLES / DYNAMIQUE (affichage seul, réglable en temps réel) ===== */
 const DB_PRESETS=[['Auto',null],['20–110',[20,110]],['30–90',[30,90]],['40–80',[40,80]]];
 const F_PRESETS=[['Pleine bande',null],['20–200',[20,200]],['20–1k',[20,1000]],['1k–10k',[1000,10000]]];
