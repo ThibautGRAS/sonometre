@@ -110,7 +110,8 @@
     padding:10px 12px 8px;overflow:hidden;
   }
   .statusline{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--lcd-dim);flex:0 0 auto;font-family:var(--mono)}
-  .badge{font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(79,195,255,.14);border:1px solid rgba(79,195,255,.35);color:#BFE3FF;font-size:10px;font-family:var(--font);letter-spacing:.04em}
+  .badge{font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(79,195,255,.14);border:1px solid rgba(79,195,255,.35);color:#BFE3FF;font-size:10px;font-family:var(--font);letter-spacing:.04em;
+    min-width:64px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;white-space:nowrap}
   .badge.rec{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 10px rgba(239,51,70,.55)}
   .badge.rec::before{content:"● ";animation:blink 1.2s step-end infinite}
   @keyframes blink{50%{opacity:.2}}
