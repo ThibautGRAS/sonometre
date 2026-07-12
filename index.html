@@ -442,6 +442,7 @@ if('serviceWorker' in navigator){
           <div class="mrow act" id="mClrHist"><span>Effacer l'évolution temporelle</span><b>⌫</b></div>
           <div class="mrow act" id="mClrPeak"><span>Effacer max / min / peak-hold</span><b>⌫</b></div>
           <div class="mrow act red" id="mClrAll"><span>Tout effacer (remise à zéro)</span><b>⌫</b></div>
+          <div class="mrow act red" id="mResetPrefs"><span>Réinitialiser les paramètres</span><b>↺</b></div>
           <div class="mnote">FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s · faire défiler pour voir toutes les options</div>
         </div>
       </div>
@@ -2275,6 +2276,7 @@ function ui(){
   ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
   $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
   $('bottomStrip').style.visibility = S.screen==='val' ? 'hidden' : 'visible';   // redondant sur Valeurs
+  savePrefs();
 }
 
 /* ================= Touches ================= */
@@ -2323,10 +2325,35 @@ $('mSgSpeed').onclick=()=>{
 };
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
 const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['gameboy','Game Boy']];
+/* ===== préférences persistantes ===== */
+const PREFS_KEY='sono_prefs';
+const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
+                   'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
+                   'trigDelay','trigLevel','offset','corr','corrName'];
+let _prefsReady=false;
+function savePrefs(){
+  if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
+  try{
+    const o={}; for(const k of PREF_FIELDS) if(S[k]!==undefined) o[k]=S[k];
+    localStorage.setItem(PREFS_KEY,JSON.stringify(o));
+  }catch(e){}
+}
+function loadPrefs(){
+  try{
+    const o=JSON.parse(localStorage.getItem(PREFS_KEY)||'{}');
+    for(const k of PREF_FIELDS) if(o[k]!==undefined) S[k]=o[k];
+    // migration : ancien réglage de thème isolé
+    const t=localStorage.getItem('sono_theme'); if(t&&o.theme===undefined) S.theme=t;
+  }catch(e){}
+  if(!THEMES.some(x=>x[0]===S.theme)) S.theme='marine';
+}
+function resetPrefs(){
+  try{ localStorage.removeItem(PREFS_KEY); localStorage.removeItem('sono_theme'); }catch(e){}
+  location.reload();
+}
 function applyTheme(){
   document.body.classList.remove('th-acier','th-clair','th-oled','th-gameboy');
   if(S.theme!=='marine')document.body.classList.add('th-'+S.theme);
-  try{localStorage.setItem('sono_theme',S.theme);}catch(e){}
   if(typeof refreshTheme==='function'){refreshTheme(); if(typeof drawActive==='function')drawActive(true);}
 }
 $('hHelp').onclick=()=>{ $('helpPop').classList.add('on'); };
@@ -2337,7 +2364,7 @@ $('mTheme').onclick=()=>{
   S.theme=THEMES[(i+1)%THEMES.length][0];
   applyTheme(); ui();
 };
-try{const t=localStorage.getItem('sono_theme');if(t&&THEMES.some(x=>x[0]===t)){S.theme=t;applyTheme();}}catch(e){}
+loadPrefs(); applyTheme(); _prefsReady=true;
 $('mToctSrc').onclick=()=>{
   S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
   S.iirBank=null;                                        // (re)construit au prochain passage
@@ -2714,6 +2741,9 @@ $('mClrSgram').onclick=function(){clearSgram();flashDone(this);};
 $('mClrHist').onclick=function(){clearHist();flashDone(this);};
 $('mClrPeak').onclick=function(){clearPeak();flashDone(this);};
 $('mClrAll').onclick=function(){clearSgram();resetMeasure();flashDone(this);};
+$('mResetPrefs').onclick=function(){
+  if(confirm("Réinitialiser tous les paramètres (thème, pondération, échelles, calibration…) aux valeurs par défaut ? L'application va redémarrer.")) resetPrefs();
+};
 
 $('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();drawActive();};
 $('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER.length];ui();drawActive();};
