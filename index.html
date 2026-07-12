@@ -340,7 +340,7 @@ const S = {
   eq:{A:0,C:0,Z:0}, eqT:0,
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
-  fview:{min:20,max:20000}, cursor:null, tview:{x0:0,x1:1},
+  fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1},
   fscale:'log', fftN:16384, nSmooth:0, colMs:50, dbAuto:true,
   win:'blackman', overlap:0.5,
   tap:null, ring:null, ringW:0, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -838,6 +838,18 @@ function sgColumn(){
     const L=lvl(pm*K); col[r]=L;
     if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
   }
+  /* pic de la colonne courante (pour le curseur de suivi) : bin de niveau max */
+  if(S.sgCursor){
+    let bestI=1,bestP=-Infinity;
+    for(let i=1;i<S.fftDb.length;i++){
+      let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
+      if(S.corr!=='off')p*=S.compGain[i];
+      if(wSel)p*=wSel[i];
+      if(p>bestP){bestP=p;bestI=i;}
+    }
+    S.sgCursor.f=S.freqs[bestI];
+    S.sgCursor.L=lvl(bestP*K);
+  }
   autoRange(sc,dLo,dHi);
   const bg=SG.bg;
   bg.drawImage(SG.buf,1,0,Wp-1,Hb,0,0,Wp-1,Hb);      // défilement du tampon
@@ -884,6 +896,24 @@ function sgBlit(c){
   g.textAlign='left';  g.fillText(ft(agoL),padL+3*c.dpr,H-4*c.dpr);
   g.textAlign='center';g.fillText(ft(agoM)+'  ·  pincer ↕ fréq / ↔ temps',padL+Wp/2,H-4*c.dpr);
   g.textAlign='right'; g.fillText(ft(agoR),W-3*c.dpr,H-4*c.dpr);
+  /* curseur de suivi du pic (repère à la fréquence du max de la dernière colonne) */
+  if(S.sgCursor&&S.sgCursor.f){
+    const f=S.sgCursor.f;
+    if(f>=nfmin&&f<=nfmax){
+      const yy=((V1n-TF(f))/(V1n-V0n))*Hu;
+      g.strokeStyle='#FF6B7A';g.lineWidth=1*c.dpr;g.setLineDash([4*c.dpr,3*c.dpr]);
+      g.beginPath();g.moveTo(padL,yy);g.lineTo(W-1,yy);g.stroke();g.setLineDash([]);
+      g.fillStyle='#FF6B7A';g.beginPath();g.arc(W-6*c.dpr,yy,3*c.dpr,0,7);g.fill();
+      const txt='◎ '+fmtF(f)+' Hz · '+fmt(S.sgCursor.L)+' dB';
+      g.font='bold '+(11*c.dpr)+'px Arial';
+      const tw=g.measureText(txt).width+10*c.dpr;
+      const lx=Math.max(padL+2*c.dpr,Math.min(W-tw-2*c.dpr,padL+4*c.dpr));
+      const ly=Math.max(2,Math.min(Hu-16*c.dpr,yy-8*c.dpr));
+      g.fillStyle='#08306B';g.fillRect(lx,ly,tw,15*c.dpr);
+      g.strokeStyle='rgba(255,107,122,.6)';g.lineWidth=1;g.strokeRect(lx+.5,ly+.5,tw-1,15*c.dpr-1);
+      g.fillStyle='#FFD6DB';g.textAlign='left';g.fillText(txt,lx+5*c.dpr,ly+11*c.dpr);
+    }
+  }
   g.restore();
   const sc=S.scale.sgram;
   $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(nfmin)+'–'+fmtF(nfmax)+'Hz';
@@ -1063,7 +1093,13 @@ attachZoomPan('specCv','x',{
   onChange:()=>{if(!S.running)drawSpectrum();},
   onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();}
 });
-attachZoomPan('sgramCv','y',{time:true,onChange:()=>{if(!S.running||S.paused)drawSgram();}});
+attachZoomPan('sgramCv','y',{time:true,
+  onChange:()=>{if(!S.running||S.paused)drawSgram();},
+  onTap:()=>{
+    S.sgCursor=S.sgCursor?null:{f:0,L:-99};
+    if(!S.running||S.paused)drawSgram();
+  }
+});
 
 /* ================= UI ================= */
 function ui(){
@@ -1111,6 +1147,7 @@ $('kScreen').addEventListener('pointerdown',()=>{
 $('kScreen').addEventListener('click',()=>{
   if(scrLong){scrLong=false;return;}
   S.screen=S.screen==='menu'?'spec':S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':'spec';
+  if(S.screen!=='sgram')S.sgCursor=null;
   ui();requestAnimationFrame(()=>{sizeAll();});
 });
 
