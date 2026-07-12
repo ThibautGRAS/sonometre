@@ -814,14 +814,58 @@ function configureAnalyser(){
 }
 async function initAudio(){
   S.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  S.analyser=S.ctx.createAnalyser();
+  await acquireMic();
+  configureAnalyser();
+}
+/* (ré)acquiert le flux micro et le branche sur l'analyseur existant */
+async function acquireMic(){
+  if(S.srcNode){try{S.srcNode.disconnect();}catch(e){}}
+  if(S.stream){for(const t of S.stream.getTracks()){try{t.stop();}catch(e){}}}
   S.stream=await navigator.mediaDevices.getUserMedia({audio:{
     echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1
   }});
-  const src=S.ctx.createMediaStreamSource(S.stream);
-  S.analyser=S.ctx.createAnalyser();
-  src.connect(S.analyser);
-  configureAnalyser();
+  S.srcNode=S.ctx.createMediaStreamSource(S.stream);
+  S.srcNode.connect(S.analyser);
+  S.lcLastCt=S.ctx.currentTime;                 // évite un saut de bloc dans les filtres temporels
+  const tr=S.stream.getAudioTracks()[0];
+  if(tr){
+    tr.onended=()=>micLost('coupé');
+    tr.onmute =()=>setMicStat('prep');
+    tr.onunmute=()=>setMicStat(S.micReady?'ready':'prep');
+  }
 }
+function micAlive(){
+  const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  return !!(tr && tr.readyState==='live' && S.ctx && S.ctx.state==='running');
+}
+/* la piste micro est morte (retour d'arrière-plan, appel téléphonique…) */
+function micLost(why){
+  setMicStat('off');
+  if(S.running&&!S.paused){
+    S.paused=true; setTransport(); ui();
+    const b=$('modeBadge'); b.textContent='MICRO INTERROMPU · PAUSE'; b.className='badge';
+  }
+}
+/* tente de tout remettre en route au retour au premier plan */
+async function reviveMic(){
+  if(!S.ctx)return;
+  try{ if(S.ctx.state!=='running') await S.ctx.resume(); }catch(e){}
+  const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  if(!tr || tr.readyState!=='live'){
+    try{ await acquireMic(); }catch(e){ setMicStat('off'); return; }
+  }
+  S.lastT=0;                                    // repart proprement (pas de dt fantôme)
+  if(micAlive()) setMicStat(S.running?'ready':(S.micReady?'ready':'off'));
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible') setTimeout(reviveMic,250);
+  else if(S.running&&!S.paused){ /* iOS suspendra : on fige proprement */ 
+    S.paused=true; setTransport();
+    const b=$('modeBadge'); b.textContent='ARRIÈRE-PLAN · PAUSE'; b.className='badge';
+  }
+});
+window.addEventListener('pageshow',()=>setTimeout(reviveMic,250));
 /* calcule le spectre courant (magnitude puissance par bin) avec la fenêtre choisie */
 function computeSpectrum(){
   const N=S.fftN, tap=S.tap, an=S.analyser;
@@ -2696,6 +2740,8 @@ function armStart(){
   if(S.micReady){k.classList.remove('mic-wait');k.disabled=false;}
 }
 ['pointerdown','touchstart'].forEach(ev=>window.addEventListener(ev,prewarmMic,{once:true,passive:true}));
+/* iOS exige parfois un GESTE pour relancer l'audio après une interruption : tout toucher réanime si besoin */
+window.addEventListener('pointerdown',()=>{ if(S.ctx && !micAlive()) reviveMic(); },{passive:true});
 
 </script>
 </body>
