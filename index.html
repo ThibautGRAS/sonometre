@@ -1180,8 +1180,8 @@ function sgBlit(c){
       const a=SG.cols[x]; if(!a)continue;
       for(let r=r0;r<=r1;r+=stR){const v=a[r];if(v>-90){if(v<lo)lo=v;if(v>hi)hi=v;}}
     }
-    /* plancher 20 dB : le bruit de fond sous 20 dB n'apporte rien et écrase le contraste */
-    lo=Math.max(20,lo); hi=Math.max(lo+5,hi);
+    /* plancher 10 dB : le bruit de fond en dessous n'apporte rien et écrase le contraste */
+    lo=Math.max(10,lo); hi=Math.max(lo+5,hi);
     autoRange(sc,lo,hi,20,true);
   }
   /* ===== rendu du viewport depuis les DONNÉES =====
