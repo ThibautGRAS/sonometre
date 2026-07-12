@@ -689,14 +689,15 @@ window.addEventListener('resize',()=>setTimeout(sizeAll,60));
 window.addEventListener('orientationchange',()=>setTimeout(sizeAll,250));
 
 /* ===== échelle auto : expansion rapide, contraction très lente (anti-scintillement) ===== */
-function autoRange(sc,dLo,dHi){
+function autoRange(sc,dLo,dHi,minSpan){
   if(!S.dbAuto){sc.lo=20;sc.hi=110;return sc;}
   if(!isFinite(dLo)||!isFinite(dHi)||dHi<=-90)return sc;
+  minSpan=minSpan||40;
   let tLo=Math.floor((dLo-4)/5)*5, tHi=Math.ceil((dHi+4)/5)*5;
-  if(tHi-tLo<40){const c=(tHi+tLo)/2; tLo=Math.round((c-20)/5)*5; tHi=tLo+40;}
+  if(tHi-tLo<minSpan){const c=(tHi+tLo)/2; tLo=Math.round((c-minSpan/2)/5)*5; tHi=tLo+minSpan;}
   tLo=Math.max(-10,tLo); tHi=Math.min(140,tHi);
-  sc.lo+=(tLo-sc.lo)*(tLo<sc.lo?0.25:0.006);   // descend vite si dépassement, remonte très lentement
-  sc.hi+=(tHi-sc.hi)*(tHi>sc.hi?0.25:0.006);
+  sc.lo+=(tLo-sc.lo)*(tLo<sc.lo?0.25:0.02);   // descend vite si dépassement, remonte doucement
+  sc.hi+=(tHi-sc.hi)*(tHi>sc.hi?0.25:0.02);
   return sc;
 }
 /* ===== transformation d'axe fréquence : log ou linéaire ===== */
@@ -890,14 +891,18 @@ function sgSetup(c){
     }
   }
   SG.flineHz=fline;
+  if(!SG.view)SG.view=document.createElement('canvas');
+  SG.view.width=Wp; SG.view.height=Hu;
+  SG.vg=SG.view.getContext('2d');
+  SG.colSeq=0; SG.vScaleKey=''; SG.vViewKey=''; SG.vSeq=-1;
   SG.init=true;
 }
 function sgColumn(){
-  /* calcule et stocke une colonne pleine bande dans le tampon */
-  const sc=S.scale.sgram, K=S.K||1, Hb=SG.bufH, Wp=SG.buf.width;
+  /* calcule et stocke une colonne pleine bande (DONNÉES dB) — l'échelle et le rendu
+     couleur sont désormais calculés dans sgBlit sur la fenêtre VISIBLE uniquement */
+  const K=S.K||1, Hb=SG.bufH, Wp=SG.buf.width;
   const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
   const col=new Float32Array(Hb);
-  let dLo=Infinity,dHi=-Infinity;
   for(let r=0;r<Hb;r++){
     const [i0,i1]=SG.map[r]; let pm=0;
     for(let i=i0;i<=i1;i++){
@@ -906,15 +911,12 @@ function sgColumn(){
       if(wSel)p*=wSel[i];
       if(p>pm)pm=p;
     }
-    const L=lvl(pm*K); col[r]=L;
-    if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
+    col[r]=lvl(pm*K);
   }
-  autoRange(sc,dLo,dHi);
-  const bg=SG.bg;
-  bg.drawImage(SG.buf,1,0,Wp-1,Hb,0,0,Wp-1,Hb);      // défilement visuel du tampon
-  /* défilement du tampon de DONNÉES (colonnes dB) : décale d'une case vers la gauche */
+  /* défilement du tampon de DONNÉES : décale d'une case vers la gauche */
   for(let x=0;x<Wp-1;x++)SG.cols[x]=SG.cols[x+1];
   SG.cols[Wp-1]=col;                                  // nouvelle colonne à droite (instant présent)
+  SG.colSeq++;
   /* mode auto : suit le max de la colonne courante, DANS la fenêtre de fréquence affichée */
   if(S.sgCursor&&S.sgCursor.mode==='auto'){
     const nfmin=Math.max(F_LOW(),S.fview.min), nfmax=Math.min(S.fview.max,nyq());
@@ -937,13 +939,6 @@ function sgColumn(){
     if(x0<0){x1-=x0;x0=0;}
     S.tview.x0=x0; S.tview.x1=Math.min(1,x1);
   }
-  const img=bg.createImageData(1,Hb), d=img.data;
-  for(let r=0;r<Hb;r++){
-    const t=Math.max(0,Math.min(1,(col[r]-sc.lo)/(sc.hi-sc.lo)));
-    const i=Math.round(t*255)*3;
-    d[r*4]=LUT[i]; d[r*4+1]=LUT[i+1]; d[r*4+2]=LUT[i+2]; d[r*4+3]=255;
-  }
-  bg.putImageData(img,Wp-1,0);
 }
 function sgBlit(c){
   /* affiche la fenêtre courante (zoom fréq. vertical + zoom temps horizontal) depuis le tampon */
@@ -956,8 +951,65 @@ function sgBlit(c){
   const sx=S.tview.x0*Wp, sw=Math.max(1,(S.tview.x1-S.tview.x0)*Wp);
   g.save();g.setTransform(1,0,0,1,0,0);
   g.imageSmoothingEnabled=true;
-  g.fillStyle='#000080';g.fillRect(padL,0,Wp,Hu);
-  g.drawImage(SG.buf,sx,Math.max(0,sy),sw,Math.max(1,sh),padL,0,Wp,Hu);
+  /* ===== échelle AUTO sur la fenêtre VISIBLE (temps × fréquence) ===== */
+  const sc=S.scale.sgram, Hb=SG.bufH;
+  {
+    const c0=Math.max(0,Math.floor(sx)), c1=Math.min(Wp-1,Math.ceil(sx+sw));
+    const r0=Math.max(0,Math.floor(sy)), r1=Math.min(Hb-1,Math.ceil(sy+Math.max(1,sh)));
+    const stC=Math.max(1,Math.round((c1-c0)/160)), stR=Math.max(1,Math.round((r1-r0)/220));
+    let lo=Infinity,hi=-Infinity;
+    for(let x=c0;x<=c1;x+=stC){
+      const a=SG.cols[x]; if(!a)continue;
+      for(let r=r0;r<=r1;r+=stR){const v=a[r];if(v>-90){if(v<lo)lo=v;if(v>hi)hi=v;}}
+    }
+    autoRange(sc,lo,hi,20);
+  }
+  /* ===== rendu du viewport depuis les DONNÉES =====
+     chemin incrémental (décalage 1 px + colonne neuve) quand seule une colonne arrive ;
+     re-rendu complet seulement si l'échelle ou la fenêtre de zoom change */
+  {
+    const q=v=>Math.round(v*2)/2;                     // échelle quantifiée à 0,5 dB
+    const scaleKey=q(sc.lo)+'|'+q(sc.hi);
+    const viewKey=sx.toFixed(1)+'|'+sw.toFixed(1)+'|'+sy.toFixed(1)+'|'+sh.toFixed(1)+'|'+Wp+'x'+Hu;
+    const lo=q(sc.lo), hi=q(sc.hi), inv=255/Math.max(0.001,(hi-lo));
+    const vg=SG.vg;
+    const ri=new Int32Array(Hu);
+    for(let y=0;y<Hu;y++){ri[y]=Math.max(0,Math.min(Hb-1,Math.round(sy+(y+0.5)/Hu*sh)));}
+    const paintCol=(x,a)=>{
+      const img=vg.createImageData(1,Hu), d=img.data;
+      for(let y=0;y<Hu;y++){
+        let i3=0;
+        if(a){let t=(a[ri[y]]-lo)*inv;t=t<0?0:t>255?255:t;i3=(t|0)*3;}
+        const o=y*4; d[o]=LUT[i3];d[o+1]=LUT[i3+1];d[o+2]=LUT[i3+2];d[o+3]=255;
+      }
+      vg.putImageData(img,x,0);
+    };
+    const liveFull=S.tview.x1>0.9999&&sw>=Wp-0.5;
+    if(scaleKey===SG.vScaleKey&&viewKey===SG.vViewKey&&SG.colSeq===SG.vSeq){
+      /* rien à faire : vue à jour */
+    }else if(scaleKey===SG.vScaleKey&&viewKey===SG.vViewKey&&liveFull&&SG.colSeq===SG.vSeq+1){
+      vg.drawImage(SG.view,-1,0);                     // décale d'un pixel vers la gauche
+      paintCol(Wp-1,SG.cols[Wp-1]);                   // ne peint que la colonne neuve
+      SG.vSeq=SG.colSeq;
+    }else{
+      /* re-rendu complet de la fenêtre visible */
+      const img=vg.createImageData(Wp,Hu), d=img.data;
+      const ci=new Int32Array(Wp);
+      for(let x=0;x<Wp;x++){ci[x]=Math.max(0,Math.min(Wp-1,Math.round(sx+(x+0.5)/Wp*sw)));}
+      for(let x=0;x<Wp;x++){
+        const a=SG.cols[ci[x]];
+        for(let y=0;y<Hu;y++){
+          let i3=0;
+          if(a){let t=(a[ri[y]]-lo)*inv;t=t<0?0:t>255?255:t;i3=(t|0)*3;}
+          const o=(y*Wp+x)*4;
+          d[o]=LUT[i3];d[o+1]=LUT[i3+1];d[o+2]=LUT[i3+2];d[o+3]=255;
+        }
+      }
+      vg.putImageData(img,0,0);
+      SG.vScaleKey=scaleKey;SG.vViewKey=viewKey;SG.vSeq=SG.colSeq;
+    }
+  }
+  g.drawImage(SG.view,padL,0);
   /* axe fréquence (fenêtre courante) */
   g.fillStyle='#050F26';g.fillRect(0,0,padL,H);
   g.fillStyle='#5F7FB8';g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
@@ -976,7 +1028,7 @@ function sgBlit(c){
   g.textAlign='right'; g.fillText(ft(agoR),Wr-3*c.dpr,H-4*c.dpr);
   /* ===== COLORBAR dB (jet) à droite ===== */
   {
-    const sc=S.scale.sgram, cbx=Wr+6*c.dpr, cbw=10*c.dpr, cbTop=2, cbBot=Hu;
+    const cbx=Wr+6*c.dpr, cbw=10*c.dpr, cbTop=2, cbBot=Hu;
     g.fillStyle='#050F26';g.fillRect(Wr,0,padR,H);
     const grad=g.createLinearGradient(0,cbTop,0,cbBot);   // haut = max, bas = min
     for(let s=0;s<=10;s++){const t=s/10;const i=Math.round((1-t)*255)*3;
@@ -1039,7 +1091,6 @@ function sgBlit(c){
     }
   }
   g.restore();
-  const sc=S.scale.sgram;
   $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(nfmin)+'–'+fmtF(nfmax)+'Hz';
 }
 function drawSgram(){
