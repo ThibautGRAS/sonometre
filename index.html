@@ -148,6 +148,13 @@
   .valdots{position:absolute;bottom:2px;left:0;right:0;display:flex;justify-content:center;gap:8px;pointer-events:none}
   .valdots .vd{width:7px;height:7px;border-radius:50%;background:rgba(79,195,255,.25)}
   .valdots .vd.on{background:var(--ice)}
+  .exp-list{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+  .exp-item{display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+    padding:11px 13px;border-radius:10px;border:1px solid rgba(79,195,255,.22);
+    background:rgba(79,195,255,.08);color:#EAF4FF;text-align:left;cursor:pointer;font-family:var(--font)}
+  .exp-item:active{background:rgba(79,195,255,.16)}
+  .exp-item b{font-size:14px;font-weight:700}
+  .exp-item span{font-size:11px;color:#8fa3c4}
   .valtable .k{font-size:10px;letter-spacing:.06em;color:var(--lcd-dim);font-weight:700}
   .valtable .v{font-family:var(--mono);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lcd-ink);text-shadow:0 0 8px rgba(79,195,255,.3)}
   .valtable .v.red{color:#FF6B7A;text-shadow:0 0 8px rgba(239,51,70,.5)}
@@ -534,6 +541,18 @@
       <span class="cp-mini" style="flex:1">dB — la mesure démarre au franchissement</span>
     </div>
     <div class="mnote" style="margin-top:8px">Ordre : armement micro → décompte → attente du seuil → mesure. Appui court sur ▶ pour lancer.</div>
+  </div></div>
+
+  <!-- menu EXPORT -->
+  <div id="expPop" class="calpop"><div class="calpop-in">
+    <div class="cp-head">EXPORTER / PARTAGER <button id="epClose">✕</button></div>
+    <div class="exp-list">
+      <button class="exp-item" id="epCsvShare"><b>Partager le CSV</b><span>données complètes · feuille de partage iOS</span></button>
+      <button class="exp-item" id="epCsvDl"><b>Télécharger le CSV</b><span>enregistrer dans Fichiers</span></button>
+      <button class="exp-item" id="epPngShare"><b>Partager l'image du graphe</b><span>écran courant en PNG · titré</span></button>
+      <button class="exp-item" id="epPngDl"><b>Télécharger l'image (PNG)</b><span>enregistrer dans Photos/Fichiers</span></button>
+    </div>
+    <div class="mnote" id="epNote" style="margin-top:8px">Le partage ouvre la feuille iOS (Mail, AirDrop, Fichiers…).</div>
   </div></div>
 
 
@@ -2672,20 +2691,73 @@ function stopMeasure(auto){
 }
 
 /* ================= Export CSV ================= */
-$('kCsv').onclick=()=>{
+/* ===== EXPORT / PARTAGE ===== */
+function stamp(){ return new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'); }
+function buildCsv(){
   let csv='SONOMETRE CETIM - export\n';
+  csv+='Date;'+new Date().toLocaleString('fr-FR')+';Duree [s];'+(S.eqT>0?S.eqT.toFixed(1):'0')+'\n';
   csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
-  csv+='LAeq;'+fmt(S.eqT>0?lvl(S.eq.A/S.eqT):-99)+';LCeq;'+fmt(S.eqT>0?lvl(S.eq.C/S.eqT):-99)+';LZeq;'+fmt(S.eqT>0?lvl(S.eq.Z/S.eqT):-99)+';LAFmax;'+fmt(S.lafMax)+';LAFmin;'+fmt(S.lafMin)+'\n';
-  csv+='LCpeak;'+fmt(S.lcPeak)+';L10;'+fmt(S.L10)+';L50;'+fmt(S.L50)+';L90;'+fmt(S.L90)+'\n\n';
+  csv+='FFT;'+S.fftN+';Fenetre;'+S.win+';Overlap;'+Math.round(S.overlap*100)+'%;Tiers d octave;'+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+'\n\n';
+  const laeq=S.eqT>0?lvl(S.eq.A/S.eqT):-99, lceq=S.eqT>0?lvl(S.eq.C/S.eqT):-99, lzeq=S.eqT>0?lvl(S.eq.Z/S.eqT):-99;
+  csv+='INDICES\n';
+  csv+='LAeq;'+fmt(laeq)+';LCeq;'+fmt(lceq)+';LZeq;'+fmt(lzeq)+'\n';
+  csv+='LAFmax;'+fmt(S.lafMax)+';LAFmin;'+fmt(S.lafMin)+';LCpeak;'+fmt(S.lcPeak)+'\n';
+  csv+='L10;'+fmt(S.L10)+';L50;'+fmt(S.L50)+';L90;'+fmt(S.L90)+'\n';
+  csv+='LAE (SEL);'+((S.eqT>0&&laeq>-90)?fmt(laeq+10*Math.log10(Math.max(0.1,S.eqT))):'-')+';Delta LF (LCeq-LAeq);'+((laeq>-90&&lceq>-90)?fmt(lceq-laeq):'-')+'\n\n';
   csv+='SPECTRE Leq (ponderation '+S.weight+' - '+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+')\nfc [Hz];Leq [dB]\n';
   for(let b=0;b<S.bands.length;b++)csv+=S.bands[b]+';'+fmt(S.eqT>0?lvl(S.bandEnergy[b]/S.eqT):-99)+'\n';
   csv+='\nHISTORIQUE (10 Hz)\nt [s];L'+S.weight+S.time+' [dB];L'+S.weight+'eq [dB]\n';
   for(const pt of S.hist)csv+=pt.t.toFixed(1)+';'+pt.L.toFixed(1)+';'+pt.Leq.toFixed(1)+'\n';
-  const blob=new Blob(["\ufeff"+csv],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='sonometre_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
-  a.click();
-};
+  return csv;
+}
+/* rend le canvas de l'écran courant dans une image titrée (fond façade + en-tête) */
+function buildGraphCanvas(){
+  const id=S.screen==='sgram'?'sgramCv':S.screen==='hist'?'histCv':'specCv';
+  const src=$(id); if(!src||!src.width)return null;
+  const pad=16, top=52, bot=30, sc=2;
+  const out=document.createElement('canvas');
+  out.width=src.width+pad*2*sc; out.height=src.height+ (top+bot)*sc;
+  const g=out.getContext('2d');
+  g.fillStyle='#04153A'; g.fillRect(0,0,out.width,out.height);
+  g.setTransform(sc,0,0,sc,0,0);
+  const W=out.width/sc;
+  // en-tête
+  g.fillStyle='#EF3346'; g.fillRect(pad,18,3,16);
+  g.fillStyle='#EAF4FF'; g.textAlign='left';
+  g.font='700 15px Arial'; g.fillText('CETIM · SONOMÈTRE',pad+9,31);
+  const scr=S.screen==='sgram'?'Spectrogramme':S.screen==='hist'?'Évolution':(S.mode==='fft'?'Spectre FFT':S.mode==='oct'?'Octave':'Tiers d\'octave');
+  const laeq=S.eqT>0?lvl(S.eq.A/S.eqT):-99;
+  g.fillStyle='#8fa3c4'; g.font='11px Arial'; g.textAlign='right';
+  g.fillText(new Date().toLocaleString('fr-FR'),W-pad,24);
+  g.fillText(scr+'  ·  pond. '+S.weight+'  ·  LAeq '+fmt(laeq)+' dB',W-pad,38);
+  // image du graphe
+  g.drawImage(src, pad, top, src.width/sc, src.height/sc);
+  return out;
+}
+function dl(blob,name){ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
+async function shareOrDownload(blob,name,title){
+  const file=new File([blob],name,{type:blob.type});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title}); return; }
+    catch(e){ if(e && e.name==='AbortError')return; }   // annulé par l'utilisateur : ne rien faire
+  }
+  dl(blob,name);                                          // repli : téléchargement
+}
+function csvBlob(){ return new Blob(["\ufeff"+buildCsv()],{type:'text/csv;charset=utf-8'}); }
+
+$('kCsv').onclick=()=>{ renderExpNote(); $('expPop').classList.add('on'); };
+$('epClose').onclick=()=>$('expPop').classList.remove('on');
+$('expPop').addEventListener('click',e=>{if(e.target.id==='expPop')$('expPop').classList.remove('on');});
+function renderExpNote(){
+  const can = navigator.canShare && (()=>{try{return navigator.canShare({files:[new File(["x"],"x.txt",{type:"text/plain"})]});}catch(e){return false;}})();
+  $('epNote').textContent = can ? 'Le partage ouvre la feuille iOS (Mail, AirDrop, Fichiers…).'
+                                : 'Partage non disponible sur ce navigateur : les boutons Partager téléchargeront le fichier.';
+}
+$('epCsvShare').onclick=()=>shareOrDownload(csvBlob(),'sonometre_'+stamp()+'.csv','Mesure sonomètre CETIM');
+$('epCsvDl').onclick   =()=>dl(csvBlob(),'sonometre_'+stamp()+'.csv');
+$('epPngShare').onclick=()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>shareOrDownload(b,'sonometre_'+stamp()+'.png','Graphe sonomètre CETIM'),'image/png'); };
+$('epPngDl').onclick   =()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>dl(b,'sonometre_'+stamp()+'.png'),'image/png'); };
 
 /* init */
 S.device=detectDevice();
