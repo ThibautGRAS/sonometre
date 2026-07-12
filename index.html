@@ -174,6 +174,30 @@
   .key-start:active{box-shadow:0 1px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25)}
   .key-start.running{background:linear-gradient(180deg,#5f6b85 0%,#3c4a6e 45%,#232c44 100%);box-shadow:0 3px 0 #10182b, inset 0 1px 0 rgba(255,255,255,.15)}
   .key-start .kv{font-size:16px;letter-spacing:.08em}
+  /* touche désactivée (réglage bloqué pendant la mesure) */
+  .key[disabled],.key.locked{opacity:.4;pointer-events:none;filter:saturate(.4)}
+  .key.locked::after{content:"🔒";position:absolute;top:5px;right:7px;font-size:9px;opacity:.7}
+  .key{position:relative}
+  #kPause{background:linear-gradient(180deg,#2E7D5B 0%,#1E6045 45%,#123C2B 100%);box-shadow:0 3px 0 #0A2419, inset 0 1px 0 rgba(255,255,255,.18)}
+  #kPause:active{box-shadow:0 1px 0 #0A2419, inset 0 1px 0 rgba(255,255,255,.18)}
+  #kPause.resume{background:linear-gradient(180deg,#C99A2E 0%,#9A7420 45%,#5E4712 100%);box-shadow:0 3px 0 #3A2C0A, inset 0 1px 0 rgba(255,255,255,.18)}
+
+  /* popover CALIBRATION */
+  .calpop{display:none;position:fixed;inset:0;z-index:20;background:rgba(0,10,30,.55);align-items:flex-end;justify-content:center}
+  .calpop.on{display:flex}
+  .calpop-in{width:100%;max-width:520px;background:linear-gradient(180deg,#0A1F42,#050F26);border:1px solid rgba(79,195,255,.2);border-radius:16px 16px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom) + 16px);box-shadow:0 -8px 30px rgba(0,0,0,.5)}
+  .cp-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.14em;color:var(--ice);font-weight:700;padding-bottom:10px}
+  .cp-head button{background:rgba(255,255,255,.08);border:0;color:#fff;border-radius:8px;width:30px;height:30px;font-size:14px;cursor:pointer}
+  .cp-row{display:flex;justify-content:space-between;align-items:center;background:rgba(79,195,255,.08);border:1px solid rgba(79,195,255,.16);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;margin-bottom:10px}
+  .cp-row button{background:rgba(79,195,255,.18);border:0;color:#CFEBFF;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)}
+  .cp-lbl{font-size:10px;letter-spacing:.12em;color:var(--lcd-dim);font-weight:700;margin-bottom:6px}
+  .cp-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+  .cp-presets button{background:rgba(255,255,255,.06);border:1px solid var(--line);color:#fff;border-radius:9px;padding:12px 4px;font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer}
+  .cp-presets button.on{background:var(--ice);color:var(--navy);border-color:var(--ice)}
+  .cp-fine{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .cp-fine button{flex:0 0 auto;width:70px;height:46px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:#fff;font-family:var(--mono);font-size:16px;font-weight:700;cursor:pointer}
+  .cp-fine span{flex:1;text-align:center;font-family:var(--mono);font-size:20px;font-weight:700;color:#F2FAFF}
+  .cp-full{width:100%;background:rgba(47,191,131,.14);border:1px solid rgba(47,191,131,.4);color:#9EF0C9;border-radius:10px;padding:12px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
 
   #err{display:none;position:absolute;left:12px;right:12px;top:12px;z-index:9;background:#B21226;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5)}
   @media (prefers-reduced-motion:reduce){.badge.rec::before{animation:none}}
@@ -307,22 +331,35 @@
   <div class="keypad">
     <div class="krow">
       <button class="key" id="kScreen"><span class="kf">ÉCRAN · LONG=EXPERT</span><span class="kv" id="kScreenV">Spectre</span></button>
-      <button class="key" id="kW"><span class="kf">POND.</span><span class="kv" id="kWV">A</span></button>
-      <button class="key" id="kT"><span class="kf">TEMPS</span><span class="kv" id="kTV">Fast</span></button>
-      <button class="key" id="kMode"><span class="kf">ANALYSE</span><span class="kv" id="kModeV">1/3 oct</span></button>
+      <button class="key cfg" id="kW"><span class="kf">POND.</span><span class="kv" id="kWV">A</span></button>
+      <button class="key cfg" id="kT"><span class="kf">TEMPS</span><span class="kv" id="kTV">Fast</span></button>
+      <button class="key cfg" id="kMode"><span class="kf">ANALYSE</span><span class="kv" id="kModeV">1/3 oct</span></button>
     </div>
     <div class="krow">
-      <button class="key" id="kDur"><span class="kf">DURÉE</span><span class="kv" id="kDurV">∞</span></button>
-      <button class="key" id="kCalM"><span class="kf">CAL</span><span class="kv">−0.5</span></button>
-      <button class="key" id="kCalP"><span class="kf">CAL</span><span class="kv">+0.5</span></button>
-      <button class="key" id="kComp"><span class="kf">CORRECTION</span><span class="kv" id="kCompV">Off</span></button>
-    </div>
-    <div class="krow">
+      <button class="key cfg" id="kDur"><span class="kf">DURÉE</span><span class="kv" id="kDurV">∞</span></button>
+      <button class="key cfg" id="kCal" style="grid-column:span 2"><span class="kf">CALIBRATION</span><span class="kv" id="kCalV">Auto · 120.0</span></button>
       <button class="key" id="kReset"><span class="kf">MESURE</span><span class="kv">Réinit</span></button>
+    </div>
+    <div class="krow">
       <button class="key" id="kCsv"><span class="kf">EXPORT</span><span class="kv">CSV</span></button>
-      <button class="key key-start" id="kStart"><span class="kv">▶ DÉMARRER</span></button>
+      <button class="key" id="kPause" disabled><span class="kf">&nbsp;</span><span class="kv">⏸ Pause</span></button>
+      <button class="key key-start" id="kStart" style="grid-column:span 2"><span class="kv">▶ DÉMARRER</span></button>
     </div>
   </div>
+
+  <!-- popover CALIBRATION -->
+  <div id="calPop" class="calpop"><div class="calpop-in">
+    <div class="cp-head">CALIBRATION <button id="cpClose">✕</button></div>
+    <div class="cp-row"><span>Correction amplitude</span><button id="cpCorr">Off</button></div>
+    <div class="cp-lbl">OFFSET dBFS → dB SPL</div>
+    <div class="cp-presets" id="cpPresets"></div>
+    <div class="cp-fine">
+      <button id="cpMinus">−0.5</button>
+      <span id="cpOff">120.0 dB</span>
+      <button id="cpPlus">+0.5</button>
+    </div>
+    <button class="cp-full" id="cpFull">Calibration avancée (profils, balayage…)</button>
+  </div></div>
 
 
 <script>
@@ -1224,12 +1261,12 @@ function ui(){
   $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':'FFT';
   $('kDurV').textContent=DURL[DURS.indexOf(S.duration)];
-  $('kCompV').textContent=S.corr==='off'?'Off':S.corr==='generic'?'Auto':'Profil';
+  $('kCalV').textContent=(S.corr==='off'?'Off':S.corr==='generic'?'Auto':'Profil')+' · '+S.offset.toFixed(1);
   $('vCal').textContent=S.offset.toFixed(1)+' dB · '+(S.corr==='off'?'sans corr.':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'));
   $('led').classList.toggle('on',S.running&&!S.paused);
   const badge=$('modeBadge');
   if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
-  else if(S.paused){badge.textContent='PAUSE';badge.className='badge';}
+  else if(S.paused){badge.textContent='⏸ PAUSE';badge.className='badge';}
   ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
   $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
 }
@@ -1457,30 +1494,41 @@ $('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER
 $('kMode').onclick=()=>{S.mode=S.mode==='toct'?'fft':'toct';ui();drawActive();};
 $('kDur').onclick=()=>{S.duration=DURS[(DURS.indexOf(S.duration)+1)%DURS.length];ui();updateNumbers(-99);};
 
-/* CAL : appui simple = ±0.5 dB, appui maintenu = répétition (réglage rapide) */
-let calFlashT;
-function calFlash(){
-  const b=$('modeBadge');b.textContent='CAL '+S.offset.toFixed(1);b.className='badge';
-  clearTimeout(calFlashT);
-  calFlashT=setTimeout(()=>{ui();if(!S.running){b.textContent='PRÊT';b.className='badge';}},1200);
+/* ===== Popover CALIBRATION global (Auto + presets + fin ±0.5 + avancé) ===== */
+const OFFSET_PRESETS=[94,100,110,120,130];
+function renderCalPop(){
+  $('cpCorr').textContent=S.corr==='off'?'Off':S.corr==='generic'?'Auto':'Profil';
+  $('cpOff').textContent=S.offset.toFixed(1)+' dB';
+  const g=$('cpPresets');g.innerHTML='';
+  for(const v of OFFSET_PRESETS){
+    const b=document.createElement('button');
+    b.textContent=v; if(Math.abs(v-S.offset)<0.01)b.className='on';
+    b.onclick=()=>{S.offset=v;ui();renderCalPop();};
+    g.appendChild(b);
+  }
 }
-function holdKey(el,fn){
-  let t,iv;
-  el.addEventListener('pointerdown',e=>{e.preventDefault();fn();t=setTimeout(()=>{iv=setInterval(fn,110);},400);});
-  ['pointerup','pointerleave','pointercancel'].forEach(ev=>el.addEventListener(ev,()=>{clearTimeout(t);clearInterval(iv);}));
-}
-holdKey($('kCalM'),()=>{S.offset=Math.round((S.offset-0.5)*2)/2;ui();calFlash();});
-holdKey($('kCalP'),()=>{S.offset=Math.round((S.offset+0.5)*2)/2;ui();calFlash();});
-$('kComp').onclick=()=>{
+$('kCal').onclick=()=>{ if($('kCal').classList.contains('locked'))return; renderCalPop(); $('calPop').classList.add('on'); };
+$('cpClose').onclick=()=>$('calPop').classList.remove('on');
+$('calPop').addEventListener('click',e=>{if(e.target.id==='calPop')$('calPop').classList.remove('on');});
+$('cpCorr').onclick=()=>{
   if(S.corr==='off')S.corr='generic';
   else if(S.corr==='generic')S.corr=S.corrCurve?'profile':'off';
   else S.corr='off';
   if(S.analyser)configureAnalyser();
-  ui();drawActive();
+  ui();drawActive();renderCalPop();
 };
-$('kReset').onclick=()=>{if(S.running)stopMeasure(false);resetMeasure();$('modeBadge').textContent='PRÊT';$('modeBadge').className='badge';};
+$('cpMinus').onclick=()=>{S.offset=Math.round((S.offset-0.5)*2)/2;ui();renderCalPop();};
+$('cpPlus').onclick=()=>{S.offset=Math.round((S.offset+0.5)*2)/2;ui();renderCalPop();};
+$('cpFull').onclick=()=>{$('calPop').classList.remove('on');S.screen='cal';ui();requestAnimationFrame(renderCal);};
 
-/* Pause : appui long sur DÉMARRER ? Non — simple : DÉMARRER alterne marche/arrêt, RÉINIT remet à zéro */
+$('kReset').onclick=()=>{if(S.running)stopMeasure(false);resetMeasure();$('modeBadge').textContent='PRÊT';$('modeBadge').className='badge';setLocks();};
+
+/* verrouille/déverrouille les réglages qui biaiseraient une mesure en cours */
+function setLocks(){
+  const active=S.running;                 // verrouillé dès qu'une mesure tourne (y compris en pause)
+  ['kW','kT','kMode','kDur','kCal'].forEach(id=>$(id).classList.toggle('locked',active));
+}
+
 $('kStart').onclick=async function(){
   if(S.running){stopMeasure(false);return;}
   try{
@@ -1495,14 +1543,27 @@ $('kStart').onclick=async function(){
   resetMeasure();
   S.running=true;S.paused=false;S.lastT=0;
   this.classList.add('running');this.querySelector('.kv').textContent='■ ARRÊTER';
+  $('kPause').disabled=false;$('kPause').classList.remove('resume');$('kPause').querySelector('.kv').textContent='⏸ Pause';
+  setLocks();
   try{S.wake=await navigator.wakeLock?.request('screen');}catch(e){}
   cancelAnimationFrame(S.raf);S.raf=requestAnimationFrame(loop);
+  ui();
+};
+$('kPause').onclick=()=>{
+  if(!S.running)return;
+  S.paused=!S.paused;
+  const k=$('kPause');
+  k.classList.toggle('resume',S.paused);
+  k.querySelector('.kv').textContent=S.paused?'▶ Reprendre':'⏸ Pause';
+  S.lastT=0;                               // repartir proprement sans compter le temps de pause
   ui();
 };
 function stopMeasure(auto){
   S.running=false;S.paused=false;
   cancelAnimationFrame(S.raf);
   const k=$('kStart');k.classList.remove('running');k.querySelector('.kv').textContent='▶ DÉMARRER';
+  $('kPause').disabled=true;$('kPause').classList.remove('resume');$('kPause').querySelector('.kv').textContent='⏸ Pause';
+  setLocks();
   try{S.wake?.release();S.wake=null;}catch(e){}
   const badge=$('modeBadge');
   badge.textContent=auto?'FINI · Leq figé':'ARRÊTÉ';badge.className='badge';
@@ -1527,6 +1588,7 @@ $('kCsv').onclick=()=>{
 /* init */
 S.device=detectDevice();
 loadProfiles();
+setLocks();
 ui();
 requestAnimationFrame(()=>sizeAll());
 </script>
