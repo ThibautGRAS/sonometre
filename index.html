@@ -838,17 +838,25 @@ function sgColumn(){
     const L=lvl(pm*K); col[r]=L;
     if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
   }
-  /* pic de la colonne courante (pour le curseur de suivi) : bin de niveau max */
+  /* curseur : met à jour fréquence + niveau du pic suivi */
   if(S.sgCursor){
-    let bestI=1,bestP=-Infinity;
-    for(let i=1;i<S.fftDb.length;i++){
-      let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
-      if(S.corr!=='off')p*=S.compGain[i];
-      if(wSel)p*=wSel[i];
-      if(p>bestP){bestP=p;bestI=i;}
+    const nb=S.fftDb.length;
+    const pAt=i=>{let p=Math.pow(10,S.fftDb[i]/10);if(!isFinite(p))p=0;if(S.corr!=='off')p*=S.compGain[i];if(wSel)p*=wSel[i];return p;};
+    if(S.sgCursor.mode==='auto'){
+      /* suit le maximum global de la colonne */
+      let bestI=1,bestP=-Infinity;
+      for(let i=1;i<nb;i++){const p=pAt(i);if(p>bestP){bestP=p;bestI=i;}}
+      S.sgCursor.f=S.freqs[bestI]; S.sgCursor.L=lvl(bestP*K);
+    }else{
+      /* accroche la raie locale : cherche le max dans une fenêtre autour de la fréquence courante,
+         puis se recale sur le pic (le curseur "glisse" et reste sur la raie même si elle dérive) */
+      const fc=S.sgCursor.f||1000;
+      const half=Math.max(3, Math.round(fc*0.06/S.binHz));   // ±6 % autour de la cible
+      const ic=Math.max(1,Math.min(nb-1,Math.round(fc/S.binHz)));
+      let bestI=ic,bestP=-Infinity;
+      for(let i=Math.max(1,ic-half);i<=Math.min(nb-1,ic+half);i++){const p=pAt(i);if(p>bestP){bestP=p;bestI=i;}}
+      S.sgCursor.f=S.freqs[bestI]; S.sgCursor.L=lvl(bestP*K);
     }
-    S.sgCursor.f=S.freqs[bestI];
-    S.sgCursor.L=lvl(bestP*K);
   }
   autoRange(sc,dLo,dHi);
   const bg=SG.bg;
@@ -896,22 +904,41 @@ function sgBlit(c){
   g.textAlign='left';  g.fillText(ft(agoL),padL+3*c.dpr,H-4*c.dpr);
   g.textAlign='center';g.fillText(ft(agoM)+'  ·  pincer ↕ fréq / ↔ temps',padL+Wp/2,H-4*c.dpr);
   g.textAlign='right'; g.fillText(ft(agoR),W-3*c.dpr,H-4*c.dpr);
-  /* curseur de suivi du pic (repère à la fréquence du max de la dernière colonne) */
+  /* curseur : viseur (pin) = cercle sur la raie ; suivi (auto) = ligne pointillée */
   if(S.sgCursor&&S.sgCursor.f){
     const f=S.sgCursor.f;
     if(f>=nfmin&&f<=nfmax){
       const yy=((V1n-TF(f))/(V1n-V0n))*Hu;
-      g.strokeStyle='#FF6B7A';g.lineWidth=1*c.dpr;g.setLineDash([4*c.dpr,3*c.dpr]);
-      g.beginPath();g.moveTo(padL,yy);g.lineTo(W-1,yy);g.stroke();g.setLineDash([]);
-      g.fillStyle='#FF6B7A';g.beginPath();g.arc(W-6*c.dpr,yy,3*c.dpr,0,7);g.fill();
-      const txt='◎ '+fmtF(f)+' Hz · '+fmt(S.sgCursor.L)+' dB';
+      const xr=W-8*c.dpr;                    // bord droit = instant présent
+      const isPin=S.sgCursor.mode==='pin';
+      const col=isPin?'#7FE9B8':'#FF6B7A';
+      g.strokeStyle=col;g.fillStyle=col;
+      if(isPin){
+        /* viseur : cercle + croix centrés sur la raie accrochée */
+        g.lineWidth=1.6*c.dpr;
+        g.beginPath();g.arc(xr,yy,6*c.dpr,0,7);g.stroke();
+        g.lineWidth=1*c.dpr;
+        g.beginPath();g.moveTo(padL,yy);g.lineTo(xr-8*c.dpr,yy);g.stroke();
+        /* petite croix au centre du cercle */
+        g.beginPath();
+        g.moveTo(xr-9*c.dpr,yy);g.lineTo(xr-3*c.dpr,yy);
+        g.moveTo(xr+3*c.dpr,yy);g.lineTo(xr+9*c.dpr,yy);
+        g.moveTo(xr,yy-9*c.dpr);g.lineTo(xr,yy-3*c.dpr);
+        g.moveTo(xr,yy+3*c.dpr);g.lineTo(xr,yy+9*c.dpr);
+        g.stroke();
+      }else{
+        g.lineWidth=1*c.dpr;g.setLineDash([4*c.dpr,3*c.dpr]);
+        g.beginPath();g.moveTo(padL,yy);g.lineTo(W-1,yy);g.stroke();g.setLineDash([]);
+        g.beginPath();g.arc(W-6*c.dpr,yy,3*c.dpr,0,7);g.fill();
+      }
+      const txt=(isPin?'◎ ':'↗ ')+fmtF(f)+' Hz · '+fmt(S.sgCursor.L)+' dB';
       g.font='bold '+(11*c.dpr)+'px Arial';
       const tw=g.measureText(txt).width+10*c.dpr;
       const lx=Math.max(padL+2*c.dpr,Math.min(W-tw-2*c.dpr,padL+4*c.dpr));
-      const ly=Math.max(2,Math.min(Hu-16*c.dpr,yy-8*c.dpr));
+      const ly=Math.max(2,Math.min(Hu-16*c.dpr,yy-9*c.dpr));
       g.fillStyle='#08306B';g.fillRect(lx,ly,tw,15*c.dpr);
-      g.strokeStyle='rgba(255,107,122,.6)';g.lineWidth=1;g.strokeRect(lx+.5,ly+.5,tw-1,15*c.dpr-1);
-      g.fillStyle='#FFD6DB';g.textAlign='left';g.fillText(txt,lx+5*c.dpr,ly+11*c.dpr);
+      g.strokeStyle=isPin?'rgba(127,233,184,.6)':'rgba(255,107,122,.6)';g.lineWidth=1;g.strokeRect(lx+.5,ly+.5,tw-1,15*c.dpr-1);
+      g.fillStyle=isPin?'#CFF7E4':'#FFD6DB';g.textAlign='left';g.fillText(txt,lx+5*c.dpr,ly+11*c.dpr);
     }
   }
   g.restore();
@@ -975,7 +1002,7 @@ function attachZoomPan(id,axis,opts){
     opts.onChange&&opts.onChange();
   };
   const two=e=>[...e.touches].sort((a,b)=>a.identifier-b.identifier);
-  let mode=null,pinchAx='main',panAx=null,anchV=0,anchB=0,anchors=null,moved=false,sX=0,sY=0,lastTap=0;
+  let mode=null,pinchAx='main',panAx=null,anchV=0,anchB=0,anchors=null,moved=false,sX=0,sY=0,lastTap=0,pinchMoved=false;
 
   cv.addEventListener('touchstart',e=>{
     e.preventDefault();
@@ -991,6 +1018,7 @@ function attachZoomPan(id,axis,opts){
         const u1=uOf(t[0],r),u2=uOf(t[1],r);
         anchors={u1,u2,V1:Vof(u1),V2:Vof(u2)};
       }
+      pinchMoved=false;
       mode='pinch';
     }else{
       const t=e.touches[0];
@@ -1015,6 +1043,7 @@ function attachZoomPan(id,axis,opts){
         const dX=Math.abs(sprX-anchors.sprX), dY=Math.abs(sprY-anchors.sprY);
         if(Math.max(dX,dY)<8)return;
         pinchAx=dX>dY?'time':'main';
+        pinchMoved=true;
         /* ré-ancrage à l'instant du verrouillage : pas de saut */
         if(pinchAx==='time'){
           const u1=uxOf(t[0],r),u2=uxOf(t[1],r);
@@ -1057,12 +1086,14 @@ function attachZoomPan(id,axis,opts){
     }
   },{passive:false});
 
-  cv.addEventListener('touchend',()=>{
-    if(mode==='pan'&&!moved&&opts.onTap){
+  cv.addEventListener('touchend',e=>{
+    if(mode==='pinch'&&!pinchMoved&&e.touches.length===0&&opts.onTap2){
+      opts.onTap2();                       // tap deux doigts immobile
+    }else if(mode==='pan'&&!moved&&opts.onTap){
       const u=(anchV-TF(Math.max(F_LOW(),S.fview.min)))/spanCur();
-      opts.onTap(TFi(anchV),axis==='x'?u:1-u);
+      opts.onTap(TFi(anchV),axis==='x'?u:1-u);   // tap un doigt : fréquence visée
     }
-    mode=null;anchors=null;
+    if(e.touches.length===0){mode=null;anchors=null;}
   });
 
   /* souris : molette = zoom fréq (Maj = zoom temps), clic = curseur */
@@ -1095,11 +1126,28 @@ attachZoomPan('specCv','x',{
 });
 attachZoomPan('sgramCv','y',{time:true,
   onChange:()=>{if(!S.running||S.paused)drawSgram();},
-  onTap:()=>{
-    S.sgCursor=S.sgCursor?null:{f:0,L:-99};
+  onTap:(f)=>{                              // un doigt : viseur accroché près de la fréquence tapée
+    S.sgCursor={mode:'pin',f:f,L:-99};
+    if(S.running&&S.binHz)snapCursorNow();
+    if(!S.running||S.paused)drawSgram();
+  },
+  onTap2:()=>{                              // deux doigts : suivi automatique du max global
+    S.sgCursor=(S.sgCursor&&S.sgCursor.mode==='auto')?null:{mode:'auto',f:0,L:-99};
     if(!S.running||S.paused)drawSgram();
   }
 });
+/* recale immédiatement le viseur sur la raie locale (sans attendre la prochaine colonne) */
+function snapCursorNow(){
+  if(!S.sgCursor||!S.fftDb)return;
+  const K=S.K||1, nb=S.fftDb.length, wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
+  const pAt=i=>{let p=Math.pow(10,S.fftDb[i]/10);if(!isFinite(p))p=0;if(S.corr!=='off')p*=S.compGain[i];if(wSel)p*=wSel[i];return p;};
+  const fc=S.sgCursor.f||1000;
+  const half=Math.max(3,Math.round(fc*0.06/S.binHz));
+  const ic=Math.max(1,Math.min(nb-1,Math.round(fc/S.binHz)));
+  let bestI=ic,bestP=-Infinity;
+  for(let i=Math.max(1,ic-half);i<=Math.min(nb-1,ic+half);i++){const p=pAt(i);if(p>bestP){bestP=p;bestI=i;}}
+  S.sgCursor.f=S.freqs[bestI]; S.sgCursor.L=lvl(bestP*K);
+}
 
 /* ================= UI ================= */
 function ui(){
