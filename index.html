@@ -23,7 +23,9 @@
     font-family:var(--font);color:#fff;
     background:
       radial-gradient(140% 90% at 50% 0%, rgba(255,255,255,.05), transparent 55%),
-      repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px),
+      linear-gradient(105deg, transparent 38%, rgba(255,255,255,.045) 47%, rgba(255,255,255,.02) 52%, transparent 62%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.028) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 7px),
       linear-gradient(180deg,#0C2760 0%,var(--navy) 30%,#001238 100%);
     display:flex;flex-direction:column;
     padding:calc(env(safe-area-inset-top) + 6px) calc(env(safe-area-inset-right) + 10px)
@@ -119,19 +121,19 @@
 
   /* écran VALEURS */
   #paneVal{overflow:hidden}
-  .valtable{display:grid;grid-template-columns:1fr 1fr;gap:6px;height:100%;align-content:start}
-  .valtable .cell{background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:8px;text-align:center}
-  .valtable .cell.hero{grid-column:span 2;padding:12px 8px}
-  .valtable .cell.hero .v{font-size:44px}
-  .valtable .cell.hero .k{font-size:12px;letter-spacing:.2em}
+  .valtable{display:grid;grid-template-columns:1fr 1fr;gap:5px;height:calc(100% - 16px);align-content:start}
+  .valtable .cell{background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:6px 6px 7px;text-align:center;min-height:0}
+  .valtable .cell.hero{grid-column:span 2;padding:8px}
+  .valtable .cell.hero .v{font-size:38px}
+  .valtable .cell.hero .k{font-size:11px;letter-spacing:.2em}
   .valsec{grid-column:span 2;display:flex;justify-content:space-around;gap:6px;flex-wrap:wrap;
     font-size:11px;color:#5F7FB8;padding:6px 4px;border-top:1px solid rgba(79,195,255,.10);margin-top:2px}
   .valsec b{color:#BFD9F5;font-family:var(--mono);font-weight:700}
-  .valdots{position:absolute;bottom:6px;left:0;right:0;display:flex;justify-content:center;gap:8px}
+  .valdots{position:absolute;bottom:2px;left:0;right:0;display:flex;justify-content:center;gap:8px;pointer-events:none}
   .valdots .vd{width:7px;height:7px;border-radius:50%;background:rgba(79,195,255,.25)}
   .valdots .vd.on{background:var(--ice)}
   .valtable .k{font-size:10px;letter-spacing:.06em;color:var(--lcd-dim);font-weight:700}
-  .valtable .v{font-family:var(--mono);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lcd-ink);text-shadow:0 0 8px rgba(79,195,255,.3)}
+  .valtable .v{font-family:var(--mono);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lcd-ink);text-shadow:0 0 8px rgba(79,195,255,.3)}
   .valtable .v.red{color:#FF6B7A;text-shadow:0 0 8px rgba(239,51,70,.5)}
 
   /* écran MODE EXPERT */
@@ -188,8 +190,14 @@
   .krow{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
   .key{
     border:0;border-radius:12px;min-height:52px;cursor:pointer;color:#fff;
-    background:linear-gradient(180deg,#123573 0%,var(--key) 45%,#07204F 100%);
-    box-shadow:0 3px 0 #041233, 0 5px 8px rgba(0,0,0,.35), inset 0 1px 0 var(--key-hi);
+    background:
+      radial-gradient(130% 100% at 50% -10%, rgba(255,255,255,.13), transparent 48%),
+      linear-gradient(180deg,#123573 0%,var(--key) 45%,#07204F 100%);
+    box-shadow:0 3px 0 #041233, 0 5px 9px rgba(0,0,0,.4),
+      inset 0 1px 0 var(--key-hi),
+      inset 1px 0 0 rgba(255,255,255,.04), inset -1px 0 0 rgba(0,0,0,.28),
+      inset 0 -7px 10px rgba(0,0,0,.22);
+    transition:transform .05s, box-shadow .05s;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     font-family:var(--font);
     overflow:hidden;
@@ -197,7 +205,9 @@
   /* reflet spéculaire diagonal sur le capuchon (comme le biseau de l'écran) */
   .key::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
     background:linear-gradient(118deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.035) 22%, transparent 38%)}
-  .key:active{transform:translateY(2px);box-shadow:0 1px 0 #041233, 0 2px 4px rgba(0,0,0,.35), inset 0 1px 0 var(--key-hi)}
+  .key:active{transform:translateY(2px);
+    box-shadow:0 1px 0 #041233, 0 1px 3px rgba(0,0,0,.4),
+      inset 0 2px 4px rgba(0,0,0,.35), inset 0 -5px 8px rgba(0,0,0,.2)}
   .key:active::before{opacity:.5}
   .key .kf{font-size:8px;letter-spacing:.14em;color:#8fa3c4;font-weight:700;
     text-shadow:0 -1px 0 rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.07)}   /* gravure */
@@ -327,7 +337,6 @@
           <div class="cell"><div class="k">LZeq</div><div class="v" id="vLZeq">--.-</div></div>
           <div class="cell"><div class="k">L50</div><div class="v" id="vL50">--.-</div></div>
           <div class="cell"><div class="k">LAFmin</div><div class="v" id="vMin">--.-</div></div>
-          <div class="valsec"><span>CAL. <b id="vCal">120.0 dB · off</b></span></div>
         </div>
         <div class="valdots"><span class="vd on" id="vd0"></span><span class="vd" id="vd1"></span></div>
       </div>
@@ -2007,7 +2016,6 @@ function ui(){
   $('kDurV').textContent=DURL[DURS.indexOf(S.duration)];
   const offd=Math.abs(S.offset-120.0)>=0.05;
   $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
-  $('vCal').textContent=S.offset.toFixed(1)+' dB · '+(S.corr==='off'?'sans corr.':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'));
   const badge=$('modeBadge');
   if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
   else if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
