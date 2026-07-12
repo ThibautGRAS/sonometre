@@ -628,11 +628,10 @@ function loop(ts){
   if(!S.lastT){S.lastT=ts;return;}
   const dt=Math.min(0.2,(ts-S.lastT)/1000); S.lastT=ts;
   if(S.paused)return;
-  /* préchauffage micro : iOS ajuste son gain d'entrée et émet un transitoire au démarrage.
-     On laisse tourner l'affichage mais on n'intègre RIEN (Leq, max, historique) pendant ce délai,
-     et on amorce le recalage Parseval sans le figer sur le pop initial. */
+  /* préchauffage micro : iOS ajuste son gain d'entrée et émet un transitoire (pop) au démarrage,
+     qui peut durer ~1 s. On reste en préchauffage tant que le niveau n'est pas STABILISÉ,
+     avec un minimum de 0,8 s et un maximum de 3 s de sécurité. Rien n'est intégré pendant ce temps. */
   const warm = S.warmT>0;
-  if(warm) S.warmT-=dt;
   S.elapsed+=dt;
 
   const mag=computeSpectrum();
@@ -703,8 +702,19 @@ function loop(ts){
   const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
   const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
   if(warm){
-    /* fin du préchauffage : on repart proprement (chrono, historique) sur un micro stabilisé */
-    if(S.warmT<=0){S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;ui();}
+    /* détection de stabilisation : le niveau instantané (Fast) ne varie plus beaucoup */
+    const Lf=lvl(S.pF[S.weight]);
+    if(S.warmPrev==null)S.warmPrev=Lf;
+    const dL=Math.abs(Lf-S.warmPrev); S.warmPrev=Lf;
+    S.warmAge=(S.warmAge||0)+dt;
+    if(dL<1.5) S.warmStable=(S.warmStable||0)+dt; else S.warmStable=0;
+    /* fin si : stabilisé ≥0,4 s ET âge ≥0,8 s, OU sécurité à 3 s */
+    const done=(S.warmStable>=0.5 && S.warmAge>=1.0) || S.warmAge>=3.0;
+    if(done){
+      S.warmT=0; S.warmAge=0; S.warmStable=0; S.warmPrev=null;
+      S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;
+      ui();
+    }
     updateNumbers(L); sgTick(); drawActive();
     return;
   }
@@ -1863,7 +1873,8 @@ $('kStart').onclick=async function(){
   }
   resetMeasure();
   S.running=true;S.paused=false;S.lastT=0;
-  S.warmT=0.6;                 // 0,6 s de préchauffage micro (transitoire iOS ignoré)
+  S.warmT=1;                   // flag préchauffage actif (levé par la stabilisation du niveau)
+  S.warmAge=0; S.warmStable=0; S.warmPrev=null;
   S.K=0;                       // recalage Parseval réamorcé
   S.badgeWarm=true;
   setTransport();
