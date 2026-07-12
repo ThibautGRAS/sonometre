@@ -270,6 +270,10 @@
               <span class="cunit">dB réf</span>
               <button class="cbtn go" id="calDo1k">Caler offset</button>
             </div>
+            <div class="crow2">
+              <span class="cunit" id="offView" style="flex:1">Offset actuel : 120.0 dB</span>
+              <button class="cbtn" id="offReset">Réinit. offset (120 dB)</button>
+            </div>
             <div class="msub">BALAYAGE TIERS D'OCTAVE (manuel)</div>
             <div class="sweepgrid" id="sweepGrid"></div>
             <div class="crow2">
@@ -1144,6 +1148,7 @@ function renderCal(){
   $('calDev').textContent='Appareil détecté : '+({iphone:'iPhone',ipad:'iPad',android:'Android',desktop:'Ordinateur'}[S.device]||S.device);
   $('cGenV').textContent=S.corr==='generic'?'actif ✓':'activer';
   $('cProfV').textContent=S.corr==='profile'?(S.corrName||'chargé'):(S.profiles.length?S.profiles.length+' dispo.':'aucun');
+  const ov=$('offView'); if(ov)ov.textContent='Offset actuel : '+S.offset.toFixed(1)+' dB';
   renderSweep();
 }
 function renderSweep(){
@@ -1233,6 +1238,7 @@ $('cImport').onclick=()=>{
   };
   inp.click();
 };
+$('offReset').onclick=()=>{S.offset=120.0;ui();renderCal();};
 /* calibreur 1 kHz : cale l'offset pour que la lecture large bande = référence à 1 kHz */
 $('calDo1k').onclick=()=>{
   if(!S.running){alert('Démarre la mesure (▶) et présente le calibreur 1 kHz.');return;}
@@ -1242,8 +1248,8 @@ $('calDo1k').onclick=()=>{
   if(b<0){alert('Bande 1 kHz indisponible.');return;}
   const cur=lvl(S.time==='F'?S.bandPowF[b]:S.bandPowS[b]);
   if(cur<=-90){alert('Pas de signal à 1 kHz. Vérifie le calibreur.');return;}
-  S.offset+= (ref-cur);   // décale l'offset pour amener la bande 1 kHz sur la référence
-  ui();
+  S.offset+= (ref-cur);
+  ui();renderCal();
   alert('Offset calé : '+S.offset.toFixed(1)+' dB (écart corrigé '+(ref-cur>=0?'+':'')+(ref-cur).toFixed(1)+' dB).');
 };
 
