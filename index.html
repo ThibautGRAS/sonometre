@@ -470,9 +470,9 @@ const S = {
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
-  fscale:'log', fftN:16384, nSmooth:0, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
+  fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true,
-  tap:null, ring:null, ringW:0, winCoef:null, winSum2:1, re:null, im:null, mag:null,
+  tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
   device:'', corr:'off', corrCurve:null, profiles:[], sweep:null,
   scale:{spec:{lo:30,hi:90}, hist:{lo:30,hi:90}, sgram:{lo:0,hi:60}}
 };
@@ -578,7 +578,7 @@ function configureAnalyser(){
   an.fftSize=Math.min(32768,N); an.smoothingTimeConstant=0;
   S.tap=new Float32Array(an.fftSize);
   /* ring buffer : accumule le signal pour fenêtrer N points même si le tap est plus court */
-  S.ring=new Float32Array(N); S.ringW=0;
+  S.ring=new Float32Array(N);
   /* fenêtre + normalisation cohérente (somme des carrés pour la puissance) */
   S.winCoef=new Float32Array(N);
   let s2=0; const wf=WINS[S.win].f;
@@ -726,7 +726,7 @@ function loop(ts){
   const aF=Math.exp(-dt/TAU.F), aS=Math.exp(-dt/TAU.S), aV=Math.exp(-dt/TAU.V);
   /* pendant les toutes premières trames, on cale Fast=Slow=V-Slow sur la valeur courante
      (sinon la montée depuis 0 crée un faux transitoire qui trompe le détecteur d'armement) */
-  const seed = S.warmAge<0.25;
+  const seed = warm && S.warmAge<0.25;
   for(const k of ['A','C','Z']){
     const p=k==='A'?pA:k==='C'?pC:pZ;
     if(seed){S.pF[k]=p;S.pS[k]=p;S.pV[k]=p;}
@@ -1060,7 +1060,7 @@ const LUT=(()=>{
    Le calcul et le stockage couvrent toujours 20 Hz(0)–Nyquist dans un canvas
    hors-écran haute résolution. Le zoom n'est qu'un recadrage à l'affichage :
    aucune donnée n'est perdue en dehors de la fenêtre. */
-const SG={init:false,buf:null,bg:null,map:null,last:0,W:0,H:0,padL:0,axH:0,bufH:0,fsc:'log',cols:null,colHz:null};
+const SG={init:false,Wp:0,map:null,last:0,W:0,H:0,padL:0,axH:0,bufH:0,fsc:'log',cols:null};
 function sgFull(){return {lo:S.fscale==='lin'?0:20, hi:nyq()};}
 function sgSetup(c){
   const cv=$('sgramCv');
@@ -1069,9 +1069,7 @@ function sgSetup(c){
   const Hu=SG.H-SG.axH, Wp=SG.W-SG.padL-SG.padR;
   SG.fsc=S.fscale;
   SG.bufH=1024;                    // hauteur de DONNÉES fixe : colonnes valides quel que soit l'écran
-  if(!SG.buf)SG.buf=document.createElement('canvas');
-  SG.buf.width=Wp; SG.buf.height=SG.bufH;
-  SG.bg=SG.buf.getContext('2d');
+  SG.Wp=Wp;                        // largeur logique du tampon de données (colonnes)
   /* tampon de DONNÉES dB. On PRÉSERVE le contenu même si la largeur change (passage
      écran masqué → visible, rotation) : rééchantillonnage des colonnes existantes.
      Les lignes (bufH) sont recalculées par la carte ci-dessous, donc on garde les colonnes
@@ -1094,7 +1092,6 @@ function sgSetup(c){
       SG.colSeq=0;
     }
     SG.cols=nc;
-    SG.colHz=new Array(Wp);
   }
   /* carte lignes du tampon → bins FFT, sur TOUTE la bande (recalculée : binHz a pu changer) */
   const full=sgFull(), V0=TF(full.lo), V1=TF(full.hi);
@@ -1118,7 +1115,7 @@ function sgSetup(c){
 function sgColumn(){
   /* calcule et stocke une colonne pleine bande (DONNÉES dB) — l'échelle et le rendu
      couleur sont désormais calculés dans sgBlit sur la fenêtre VISIBLE uniquement */
-  const K=S.K||1, Hb=SG.bufH, Wp=SG.buf.width;
+  const K=S.K||1, Hb=SG.bufH, Wp=SG.Wp;
   const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
   const col=new Float32Array(Hb);
   for(let r=0;r<Hb;r++){
@@ -1269,7 +1266,7 @@ function sgBlit(c){
   /* axe temps : secondes avant l'instant présent */
   g.fillStyle='#050F26';g.fillRect(padL,H-SG.axH,Wp,SG.axH);
   g.fillStyle='#5F7FB8';
-  const Tbuf=SG.buf.width*S.colMs/1000;              // durée totale du tampon
+  const Tbuf=sgBufDur();                             // durée totale du tampon
   const agoL=(1-S.tview.x0)*Tbuf, agoM=(1-(S.tview.x0+S.tview.x1)/2)*Tbuf, agoR=(1-S.tview.x1)*Tbuf;
   const ft=t=>t<0.05?'0 s':'−'+(t<10?t.toFixed(1):Math.round(t))+' s';
   g.textAlign='left';  g.fillText(ft(agoL),padL+3*c.dpr,H-4*c.dpr);
@@ -1310,7 +1307,7 @@ function sgBlit(c){
     /* position horizontale : pin = colonne figée reprojetée dans la fenêtre ; auto = bord droit */
     let xc=Wr-8*c.dpr, visible=(f>=nfmin&&f<=nfmax);
     if(isPin){
-      const colFrac=S.sgCursor.col/(SG.buf.width-1);
+      const colFrac=S.sgCursor.col/(SG.Wp-1);
       const inWin=(colFrac-S.tview.x0)/Math.max(1e-6,(S.tview.x1-S.tview.x0));
       xc=padL+inWin*Wp;
       if(inWin<0||inWin>1)visible=false;              // hors de la fenêtre temporelle affichée
@@ -1352,16 +1349,20 @@ function sgBlit(c){
   $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(nfmin)+'–'+fmtF(nfmax)+'Hz';
 }
 /* alimente le spectrogramme (appelé par la boucle même quand un autre écran/menu est affiché) */
+/* cadence réelle des colonnes (ms) et durée couverte par le tampon (s) */
+function sgInterval(){
+  const fs=S.ctx?S.ctx.sampleRate:48000;
+  const hopMs=S.fftN*(1-S.overlap)/fs*1000;
+  return Math.max(16,Math.min(S.colMs,hopMs));
+}
+function sgBufDur(){ return (SG.Wp||1)*sgInterval()/1000; }
 function sgTick(){
   if(!S.binHz)return;
   if(!CV.sgramCv)sizeCanvas('sgramCv');               // dimensionne même si l'écran n'est pas affiché
   if(!SG.init&&CV.sgramCv)sgSetup(CV.sgramCv);        // (re)cartographie
   if(!SG.init||!SG.map||!SG.map.length)return;
   const now=performance.now();
-  const fs=S.ctx?S.ctx.sampleRate:48000;
-  const hopMs=S.fftN*(1-S.overlap)/fs*1000;
-  const interval=Math.max(16,Math.min(S.colMs,hopMs));
-  if(now-SG.last>=interval){SG.last=now;sgColumn();}
+  if(now-SG.last>=sgInterval()){SG.last=now;sgColumn();}
 }
 function drawSgram(){
   const c=CV.sgramCv; if(!c)return;
@@ -1574,18 +1575,13 @@ attachZoomPan('specCv','x',{
 (function(){
   const cv=$('histCv'); if(!cv)return;
   const padL=26, axH=13;
-  const histBounds=()=>{
-    const tEnd=S.hist.length?S.hist[S.hist.length-1].t:0;
-    const fullSpan=S.duration>0?S.duration:Math.max(30,S.elapsed);
-    return {t0:Math.max(0,tEnd-fullSpan),t1:tEnd};
-  };
   let mode=null,ax=null,anchors=null,sX=0,sY=0,moved=false,lastTap=0;
   const two=e=>[...e.touches].sort((a,b)=>a.identifier-b.identifier);
   cv.addEventListener('touchstart',e=>{
     e.preventDefault();
     if(e.touches.length>=2){
       const t=two(e);
-      if(!S.histView){const b=histBounds();S.histView={t0:b.t0,t1:b.t1};}
+      if(!S.histView){const b=histBoundsFull();S.histView={t0:b.t0,t1:b.t1};}
       ax=null;
       anchors={sprX:Math.abs(t[0].clientX-t[1].clientX),sprY:Math.abs(t[0].clientY-t[1].clientY),
                v:{...S.histView},db:{lo:S.dbMin,hi:S.dbMax}};
@@ -1611,7 +1607,7 @@ attachZoomPan('specCv','x',{
         const cur=anchors.v, cspan=cur.t1-cur.t0;
         const ratio=Math.max(0.05,Math.min(20,anchors.sprX/Math.max(4,sprX)));
         const cc=(cur.t0+cur.t1)/2, half=cspan*ratio/2;
-        const b=histBounds();
+        const b=histBoundsFull();
         let a0=cc-half,a1=cc+half;
         if(a0<b.t0)a0=b.t0; if(a1>b.t1)a1=b.t1; if(a1-a0<0.5)a1=a0+0.5;
         S.histView={t0:a0,t1:a1};
@@ -1652,7 +1648,7 @@ attachZoomPan('sgramCv','y',{time:true,padR:30,
 /* pose un viseur figé : max d'amplitude dans une fenêtre temps×fréquence autour du point tapé */
 function pinCursorAt(fTap,ux){
   if(!SG.cols||!SG.flineHz){S.sgCursor={mode:'pin',f:fTap,L:-99,col:null};return;}
-  const Wp=SG.buf.width, Hb=SG.bufH;
+  const Wp=SG.Wp, Hb=SG.bufH;
   /* colonne visée dans le tampon : ux est dans la fenêtre temporelle courante (tview) */
   const tspan=S.tview.x1-S.tview.x0;
   const colFrac=S.tview.x0+ux*tspan;
@@ -1826,17 +1822,16 @@ function renderDynPop(){
   /* ---- presets TEMPS (X) : spectrogramme / évolution ---- */
   if(isSgram||isHist){
     const gt=$('dpTPresets');gt.innerHTML='';
-    const dur=Math.max(1,S.elapsed);
     const TPRE=[['Tout',null],['3 s',3],['5 s',5],['10 s',10]];
     for(const [lbl,sec] of TPRE){
       const b=document.createElement('button');b.textContent=lbl;
       let on=false;
-      if(isSgram){ on = sec?(Math.abs((1-S.tview.x0)*dur-sec)<0.6 && S.tview.x1>0.999):(S.tview.x0<1e-3&&S.tview.x1>0.999); }
+      if(isSgram){ on = sec?(Math.abs((1-S.tview.x0)*sgBufDur()-sec)<0.6 && S.tview.x1>0.999):(S.tview.x0<1e-3&&S.tview.x1>0.999); }
       else { on = sec?(!!S.histView&&Math.abs((S.histView.t1-S.histView.t0)-sec)<0.6):!S.histView; }
       if(on)b.className='on';
       b.onclick=()=>{
         if(isSgram){
-          if(sec){const f=Math.max(0,Math.min(0.97,1-sec/dur));S.tview={x0:f,x1:1};}
+          if(sec){const f=Math.max(0,Math.min(0.97,1-sec/Math.max(0.5,sgBufDur())));S.tview={x0:f,x1:1};}
           else S.tview={x0:0,x1:1};
         }else{
           const bd=histBoundsFull();
@@ -1849,8 +1844,10 @@ function renderDynPop(){
     }
     /* champs saisie temps (secondes écoulées, 0 = début) */
     if(isSgram){
-      $('dpTMin').value=Math.round((S.tview.x0)*dur);
-      $('dpTMax').value=Math.round((S.tview.x1)*dur);
+      /* champs = secondes DEPUIS LE DÉBUT ; bord droit du tampon = maintenant (elapsed) */
+      const Tb=sgBufDur(), tR=S.elapsed;
+      $('dpTMin').value=Math.max(0,Math.round(tR-(1-S.tview.x0)*Tb));
+      $('dpTMax').value=Math.max(0,Math.round(tR-(1-S.tview.x1)*Tb));
     }else{
       const v=S.histView||histBoundsFull();
       $('dpTMin').value=Math.round(v.t0); $('dpTMax').value=Math.round(v.t1);
@@ -1915,9 +1912,12 @@ $('dpTApply').onclick=()=>{
   let a=parseFloat($('dpTMin').value), b=parseFloat($('dpTMax').value);
   if(!isFinite(a)||!isFinite(b)||b-a<0.5){alert('Fenêtre temps invalide (min 0,5 s).');return;}
   if(S.screen==='sgram'){
-    const dur=Math.max(1,S.elapsed);
-    a=Math.max(0,Math.min(dur,a)); b=Math.max(a+0.5,Math.min(dur,b));
-    S.tview={x0:a/dur,x1:b/dur};
+    /* secondes depuis le début → fraction du tampon (droite = maintenant) */
+    const Tb=Math.max(0.5,sgBufDur()), tR=S.elapsed;
+    a=Math.max(Math.max(0,tR-Tb),Math.min(tR,a)); b=Math.max(a+0.5,Math.min(tR,b));
+    let x0=1-(tR-a)/Tb, x1=1-(tR-b)/Tb;
+    x0=Math.max(0,Math.min(0.97,x0)); x1=Math.max(x0+0.03,Math.min(1,x1));
+    S.tview={x0,x1};
   }else{
     const bd=histBoundsFull();
     a=Math.max(bd.t0,a); b=Math.min(bd.t1,b);
@@ -2202,7 +2202,7 @@ $('kStart').onclick=async function(){
     setTimeout(()=>el.style.display='none',6000);
     return;
   }
-  S.everStarted=true; S.micReady=true;
+  S.micReady=true;
   setMicStat('ready'); $('kStart').classList.remove('mic-wait');
   resetMeasure();
   S.running=true;S.paused=false;S.lastT=0;
@@ -2210,7 +2210,6 @@ $('kStart').onclick=async function(){
   S.warmAge=0;
   S.warmMax=coldStart?2.5:0.6; // micro froid → armement long ; déjà chaud → court
   S.K=0;
-  S.badgeWarm=true;
   setTransport();
   setLocks();
   try{S.wake=await navigator.wakeLock?.request('screen');}catch(e){}
