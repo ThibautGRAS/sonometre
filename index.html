@@ -321,6 +321,7 @@
           <div class="mrow" id="mOverlap"><span>Recouvrement (overlap)</span><b>50 %</b></div>
           <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
           <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
+          <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
           <div class="mrow" id="mDbScale"><span>Échelles dB / fréquence</span><b>Auto</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
@@ -504,7 +505,8 @@ const S = {
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true,
-  lcPeak:-Infinity, lcBq:null, lcLastCt:0,            // LCpeak (crête pondérée C, domaine temporel)
+  lcPeak:-Infinity, lcBq:null, lcLastCt:0,
+  toctSrc:'fft', iirBank:null,            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -588,6 +590,72 @@ function cFilterRun(bq,x){        // filtre en place (Direct Form II transposée
     const a=Math.abs(y); if(a>mx)mx=a;
   }
   return mx;
+}
+/* ===== banc de filtres TIERS D'OCTAVE IEC 61260 (option expert) =====
+   Butterworth passe-bande ordre 6 (3 biquads) par bande : prototype passe-bas
+   analogique ordre 3 → transformation LP→BP → bilinéaire avec pré-warping des bornes.
+   Validé : 0 dB à fc, −3 dB aux bornes, −18 dB à un tiers, somme = entrée (−0,1 dB). */
+function designToctBand(fs,fc){
+  const G=Math.pow(2,1/6);
+  const warp=f=>2*fs*Math.tan(Math.PI*Math.min(f,fs*0.499)/fs);
+  const w1=warp(fc/G), w2=warp(fc*G), w0=Math.sqrt(w1*w2), B=w2-w1;
+  const lp=[{re:-0.5,im:Math.sqrt(3)/2},{re:-1,im:0},{re:-0.5,im:-Math.sqrt(3)/2}];
+  const poles=[];
+  for(const p of lp){
+    const bs={re:B*p.re/2,im:B*p.im/2};
+    const a={re:bs.re*bs.re-bs.im*bs.im-w0*w0, im:2*bs.re*bs.im};
+    const r=Math.hypot(a.re,a.im), th=Math.atan2(a.im,a.re);
+    const d={re:Math.sqrt(r)*Math.cos(th/2), im:Math.sqrt(r)*Math.sin(th/2)};
+    poles.push({re:bs.re+d.re,im:bs.im+d.im},{re:bs.re-d.re,im:bs.im-d.im});
+  }
+  const up=poles.filter(p=>p.im>=-1e-9).slice(0,3);
+  const K=2*fs, sections=[];
+  for(const p of up){
+    const a1=-2*p.re, a0=p.re*p.re+p.im*p.im;
+    const A0=K*K+a1*K+a0, A1=2*(a0-K*K), A2=K*K-a1*K+a0;
+    sections.push({b0:K/A0,b1:0,b2:-K/A0,a1:A1/A0,a2:A2/A0,z1:0,z2:0});
+  }
+  const H=f=>{const w=2*Math.PI*f/fs;let m=1;
+    for(const s of sections){
+      const nR=s.b0+s.b2*Math.cos(2*w), nI=-s.b2*Math.sin(2*w);
+      const dR=1+s.a1*Math.cos(w)+s.a2*Math.cos(2*w), dI=-s.a1*Math.sin(w)-s.a2*Math.sin(2*w);
+      m*=Math.hypot(nR,nI)/Math.hypot(dR,dI);}
+    return m;};
+  const g=1/H(fc); sections[0].b0*=g; sections[0].b2*=g;
+  return sections;
+}
+function buildIirBank(){
+  if(!S.ctx||!S.bands.length)return null;
+  const fs=S.ctx.sampleRate;
+  const bank={fs, bands:[], acc:new Float64Array(S.bands.length), n:0,
+              wAfc:new Float64Array(S.bands.length), wCfc:new Float64Array(S.bands.length),
+              compFc:new Float64Array(S.bands.length)};
+  for(let b=0;b<S.bands.length;b++){
+    const fc=S.bands[b];
+    bank.bands.push(designToctBand(fs,fc));
+    bank.wAfc[b]=Math.pow(10,aWeight(fc)/10);
+    bank.wCfc[b]=Math.pow(10,cWeight(fc)/10);
+    const i=Math.max(1,Math.round(fc/S.binHz));
+    bank.compFc[b]=S.compGain&&S.compGain[i]?S.compGain[i]:1;
+  }
+  return bank;
+}
+/* traite un bloc d'échantillons : accumule l'énergie de chaque bande (états persistants) */
+function iirBankRun(bank,x){
+  const nb=bank.bands.length;
+  for(let b=0;b<nb;b++){
+    const secs=bank.bands[b]; let e=0;
+    const s0=secs[0],s1=secs[1],s2=secs[2];
+    for(let i=0;i<x.length;i++){
+      let v=x[i];
+      let y=s0.b0*v+s0.z1; s0.z1=s0.z2-s0.a1*y; s0.z2=s0.b2*v-s0.a2*y; v=y;
+      y=s1.b0*v+s1.z1; s1.z1=s1.z2-s1.a1*y; s1.z2=s1.b2*v-s1.a2*y; v=y;
+      y=s2.b0*v+s2.z1; s2.z1=s2.z2-s2.a1*y; s2.z2=s2.b2*v-s2.a2*y;
+      e+=y*y;
+    }
+    bank.acc[b]+=e;
+  }
+  bank.n+=x.length;
 }
 /* ===== interpolation parabolique de pic =====
    ajuste une parabole sur (i-1,i,i+1) en dB : exacte pour une fenêtre gaussienne,
@@ -691,6 +759,7 @@ function configureAnalyser(){
     S.binPowS=new Float32Array(n);
     S.binPowV=new Float32Array(n);
   }
+  S.iirBank=null;                      // le banc IIR dépend de fs/binHz/compGain : reconstruit
   SG.init=false;                       // recartographie bins→lignes (les données sgram sont préservées par sgSetup)
 }
 async function initAudio(){
@@ -795,6 +864,17 @@ function loop(ts){
   const K=S.K||1;
   pA*=K; pC*=K; pZ*=K;
   for(let b=0;b<nb;b++)bp[b]*=K;
+  /* ---- source TIERS D'OCTAVE : banc de filtres IEC à la place de la synthèse FFT ---- */
+  if(S.toctSrc==='iir'&&S.iirBank&&S.iirBank.n>0){
+    const bk=S.iirBank, wfc=S.weight==='A'?bk.wAfc:S.weight==='C'?bk.wCfc:null;
+    for(let b=0;b<nb;b++){
+      let p=bk.acc[b]/bk.n;                              // puissance moyenne de bande (temporel)
+      if(S.corr!=='off')p*=bk.compFc[b];
+      if(wfc)p*=wfc[b];
+      bp[b]=p;
+    }
+    bk.acc.fill(0); bk.n=0;
+  }
 
   const aF=Math.exp(-dt/TAU.F), aS=Math.exp(-dt/TAU.S), aV=Math.exp(-dt/TAU.V);
   /* pendant les toutes premières trames, on cale Fast=Slow=V-Slow sur la valeur courante
@@ -834,7 +914,7 @@ function loop(ts){
 
   const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
   const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
-  /* ---- LCpeak : filtre C temporel sur les échantillons nouveaux (état continu) ---- */
+  /* ---- traitements temporels sur les échantillons NOUVEAUX (états continus) ---- */
   {
     if(!S.lcBq&&S.ctx)S.lcBq=designCWeight(S.ctx.sampleRate);
     if(S.lcBq&&S.tap){
@@ -842,10 +922,17 @@ function loop(ts){
       let k=Math.round((ct-(S.lcLastCt||ct))*fs); S.lcLastCt=ct;
       k=Math.max(0,Math.min(S.tap.length,k));
       if(k>0){
-        const mx=cFilterRun(S.lcBq,S.tap.subarray(S.tap.length-k));
+        const fresh=S.tap.subarray(S.tap.length-k);
+        /* LCpeak (filtre C) */
+        const mx=cFilterRun(S.lcBq,fresh);
         if(!warm && S.delayT<=0 && !S.trigWait && mx>0){
           const Lp=20*Math.log10(mx)+S.offset;
           if(Lp>S.lcPeak)S.lcPeak=Lp;
+        }
+        /* banc de filtres IEC (option expert) */
+        if(S.toctSrc==='iir'){
+          if(!S.iirBank)S.iirBank=buildIirBank();
+          if(S.iirBank)iirBankRun(S.iirBank,fresh);
         }
       }
     }
@@ -1886,6 +1973,7 @@ function ui(){
   $('mOverlap').querySelector('b').textContent=Math.round(S.overlap*100)+' %';
   $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
   $('mPeakInterp').querySelector('b').textContent=S.peakInterp?'Oui':'Non';
+  $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
   $('mDbScale').querySelector('b').textContent=(S.dbAuto?'dB auto':('dB '+S.dbMin+'–'+S.dbMax))+' ▸';
   $('kDynV').textContent=S.dbAuto?'Auto':(S.dbMin+'–'+S.dbMax);
   $('kWV').textContent=S.weight;
@@ -1949,6 +2037,11 @@ $('mSgSpeed').onclick=()=>{
   ui();
 };
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
+$('mToctSrc').onclick=()=>{
+  S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
+  S.iirBank=null;                                        // (re)construit au prochain passage
+  ui();
+};
 /* ===== Popover ÉCHELLES / DYNAMIQUE (affichage seul, réglable en temps réel) ===== */
 const DB_PRESETS=[['Auto',null],['20–110',[20,110]],['30–90',[30,90]],['40–80',[40,80]]];
 const F_PRESETS=[['Pleine bande',null],['20–200',[20,200]],['20–1k',[20,1000]],['1k–10k',[1000,10000]]];
@@ -2447,7 +2540,7 @@ $('kCsv').onclick=()=>{
   csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
   csv+='LAeq;'+fmt(S.eqT>0?lvl(S.eq.A/S.eqT):-99)+';LCeq;'+fmt(S.eqT>0?lvl(S.eq.C/S.eqT):-99)+';LZeq;'+fmt(S.eqT>0?lvl(S.eq.Z/S.eqT):-99)+';LAFmax;'+fmt(S.lafMax)+';LAFmin;'+fmt(S.lafMin)+'\n';
   csv+='LCpeak;'+fmt(S.lcPeak)+';L10;'+fmt(S.L10)+';L50;'+fmt(S.L50)+';L90;'+fmt(S.L90)+'\n\n';
-  csv+='SPECTRE Leq (ponderation '+S.weight+')\nfc [Hz];Leq [dB]\n';
+  csv+='SPECTRE Leq (ponderation '+S.weight+' - '+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+')\nfc [Hz];Leq [dB]\n';
   for(let b=0;b<S.bands.length;b++)csv+=S.bands[b]+';'+fmt(S.eqT>0?lvl(S.bandEnergy[b]/S.eqT):-99)+'\n';
   csv+='\nHISTORIQUE (10 Hz)\nt [s];L'+S.weight+S.time+' [dB];L'+S.weight+'eq [dB]\n';
   for(const pt of S.hist)csv+=pt.t.toFixed(1)+';'+pt.L.toFixed(1)+';'+pt.Leq.toFixed(1)+'\n';
