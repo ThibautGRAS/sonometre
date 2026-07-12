@@ -34,6 +34,16 @@
   .logo{height:24px;width:auto;display:block}
   .wordmark{font-family:var(--font);font-size:14px;font-weight:400;letter-spacing:.16em;color:#DCE9FF;text-transform:uppercase;padding-left:11px;border-left:2px solid var(--red);line-height:1}
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
+  .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}
+  .micstat .micic{width:20px;height:20px}
+  .micstat .micic path{fill:currentColor;stroke:currentColor}
+  .micstat .micic path[fill="none"]{fill:none}
+  .micstat .micslash{position:absolute;left:50%;top:50%;width:26px;height:2.5px;background:currentColor;border-radius:2px;transform:translate(-50%,-50%) rotate(-45deg);box-shadow:0 0 0 1.5px #0A1F42}
+  .micstat.off{color:#EF3346}                 /* micro non prêt : rouge, barré */
+  .micstat.ready{color:#2FBF83}               /* micro prêt : vert, débarré */
+  .micstat.ready .micslash{display:none}
+  .micstat.prep{color:#FFB454}                /* préparation : ambre, barré */
+  .micstat.prep .micslash{opacity:.6}
   .led.on{background:var(--green);box-shadow:0 0 8px rgba(47,191,131,.9)}
 
   /* ---------- éléments physiques du boîtier ---------- */
@@ -180,6 +190,7 @@
     box-shadow:0 3px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25);
   }
   .key-start.running:active{box-shadow:0 1px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25)}
+  .key-start.mic-wait{filter:grayscale(.75) brightness(.7);opacity:.7}
   .key-pause{
     background:linear-gradient(180deg,#FFC24B 0%,#E09A22 45%,#9A6410 100%);
     box-shadow:0 3px 0 #5E3C08, inset 0 1px 0 rgba(255,255,255,.30);
@@ -240,7 +251,10 @@
       </svg>
       <span class="wordmark">Sonomètre</span>
     </div>
-    <span class="led" id="led"></span>
+    <span class="micstat off" id="micStat" title="Micro">
+      <svg viewBox="0 0 24 24" class="micic"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3" fill="none" stroke-width="2"/></svg>
+      <span class="micslash"></span>
+    </span>
   </header>
 
   <div class="miccap"><i></i></div>
@@ -1625,7 +1639,6 @@ function ui(){
   const offd=Math.abs(S.offset-120.0)>=0.05;
   $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
   $('vCal').textContent=S.offset.toFixed(1)+' dB · '+(S.corr==='off'?'sans corr.':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'));
-  $('led').classList.toggle('on',S.running&&!S.paused);
   const badge=$('modeBadge');
   if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
   else if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
@@ -2008,6 +2021,7 @@ $('kStart').onclick=async function(){
     return;
   }
   S.everStarted=true; S.micReady=true;
+  setMicStat('ready'); $('kStart').classList.remove('mic-wait');
   resetMeasure();
   S.running=true;S.paused=false;S.lastT=0;
   S.warmT=1;                   // armement actif
@@ -2036,7 +2050,6 @@ function stopMeasure(auto){
   try{S.wake?.release();S.wake=null;}catch(e){}
   const badge=$('modeBadge');
   badge.textContent=auto?'FINI · Leq figé':'ARRÊTÉ';badge.className='badge';
-  $('led').classList.remove('on');
 }
 
 /* ================= Export CSV ================= */
@@ -2058,6 +2071,8 @@ $('kCsv').onclick=()=>{
 S.device=detectDevice();
 loadProfiles();
 setLocks();
+setMicStat('off');
+$('kStart').classList.add('mic-wait');
 ui();
 requestAnimationFrame(()=>sizeAll());
 
@@ -2068,19 +2083,28 @@ requestAnimationFrame(()=>sizeAll());
 async function prewarmMic(){
   if(S.ctx||S.prewarming)return;
   S.prewarming=true;
+  setMicStat('prep');                          // ambre : initialisation en cours
   try{
     await initAudio();
     if(S.ctx.state==='suspended')await S.ctx.resume();
-    /* petite boucle de fond : consomme le flux pour établir/stabiliser le gain d'entrée */
     const tmp=new Float32Array(S.analyser.fftSize);
     let n=0;
     const keep=()=>{ if(S.running)return; if(S.analyser)S.analyser.getFloatTimeDomainData(tmp);
-      if(++n<200)setTimeout(keep,50); };  // ~10 s d'entretien puis on laisse dormir
+      if(++n<200)setTimeout(keep,50); };
     keep();
-    S.micReady=true;
-    const b=$('modeBadge'); if(!S.running){b.textContent='PRÊT';b.className='badge';}
-  }catch(e){ /* refus micro : la demande sera refaite au Démarrer */ }
+    /* le micro devient "prêt" (icône verte + lecture dégrisée) après ~2 s de chauffe */
+    setTimeout(()=>{ S.micReady=true; setMicStat('ready'); armStart(); }, 2000);
+  }catch(e){ setMicStat('off'); }              // refus : reste barré rouge
   S.prewarming=false;
+}
+function setMicStat(state){
+  const el=$('micStat'); if(!el)return;
+  el.classList.remove('off','ready','prep');
+  el.classList.add(state);
+}
+function armStart(){
+  const k=$('kStart');
+  if(S.micReady){k.classList.remove('mic-wait');k.disabled=false;}
 }
 ['pointerdown','touchstart'].forEach(ev=>window.addEventListener(ev,prewarmMic,{once:true,passive:true}));
 
