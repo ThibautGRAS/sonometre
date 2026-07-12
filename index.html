@@ -420,7 +420,7 @@ const S = {
   eq:{A:0,C:0,Z:0}, eqT:0,
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
-  fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1},
+  fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
   fscale:'log', fftN:16384, nSmooth:0, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true,
   win:'blackman', overlap:0.5, peakInterp:true,
   tap:null, ring:null, ringW:0, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -670,11 +670,17 @@ function loop(ts){
   for(let b=0;b<nb;b++)bp[b]*=K;
 
   const aF=Math.exp(-dt/TAU.F), aS=Math.exp(-dt/TAU.S), aV=Math.exp(-dt/TAU.V);
+  /* pendant les toutes premières trames, on cale Fast=Slow=V-Slow sur la valeur courante
+     (sinon la montée depuis 0 crée un faux transitoire qui trompe le détecteur d'armement) */
+  const seed = S.warmAge<0.25;
   for(const k of ['A','C','Z']){
     const p=k==='A'?pA:k==='C'?pC:pZ;
-    S.pF[k]=aF*S.pF[k]+(1-aF)*p;
-    S.pS[k]=aS*S.pS[k]+(1-aS)*p;
-    S.pV[k]=aV*S.pV[k]+(1-aV)*p;
+    if(seed){S.pF[k]=p;S.pS[k]=p;S.pV[k]=p;}
+    else{
+      S.pF[k]=aF*S.pF[k]+(1-aF)*p;
+      S.pS[k]=aS*S.pS[k]+(1-aS)*p;
+      S.pV[k]=aV*S.pV[k]+(1-aV)*p;
+    }
     if(!warm) S.eq[k]+=p*dt;                    // Leq : pas d'intégration pendant le préchauffage
   }
   if(!warm) S.eqT+=dt;
@@ -702,16 +708,11 @@ function loop(ts){
   const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
   const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
   if(warm){
-    /* détection de stabilisation : le niveau instantané (Fast) ne varie plus beaucoup */
-    const Lf=lvl(S.pF[S.weight]);
-    if(S.warmPrev==null)S.warmPrev=Lf;
-    const dL=Math.abs(Lf-S.warmPrev); S.warmPrev=Lf;
+    /* ARMEMENT : on jette les premières 1,5 s (transitoire de gain iOS + pop d'amorçage).
+       Délai fixe = simple et fiable ; l'affichage tourne mais rien n'est intégré. */
     S.warmAge=(S.warmAge||0)+dt;
-    if(dL<1.5) S.warmStable=(S.warmStable||0)+dt; else S.warmStable=0;
-    /* fin si : stabilisé ≥0,4 s ET âge ≥0,8 s, OU sécurité à 3 s */
-    const done=(S.warmStable>=0.5 && S.warmAge>=1.0) || S.warmAge>=3.0;
-    if(done){
-      S.warmT=0; S.warmAge=0; S.warmStable=0; S.warmPrev=null;
+    if(S.warmAge>=1.5){
+      S.warmT=0; S.warmAge=0;
       S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;
       ui();
     }
@@ -929,27 +930,47 @@ function drawHistory(){
   g.fillStyle='#050F26';g.fillRect(0,0,w,h);
   const padL=26, sc=S.scale.hist;
   if(S.hist.length<2){grid(g,w,h,sc,padL,10);return;}
-  const span=S.duration>0?S.duration:Math.max(30,S.elapsed);
-  const t1=S.hist[S.hist.length-1].t, t0=Math.max(0,t1-span);
+  const tEnd=S.hist[S.hist.length-1].t;
+  const fullSpan=S.duration>0?S.duration:Math.max(30,S.elapsed);
+  const full0=Math.max(0,tEnd-fullSpan);
+  /* fenêtre visible : zoom temps via histView {t0,t1} (sinon plein historique) */
+  let t0=full0, t1=tEnd;
+  if(S.histView){t0=S.histView.t0;t1=S.histView.t1;}
+  const span=Math.max(1e-6,t1-t0);
   // bornes des données visibles
   let dLo=Infinity,dHi=-Infinity;
   for(const pt of S.hist){
-    if(pt.t<t0)continue;
+    if(pt.t<t0||pt.t>t1)continue;
     if(pt.L>-90){if(pt.L<dLo)dLo=pt.L; if(pt.L>dHi)dHi=pt.L;}
     if(pt.Leq>-90){if(pt.Leq<dLo)dLo=pt.Leq; if(pt.Leq>dHi)dHi=pt.Leq;}
   }
   autoRange(sc,dLo,dHi);
   grid(g,w,h,sc,padL,10);
-  const x2=t=>padL+((t-t0)/Math.max(1e-6,span))*(w-padL-4);
+  const x2=t=>padL+((t-t0)/span)*(w-padL-4);
   g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.1;let st=false;
-  for(const pt of S.hist){if(pt.t<t0)continue;const x=x2(pt.t),y=y2(pt.L,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
+  for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const x=x2(pt.t),y=y2(pt.L,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
   g.stroke();
   g.beginPath();g.strokeStyle='#EF3346';g.lineWidth=2;st=false;
-  for(const pt of S.hist){if(pt.t<t0)continue;const x=x2(pt.t),y=y2(pt.Leq,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
+  for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const x=x2(pt.t),y=y2(pt.Leq,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
   g.stroke();
   g.textAlign='left';g.font='9px Arial';
   g.fillStyle='#4FC3FF';g.fillText('L'+S.weight+S.time,padL+4,10);
   g.fillStyle='#EF3346';g.fillText('L'+S.weight+'eq',padL+40,10);
+  /* curseur mobile : trouve le point le plus proche en temps */
+  if(S.histCursor!=null){
+    const tc=t0+S.histCursor*span;
+    let best=null,bd=1e9;
+    for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const d=Math.abs(pt.t-tc);if(d<bd){bd=d;best=pt;}}
+    if(best){
+      const x=x2(best.t);
+      g.strokeStyle='#BFE9FF';g.lineWidth=1;g.setLineDash([3,3]);
+      g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
+      g.fillStyle='#4FC3FF';g.beginPath();g.arc(x,y2(best.L,h,sc),3,0,7);g.fill();
+      g.fillStyle='#EF3346';g.beginPath();g.arc(x,y2(best.Leq,h,sc),3,0,7);g.fill();
+      const ago=tEnd-best.t;
+      cursorLabel(g,w,x,'−'+(ago<10?ago.toFixed(1):Math.round(ago))+'s · L '+fmt(best.L)+' · eq '+fmt(best.Leq));
+    }
+  }
   $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
 }
 
@@ -1451,6 +1472,74 @@ attachZoomPan('specCv','x',{
   onChange:()=>{if(!S.running)drawSpectrum();},
   onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();}
 });
+/* ===== gestes de la courbe d'évolution (temps × dB) ===== */
+(function(){
+  const cv=$('histCv'); if(!cv)return;
+  const padL=26, axH=13;
+  const histBounds=()=>{
+    const tEnd=S.hist.length?S.hist[S.hist.length-1].t:0;
+    const fullSpan=S.duration>0?S.duration:Math.max(30,S.elapsed);
+    return {t0:Math.max(0,tEnd-fullSpan),t1:tEnd};
+  };
+  let mode=null,ax=null,anchors=null,sX=0,sY=0,moved=false,lastTap=0;
+  const two=e=>[...e.touches].sort((a,b)=>a.identifier-b.identifier);
+  cv.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    if(e.touches.length>=2){
+      const t=two(e);
+      if(!S.histView){const b=histBounds();S.histView={t0:b.t0,t1:b.t1};}
+      ax=null;
+      anchors={sprX:Math.abs(t[0].clientX-t[1].clientX),sprY:Math.abs(t[0].clientY-t[1].clientY),
+               v:{...S.histView},db:{lo:S.dbMin,hi:S.dbMax}};
+      mode='pinch';
+    }else{
+      const t=e.touches[0];sX=t.clientX;sY=t.clientY;moved=false;mode='pan';
+      const now=Date.now();
+      if(now-lastTap<300){S.histView=null;S.histCursor=null;lastTap=0;drawHistory();mode=null;return;}
+      lastTap=now;
+    }
+  },{passive:false});
+  cv.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    const r=cv.getBoundingClientRect();
+    if(mode==='pinch'&&e.touches.length>=2){
+      const t=two(e);
+      const sprX=Math.abs(t[0].clientX-t[1].clientX),sprY=Math.abs(t[0].clientY-t[1].clientY);
+      if(ax===null){
+        const dX=Math.abs(sprX-anchors.sprX),dY=Math.abs(sprY-anchors.sprY);
+        if(Math.max(dX,dY)<8)return; ax=dX>dY?'time':'db';
+      }
+      if(ax==='time'){
+        const cur=anchors.v, cspan=cur.t1-cur.t0;
+        const ratio=Math.max(0.05,Math.min(20,anchors.sprX/Math.max(4,sprX)));
+        const cc=(cur.t0+cur.t1)/2, half=cspan*ratio/2;
+        const b=histBounds();
+        let a0=cc-half,a1=cc+half;
+        if(a0<b.t0)a0=b.t0; if(a1>b.t1)a1=b.t1; if(a1-a0<0.5)a1=a0+0.5;
+        S.histView={t0:a0,t1:a1};
+      }else{
+        const ratio=Math.max(0.2,Math.min(5,anchors.sprY/Math.max(4,sprY)));
+        const c=(anchors.db.lo+anchors.db.hi)/2, half=(anchors.db.hi-anchors.db.lo)/2*ratio;
+        let lo=Math.round(c-half),hi=Math.round(c+half);
+        if(hi-lo<10){lo=Math.round(c-5);hi=Math.round(c+5);}
+        S.dbAuto=false;S.dbMin=Math.max(-20,lo);S.dbMax=Math.min(140,hi);ui();
+      }
+      drawHistory();
+    }else if(mode==='pan'&&e.touches.length===1){
+      const t=e.touches[0];
+      if(!moved&&Math.hypot(t.clientX-sX,t.clientY-sY)>6)moved=true;
+      if(moved){S.histCursor=Math.max(0,Math.min(1,((t.clientX-r.left)-padL)/Math.max(1,r.width-padL-4)));drawHistory();}
+    }
+  },{passive:false});
+  cv.addEventListener('touchend',e=>{
+    if(mode==='pan'&&!moved){
+      const r=cv.getBoundingClientRect();
+      S.histCursor=Math.max(0,Math.min(1,((sX-r.left)-padL)/Math.max(1,r.width-padL-4)));
+      drawHistory();
+    }
+    if(e.touches.length===0)mode=null;
+  });
+})();
 attachZoomPan('sgramCv','y',{time:true,padR:30,
   onChange:()=>{if(!S.running||S.paused)drawSgram();},
   onTap:(f,uy,ux)=>{                        // un doigt : viseur figé sur le max local d'une zone
@@ -1563,6 +1652,7 @@ $('kScreen').addEventListener('click',()=>{
   if(S.screen==='menu'||S.screen==='cal'){S.screen=S.prevScreen||'spec';}     // sortie du menu : écran précédent
   else S.screen=S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':'spec';
   if(S.screen!=='sgram')S.sgCursor=null;
+  if(S.screen!=='hist')S.histCursor=null;
   ui();requestAnimationFrame(()=>{sizeAll();});
 });
 
