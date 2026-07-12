@@ -443,7 +443,6 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
           <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
-          <div class="mrow" id="mDbScale"><span>Échelles dB / fréquence</span><b>Auto</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
           <div class="mrow act" id="mClrHist"><span>Effacer l'évolution temporelle</span><b>⌫</b></div>
@@ -2269,7 +2268,7 @@ function ui(){
   $('mPeakInterp').querySelector('b').textContent=S.peakInterp?'Oui':'Non';
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
-  $('mDbScale').querySelector('b').textContent=(S.dbAuto?'dB auto':('dB '+S.dbMin+'–'+S.dbMax))+' ▸';
+
   $('kDynV').textContent=S.dbAuto?'Auto':(S.dbMin+'–'+S.dbMax);
   $('kWV').textContent=S.weight;
   $('kTV').textContent=TIME_LBL[S.time];
@@ -2547,7 +2546,6 @@ $('dpFApply').onclick=()=>{
   drawActive(); renderDynPop();
 };
 $('dpInterp').onclick=()=>{S.sgInterp=!S.sgInterp;SG.vSeq=-1;SG.vViewKey='';drawActive();renderDynPop();};
-$('mDbScale').onclick=openDynPop;
 $('mCalib').onclick=()=>{S.screen='cal';ui();requestAnimationFrame(renderCal);};
 $('calClose').onclick=()=>{S.screen='menu';ui();};
 
