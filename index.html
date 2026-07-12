@@ -831,19 +831,19 @@ window.addEventListener('resize',()=>setTimeout(sizeAll,60));
 window.addEventListener('orientationchange',()=>setTimeout(sizeAll,250));
 
 /* ===== échelle auto : expansion rapide, contraction très lente (anti-scintillement) ===== */
-function autoRange(sc,dLo,dHi,minSpan){
-  if(!S.dbAuto){sc.lo=S.dbMin;sc.hi=S.dbMax;return sc;}
+function autoRange(sc,dLo,dHi,minSpan,forceAuto){
+  if(!forceAuto && !S.dbAuto){sc.lo=S.dbMin;sc.hi=S.dbMax;return sc;}
   if(!isFinite(dLo)||!isFinite(dHi)||dHi<=-90)return sc;
   minSpan=minSpan||40;
   let tLo=Math.floor((dLo-4)/5)*5, tHi=Math.ceil((dHi+4)/5)*5;
   if(tHi-tLo<minSpan){const c=(tHi+tLo)/2; tLo=Math.round((c-minSpan/2)/5)*5; tHi=tLo+minSpan;}
   tLo=Math.max(-10,tLo); tHi=Math.min(140,tHi);
-  /* expansion immédiate (jamais d'écrêtage), contraction avec ZONE MORTE de 5 dB :
-     de petites fluctuations du max ne font pas trembler l'échelle ni la colorbar */
-  if(tLo<sc.lo)      sc.lo+=(tLo-sc.lo)*0.25;
-  else if(sc.lo<tLo-5) sc.lo+=(tLo-sc.lo)*0.02;
-  if(tHi>sc.hi)      sc.hi+=(tHi-sc.hi)*0.25;
-  else if(sc.hi>tHi+5) sc.hi+=(tHi-sc.hi)*0.02;
+  /* SAUT NET (un seul re-rendu, pas de glissement qui fait clignoter) :
+     expansion immédiate si dépassement, contraction seulement au-delà d'une zone morte de 5 dB */
+  if(tLo<sc.lo) sc.lo=tLo;
+  else if(sc.lo<tLo-5) sc.lo=tLo;
+  if(tHi>sc.hi) sc.hi=tHi;
+  else if(sc.hi>tHi+5) sc.hi=tHi;
   return sc;
 }
 /* ===== transformation d'axe fréquence : log ou linéaire ===== */
@@ -1180,7 +1180,9 @@ function sgBlit(c){
       const a=SG.cols[x]; if(!a)continue;
       for(let r=r0;r<=r1;r+=stR){const v=a[r];if(v>-90){if(v<lo)lo=v;if(v>hi)hi=v;}}
     }
-    autoRange(sc,lo,hi,20);
+    /* plancher 20 dB : le bruit de fond sous 20 dB n'apporte rien et écrase le contraste */
+    lo=Math.max(20,lo); hi=Math.max(lo+5,hi);
+    autoRange(sc,lo,hi,20,true);
   }
   /* ===== rendu du viewport depuis les DONNÉES =====
      chemin incrémental (décalage 1 px + colonne neuve) quand seule une colonne arrive ;
@@ -1286,14 +1288,12 @@ function sgBlit(c){
     g.fillStyle=grad;g.fillRect(cbx,cbTop,cbw,cbBot-cbTop);
     g.strokeStyle='rgba(255,255,255,.25)';g.lineWidth=1;g.strokeRect(cbx+.5,cbTop+.5,cbw-1,cbBot-cbTop-1);
     g.fillStyle='#8FB2E8';g.font=(8*c.dpr)+'px Arial';g.textAlign='left';
-    /* pas adaptatif : vise 10 dB, mais garantit au moins ~14 px entre graduations
-       (jamais de texte superposé), en montant sur 1/2/5/10/20/50 dB */
+    /* pas adaptatif : 5 dB standard, élargi (10/20/50) seulement si la place manque (≥12 px/grad) */
     const span=sc.hi-sc.lo, hpx=(cbBot-cbTop)/c.dpr;
-    const minGapPx=14, maxTicks=Math.max(2,Math.floor(hpx/minGapPx));
-    const NICE=[1,2,5,10,20,50,100];
-    let step=10;
-    for(const s of NICE){ if(s>=10 && span/s<=maxTicks){step=s;break;} step=s; }
-    if(span/step>maxTicks){ for(const s of NICE){ if(span/s<=maxTicks){step=s;break;} } }
+    const minGapPx=12, maxTicks=Math.max(2,Math.floor(hpx/minGapPx));
+    const NICE=[5,10,20,50,100];
+    let step=NICE[NICE.length-1];
+    for(const s of NICE){ if(span/s<=maxTicks){step=s;break;} }
     for(let d=Math.ceil(sc.lo/step)*step;d<=sc.hi;d+=step){
       const y=cbTop+(1-(d-sc.lo)/(sc.hi-sc.lo))*(cbBot-cbTop);
       if(y<cbTop+4*c.dpr||y>cbBot-1)continue;        // pas d'étiquette qui déborde de la barre
