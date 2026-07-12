@@ -178,9 +178,13 @@
   .key[disabled],.key.locked{opacity:.4;pointer-events:none;filter:saturate(.4)}
   .key.locked::after{content:"🔒";position:absolute;top:5px;right:7px;font-size:9px;opacity:.7}
   .key{position:relative}
-  #kPause{background:linear-gradient(180deg,#2E7D5B 0%,#1E6045 45%,#123C2B 100%);box-shadow:0 3px 0 #0A2419, inset 0 1px 0 rgba(255,255,255,.18)}
-  #kPause:active{box-shadow:0 1px 0 #0A2419, inset 0 1px 0 rgba(255,255,255,.18)}
-  #kPause.resume{background:linear-gradient(180deg,#C99A2E 0%,#9A7420 45%,#5E4712 100%);box-shadow:0 3px 0 #3A2C0A, inset 0 1px 0 rgba(255,255,255,.18)}
+  .key-pause{
+    background:linear-gradient(180deg,#2E6FC7 0%,#1B4E9E 45%,#0E3170 100%);
+    box-shadow:0 3px 0 #081F47, inset 0 1px 0 rgba(255,255,255,.22);
+  }
+  .key-pause:active{transform:translateY(2px);box-shadow:0 1px 0 #081F47, inset 0 1px 0 rgba(255,255,255,.22)}
+  .key-pause .kv{font-size:16px;letter-spacing:.08em}
+  .key-pause.resume{background:linear-gradient(180deg,#3E86E0 0%,#2E6FC7 45%,#1B4E9E 100%)}
 
   /* popover CALIBRATION */
   .calpop{display:none;position:fixed;inset:0;z-index:20;background:rgba(0,10,30,.55);align-items:flex-end;justify-content:center}
@@ -341,9 +345,11 @@
       <button class="key" id="kReset"><span class="kf">MESURE</span><span class="kv">Réinit</span></button>
     </div>
     <div class="krow">
-      <button class="key" id="kCsv"><span class="kf">EXPORT</span><span class="kv">CSV</span></button>
-      <button class="key" id="kPause" disabled><span class="kf">&nbsp;</span><span class="kv">⏸ Pause</span></button>
+      <button class="key" id="kCsv" style="grid-column:span 4"><span class="kf">EXPORT</span><span class="kv">CSV</span></button>
+    </div>
+    <div class="krow">
       <button class="key key-start" id="kStart" style="grid-column:span 2"><span class="kv">▶ DÉMARRER</span></button>
+      <button class="key key-pause" id="kPause" disabled style="grid-column:span 2"><span class="kv">⏸ PAUSE</span></button>
     </div>
   </div>
 
@@ -1563,7 +1569,7 @@ $('kStart').onclick=async function(){
   resetMeasure();
   S.running=true;S.paused=false;S.lastT=0;
   this.classList.add('running');this.querySelector('.kv').textContent='■ ARRÊTER';
-  $('kPause').disabled=false;$('kPause').classList.remove('resume');$('kPause').querySelector('.kv').textContent='⏸ Pause';
+  $('kPause').disabled=false;$('kPause').classList.remove('resume');$('kPause').querySelector('.kv').textContent='⏸ PAUSE';
   setLocks();
   try{S.wake=await navigator.wakeLock?.request('screen');}catch(e){}
   cancelAnimationFrame(S.raf);S.raf=requestAnimationFrame(loop);
@@ -1574,7 +1580,7 @@ $('kPause').onclick=()=>{
   S.paused=!S.paused;
   const k=$('kPause');
   k.classList.toggle('resume',S.paused);
-  k.querySelector('.kv').textContent=S.paused?'▶ Reprendre':'⏸ Pause';
+  k.querySelector('.kv').textContent=S.paused?'▶ REPRENDRE':'⏸ PAUSE';
   S.lastT=0;                               // repartir proprement sans compter le temps de pause
   ui();
 };
@@ -1582,7 +1588,7 @@ function stopMeasure(auto){
   S.running=false;S.paused=false;
   cancelAnimationFrame(S.raf);
   const k=$('kStart');k.classList.remove('running');k.querySelector('.kv').textContent='▶ DÉMARRER';
-  $('kPause').disabled=true;$('kPause').classList.remove('resume');$('kPause').querySelector('.kv').textContent='⏸ Pause';
+  $('kPause').disabled=true;$('kPause').classList.remove('resume');$('kPause').querySelector('.kv').textContent='⏸ PAUSE';
   setLocks();
   try{S.wake?.release();S.wake=null;}catch(e){}
   const badge=$('modeBadge');
