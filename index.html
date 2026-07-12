@@ -120,10 +120,10 @@
   .mnote{font-size:8px;color:var(--lcd-dim);text-align:center;margin-top:auto;padding:2px 6px;line-height:1.35}
 
   /* ---------- écran CALIBRATION ---------- */
-  .cal{height:100%;display:flex;flex-direction:column;overflow:hidden}
+  .cal{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
   .calhead{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--ice);font-weight:700;flex:0 0 auto;padding-bottom:5px}
   .calx{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--lcd-dim);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer}
-  .calbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:4px;padding-right:2px}
+  .calbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:4px;padding-right:2px}
   .calbody::-webkit-scrollbar{width:3px}.calbody::-webkit-scrollbar-thumb{background:rgba(79,195,255,.3);border-radius:2px}
   .msub{font-size:9px;letter-spacing:.12em;color:var(--lcd-dim);font-weight:700;padding:6px 2px 2px}
   .crow2{display:flex;gap:5px;align-items:center}
@@ -135,7 +135,7 @@
   .curvebox{background:#050F26;border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:5px 6px 2px;position:relative}
   .curvelbl{display:flex;justify-content:space-between;font-size:8.5px;font-weight:700;color:var(--lcd-dim);font-family:var(--mono);padding-bottom:2px}
   .curvelbl span:first-child{color:var(--ice)}
-  #curveCv{width:100%;height:96px;display:block}
+  #curveCv{width:100%;height:80px;display:block}
 
   .sweepgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
   .scell{background:rgba(79,195,255,.06);border:1px solid rgba(79,195,255,.12);border-radius:6px;padding:4px 2px;text-align:center;cursor:pointer;font-family:var(--mono)}
@@ -1137,7 +1137,7 @@ $('mSgSpeed').onclick=()=>{
   ui();
 };
 $('mDbScale').onclick=()=>{S.dbAuto=!S.dbAuto;ui();drawActive();};
-$('mCalib').onclick=()=>{S.screen='cal';ui();renderCal();};
+$('mCalib').onclick=()=>{S.screen='cal';ui();requestAnimationFrame(renderCal);};
 $('calClose').onclick=()=>{S.screen='menu';ui();};
 
 /* ===== Profils (localStorage) ===== */
