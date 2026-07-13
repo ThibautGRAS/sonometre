@@ -198,9 +198,10 @@ if('serviceWorker' in navigator){
   .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
   .sg3dbtn{transition:opacity .35s ease;}
-  .sg3dbtn.fade{opacity:.18}
+  .sg3dbtn.fade{opacity:.18 !important}
+  #sg3dBtn:active,#lsnBtn:active{opacity:1 !important}
   .sg3dbtn:active{opacity:1}
-  .sg3dbtn{position:absolute;top:6px;right:34px;z-index:6;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.06em;border-radius:7px;padding:4px 9px;cursor:pointer}
+  .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:46px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.06em;border-radius:7px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
   .sg3dbtn.on{background:rgba(79,195,255,.28);color:#EAF6FF}
   #emgBtn.on{background:rgba(255,180,84,.24);border-color:rgba(255,180,84,.65);color:#FFD9A0}
@@ -452,8 +453,8 @@ if('serviceWorker' in navigator){
     <div class="graphzone">
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
-      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="emgBtn">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="right:86px">VIB</button></div>
-      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn" style="right:56px">3D</button><button class="sg3dbtn" id="lsnBtn" style="right:56px;top:38px">🔊</button></div>
+      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="emgBtn">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="right:60px">VIB</button></div>
+      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn" style="right:auto;left:8px;opacity:.55">3D</button><button class="sg3dbtn" id="lsnBtn" style="right:auto;left:8px;top:38px;opacity:.55">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
