@@ -326,6 +326,12 @@ if('serviceWorker' in navigator){
   .calpop{display:none;position:fixed;inset:0;z-index:20;background:rgba(0,10,30,.55);align-items:flex-end;justify-content:center}
   .calpop.on{display:flex}
   .helppop{max-height:86vh;display:flex;flex-direction:column}
+  .ppbody{display:flex;flex-direction:column;gap:8px}
+  .ppopt{display:flex;flex-direction:column;gap:3px;text-align:left;background:rgba(79,195,255,.08);border:1px solid rgba(79,195,255,.2);border-radius:10px;padding:11px 13px;cursor:pointer;font-family:var(--font);color:#EAF4FF}
+  .ppopt:active{background:rgba(79,195,255,.2)}
+  .ppopt b{font-size:14px;color:#EAF4FF}
+  .ppopt span{font-size:11.5px;line-height:1.45;color:#B9C7E2}
+  .ppopt em{font-size:10.5px;color:#8FB2E8;font-style:normal;font-family:var(--mono);letter-spacing:.02em}
   .helpbody{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-right:4px}
   .helpbody h3{font-size:13px;color:var(--ice);letter-spacing:.06em;margin:14px 0 5px;font-weight:700}
   .helpbody h3.warn{color:#FFB454}
@@ -434,6 +440,7 @@ if('serviceWorker' in navigator){
       </div>
       <div class="gpane" id="paneMenu">
         <div class="menu">
+          <div class="mrow" id="mPreset" style="border-color:rgba(79,195,255,.4);background:rgba(79,195,255,.10)"><span>Optimiser le spectrogramme</span><b id="mPresetV" style="color:#4FC3FF">▸ choisir</b></div>
           <div class="mrow" id="mFscale"><span>Échelle fréquence</span><b>LOG</b></div>
           <div class="mrow" id="mWin"><span>Type de fenêtre</span><b>Blackman</b></div>
           <div class="mrow" id="mFft"><span>Nombre de points (FFT)</span><b>16384</b></div>
@@ -616,6 +623,29 @@ if('serviceWorker' in navigator){
 
   <!-- menu EXPORT -->
   <!-- page AIDE -->
+  <!-- popover PRESET spectrogramme -->
+  <div id="presetPop" class="calpop"><div class="calpop-in">
+    <div class="cp-head">OPTIMISER LE SPECTROGRAMME <button id="ppClose">✕</button></div>
+    <div class="ppbody">
+      <button class="ppopt" data-preset="tonal">
+        <b>Son tonal / stable</b>
+        <span>Moteur, ventilateur, bourdonnement. Résolution fréquence maximale (1,5 Hz) pour séparer harmoniques et repérer une émergence.</span>
+        <em>FFT 32768 · Blackman · overlap 75 % · 20 col/s · log</em>
+      </button>
+      <button class="ppopt" data-preset="transient">
+        <b>Transitoire / événements brefs</b>
+        <span>Chocs, impacts, parole. Résolution temporelle privilégiée pour voir quand les choses arrivent.</span>
+        <em>FFT 4096 · Hann · overlap 75 % · 40 col/s · log</em>
+      </button>
+      <button class="ppopt" data-preset="balanced">
+        <b>Équilibré (polyvalent)</b>
+        <span>Bon compromis fréquence / temps pour un usage général.</span>
+        <em>FFT 16384 · Blackman · overlap 75 % · 20 col/s · log</em>
+      </button>
+      <div class="mnote" style="margin-top:8px">L'overlap lisse le rendu (plus de colonnes) mais ne change pas la résolution réelle, fixée par la taille de FFT. Compromis de Gabor : fréquence fine ⇄ temps fin.</div>
+    </div>
+  </div></div>
+
   <div id="helpPop" class="calpop"><div class="calpop-in helppop">
     <div class="cp-head">AIDE &amp; GUIDE <button id="hpClose">✕</button></div>
     <div class="helpbody">
@@ -669,6 +699,9 @@ if('serviceWorker' in navigator){
 
       <h3>Export</h3>
       <p>Touche <b>Partager</b> : feuille de partage iOS (Mail, AirDrop, Fichiers…) ou téléchargement, en <b>CSV</b> (métadonnées + micro + indices + spectre + historique) ou en <b>image PNG</b> titrée du graphe affiché.</p>
+
+      <h3>Optimiser le spectrogramme</h3>
+      <p>Menu expert ▸ <b>Optimiser le spectrogramme</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse et échelle. <b>Tonal</b> (résolution fréquence max, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, pour chocs/parole), <b>Équilibré</b> (polyvalent). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
 
       <h3>Thèmes</h3>
       <p>Menu expert ▸ <b>Thème de façade</b> : Marine, Acier, Clair labo, OLED noir et <b>Game Boy</b> (écran vert monochrome). Tout suit le thème — façade, écran de mesure, capsule, touches et couleurs des courbes. Le logo CETIM reste conforme à la charte (blanc ou bleu selon le fond).</p>
@@ -2355,6 +2388,27 @@ $('kScreen').addEventListener('click',()=>{
 });
 
 /* lignes du MODE EXPERT */
+/* ===== presets d'optimisation du spectrogramme ===== */
+const SG_PRESETS={
+  tonal:     {fftN:32768, win:'blackman', overlap:0.75, colMs:50, fscale:'log', label:'Tonal'},
+  transient: {fftN:4096,  win:'hann',     overlap:0.75, colMs:25, fscale:'log', label:'Transitoire'},
+  balanced:  {fftN:16384, win:'blackman', overlap:0.75, colMs:50, fscale:'log', label:'Équilibré'}
+};
+function applyPreset(key){
+  const p=SG_PRESETS[key]; if(!p)return;
+  S.fftN=p.fftN; S.win=p.win; S.overlap=p.overlap; S.colMs=p.colMs;
+  if(S.fscale!==p.fscale){ S.fscale=p.fscale; SG.init=false; resetView(); }
+  if(S.analyser)configureAnalyser();
+  S.presetName=p.label;
+  const b=$('mPresetV'); if(b)b.textContent='✓ '+p.label;
+  ui();
+}
+$('mPreset').onclick=()=>{ $('presetPop').classList.add('on'); };
+$('ppClose').onclick=()=>$('presetPop').classList.remove('on');
+$('presetPop').addEventListener('click',e=>{ if(e.target.id==='presetPop')$('presetPop').classList.remove('on'); });
+document.querySelectorAll('.ppopt').forEach(btn=>{
+  btn.onclick=()=>{ applyPreset(btn.getAttribute('data-preset')); $('presetPop').classList.remove('on'); };
+});
 $('mFscale').onclick=()=>{S.fscale=S.fscale==='log'?'lin':'log';SG.init=false;resetView();ui();};
 $('mWin').onclick=()=>{
   S.win=WIN_ORDER[(WIN_ORDER.indexOf(S.win)+1)%WIN_ORDER.length];
