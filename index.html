@@ -15,15 +15,9 @@
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     // updateViaCache:'none' → le navigateur va TOUJOURS chercher sw.js sur le réseau (jamais son cache HTTP)
-    const hadController=!!navigator.serviceWorker.controller;   // y avait-il déjà un SW aux commandes ?
-    navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
-      reg.update();                                   // vérifie une mise à jour à chaque ouverture
-      let reloaded=false;
-      navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        if(reloaded||!hadController)return;            // 1er chargement (claim initial) : NE PAS recharger → pas de scintillement
-        reloaded=true; location.reload();
-      });
-    }).catch(()=>{});
+    // réseau d'abord + cache:reload (voir sw.js) suffisent à servir la version fraîche à chaque ouverture.
+    // PAS de reload automatique : il provoquait un double-chargement visible à chaque mise à jour.
+    navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ reg.update(); }).catch(()=>{});
   });
 }
 </script>
