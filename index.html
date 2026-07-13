@@ -3821,7 +3821,8 @@ S.device=detectDevice();
 loadProfiles();
 setLocks();
 setMicStat('off');
-$('kStart').classList.add('mic-wait');
+/* le bouton REC est pleinement actif au lancement (c'est l'appui qui demande le micro) :
+   plus de grisage « mic-wait » au boot, qui donnait un cercle rouge qui s'éteignait aussitôt */
 ui();
 refreshTheme();
 requestAnimationFrame(()=>sizeAll());
