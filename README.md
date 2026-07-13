@@ -53,7 +53,7 @@ Le traitement du signal est intégralement écrit à la main en JavaScript : FFT
 **Installer sur l'écran d'accueil (recommandé)** — iPhone : bouton Partager de Safari puis « Sur l'écran d'accueil ». Android : menu du navigateur puis « Ajouter à l'écran d'accueil ». L'application s'ouvre alors en plein écran et fonctionne hors ligne (après un premier chargement connecté).
 
 **Gestes principaux**
-- Touche **ÉCRAN** : appui court pour changer d'affichage, appui long pour le mode expert
+- Touche **ÉCRAN** : change d'affichage · Touche **MENU** : mode expert
 - Touche **▶** : appui long pour le menu de déclenchement
 - Sur les graphes : pincer pour zoomer, glisser pour déplacer, toucher pour poser un curseur
 - Bouton **?** dans l'en-tête : ouvre l'aide
