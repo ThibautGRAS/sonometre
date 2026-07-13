@@ -109,7 +109,7 @@ if('serviceWorker' in navigator){
   header{display:flex;align-items:center;justify-content:space-between;padding:2px 18px 8px 20px;flex:0 0 auto}
   .brandwrap{display:flex;align-items:center;gap:10px}
   .logobox{background:#fff;border-radius:9px;padding:5px 10px;display:flex;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.25)}
-  .logo{height:26px;width:auto;display:block}
+  .logo{height:18px;width:auto;display:block}
   .wordmark{font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:.16em;color:var(--ink);text-transform:uppercase;padding-left:11px;border-left:2px solid var(--red);line-height:1}
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}
@@ -142,11 +142,9 @@ if('serviceWorker' in navigator){
   .miccap{flex:0 0 auto;display:flex;justify-content:center;margin:0 0 5px}
   .miccap i{
     width:92px;height:15px;border-radius:0 0 14px 14px;border:1px solid var(--line);border-top:0;
-    /* phase du motif calée sur la largeur utile (92 px, pas 6 px) : centres de points à
-       4 px des DEUX bords (92-2·4 divisible par 6) → symétrique, aucun point coupé */
+    /* fentes diagonales façon grille de haut-parleur DMG */
     background:
-      radial-gradient(circle, var(--cap-dot) 1px, transparent 1.4px) 1px 3px/6px 6px repeat-x,
-      radial-gradient(circle, var(--cap-dot) 1px, transparent 1.4px) 1px 8px/6px 6px repeat-x,
+      repeating-linear-gradient(115deg, transparent 0 5px, var(--cap-dot) 5px 6.8px),
       linear-gradient(180deg,var(--cap0),var(--cap1));
     box-shadow:inset 0 -3px 7px var(--cap-sh,rgba(0,0,0,.55));
   }
@@ -389,20 +387,19 @@ if('serviceWorker' in navigator){
 
   <header>
     <div class="brandwrap">
-      <svg class="logo" viewBox="0 0 322 96" aria-label="CETIM">
-        <!-- glyphe CETIM : proportions mesurées au pixel sur le logo officiel
-             (module u≈13,5 : barre haute 51→110 h20 + descente droite 90→110,
-              pièce gauche 0→51 h20 + descente 0→20, carré rouge 51,40 19×20) -->
-        <g transform="translate(2,16)">
-          <g fill="var(--logo-fill)">
-            <path d="M51 2 h52 a7 7 0 0 1 7 7 v53 h-20 V22 h-39 z"/>
-            <path d="M0 22 h51 v20 h-31 v20 h-20 z"/>
-          </g>
-          <rect x="51" y="42" width="19" height="20" fill="#EF3346"/>
-        </g>
-        <!-- mot CETIM -->
-        <text x="124" y="69" fill="var(--logo-fill)" font-family="Arial Nova, Arial, sans-serif" font-weight="700" font-size="58" letter-spacing="1">CETIM</text>
-      </svg>
+      <svg class="logo" viewBox="0 0 374.5 59.0" aria-label="CETIM">
+  <!-- logo CETIM vectorisé par traçage de contours depuis le fichier officiel : formes et écriture exactes -->
+  <g fill="var(--logo-fill)">
+    <path d="M374.0,57.4 L360.4,57.2 L360.2,23.6 L346.9,45.0 L343.5,45.4 L341.6,45.0 L328.2,23.6 L328.1,57.2 L314.5,57.4 L314.4,1.8 L328.0,1.6 L344.5,26.9 L360.8,1.6 L374.2,1.6 L374.0,57.4Z"/>
+    <path d="M148.2,58.9 L141.5,58.9 L136.2,57.9 L126.8,53.1 L119.4,44.5 L116.1,35.2 L115.6,27.5 L116.4,22.2 L117.9,17.5 L121.4,11.2 L129.5,3.9 L139.8,0.1 L151.5,0.4 L159.8,3.6 L167.9,11.0 L172.4,20.5 L172.2,21.9 L157.0,21.9 L153.5,16.4 L150.2,14.4 L146.5,13.4 L139.8,14.1 L136.5,15.9 L132.9,19.8 L130.6,25.2 L130.6,33.2 L133.1,39.2 L138.8,44.1 L143.8,45.4 L149.8,44.4 L154.9,40.5 L157.2,35.9 L172.6,36.2 L169.1,45.5 L164.2,51.6 L157.2,56.4 L148.2,58.9Z"/>
+    <path d="M100.8,57.4 L83.4,57.2 L83.4,20.2 L47.0,20.1 L47.0,1.6 L91.8,1.6 L95.8,3.1 L98.6,5.8 L101.1,12.2 L100.8,57.4Z"/>
+    <path d="M221.8,57.4 L182.1,57.0 L182.2,1.6 L221.9,1.8 L221.8,13.4 L196.9,13.8 L197.2,24.1 L217.9,24.2 L217.8,34.1 L197.2,34.1 L196.9,45.0 L221.8,45.4 L221.8,57.4Z"/>
+    <path d="M259.8,57.4 L245.4,57.0 L245.6,14.8 L231.0,14.6 L231.0,1.6 L275.1,1.8 L275.0,14.6 L260.1,14.8 L259.8,57.4Z"/>
+    <path d="M17.2,57.4 L-0.1,57.0 L-0.1,20.5 L46.8,20.4 L46.9,38.5 L17.8,38.6 L17.2,57.4Z"/>
+    <path d="M299.0,57.4 L284.6,57.0 L284.8,1.6 L299.1,1.8 L299.0,57.4Z"/>
+  </g>
+  <path d="M64.8,57.4 L46.9,57.0 L47.0,38.6 L64.9,38.8 L64.8,57.4Z" fill="#EF3346"/>
+</svg>
       <span class="wordmark">Sonomètre</span>
     </div>
     <span class="hdricons">
