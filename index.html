@@ -448,7 +448,8 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mOverlap"><span>Recouvrement (overlap)</span><b>50 %</b></div>
           <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
           <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
-          <div class="mrow" id="mEmgMethod"><span>Émergence tonale</span><b>Pragmatique</b></div>
+          <div class="mrow" id="mEmg"><span>Émergence tonale (ISO 1996-2)</span><b>Activée</b></div>
+          <div class="mrow" id="mEmgThr"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
           <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
@@ -702,7 +703,7 @@ if('serviceWorker' in navigator){
       <p>Touche <b>Partager</b> : feuille de partage iOS (Mail, AirDrop, Fichiers…) ou téléchargement, en <b>CSV</b> (métadonnées + micro + indices + spectre + historique) ou en <b>image PNG</b> titrée du graphe affiché.</p>
 
       <h3>Émergence tonale</h3>
-      <p>Sur l'écran spectre (bandes fines), l'application détecte automatiquement la raie la plus émergente : si elle dépasse nettement le bruit voisin, un <b>bandeau orange</b> l'annonce (« ÉMERGENCE … Hz · +X dB ») et marque la raie. Pose un <b>curseur</b> sur n'importe quelle raie pour lire son émergence locale. Le bandeau n'apparaît que si une <b>vraie émergence</b> est détectée. Menu expert ▸ <b>Émergence tonale</b> : méthode <b>Pragmatique</b> (raie − bruit médian ±1/3 d'octave, seuil +6 dB) ou <b>ISO 1996-2</b> (bande critique de Bark, seuil dépendant de la fréquence). Indicateur d'aide au diagnostic, non certifié.</p>
+      <p>Sur l'écran spectre (bandes fines), l'application repère la raie la plus émergente selon la méthode <b>ISO 1996-2</b> (bande critique de Bark). Un <b>bandeau orange</b> l'annonce uniquement si l'émergence dépasse le <b>seuil d'alerte</b> — pour éviter que ça scintille au moindre pic (une hystérésis empêche le clignotement autour du seuil). Pose un <b>curseur</b> sur n'importe quelle raie : le label donne alors <b>le niveau et l'émergence</b> de cette raie, quel que soit le seuil. Menu expert : <b>Émergence tonale</b> (activer/désactiver) et <b>Seuil d'alerte</b> (6 / 8 / 10 / 12 / 15 dB, défaut 10). Indicateur de diagnostic, non certifié.</p>
 
       <h3>Optimiser le spectrogramme</h3>
       <p>Menu expert ▸ <b>Optimiser le spectrogramme</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse et échelle. <b>Tonal</b> (résolution fréquence max, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, pour chocs/parole), <b>Équilibré</b> (polyvalent). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
@@ -753,7 +754,7 @@ const S = {
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
-  win:'blackman', overlap:0.5, peakInterp:true, emgMethod:'pragmatic',
+  win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
   toctSrc:'iir', iirBank:null, theme:'marine',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
@@ -932,34 +933,18 @@ function tonalEmergence(binPow, ic, wSel){
   const pw=k=>{ let p=binPow[k]; if(!isFinite(p)||p<=0) return 0; if(wSel)p*=wSel[k]; return p; };
   const dbOf=p=>p>0?10*Math.log10(p):-180;
   const Lpk=dbOf(pw(ic));
-  // largeur de la "raie" : ±2 bins autour du pic (exclus du bruit)
-  const guard=2;
-  if(S.emgMethod==='iso'){
-    /* bande critique centrée sur f0 : ±0,5 Bark → bornes en Hz */
-    const z=bark(f0);
-    const fLo=Math.max(20, invBark(z-0.5)), fHi=Math.min(bh*(n-1), invBark(z+0.5));
-    const kLo=Math.max(1,Math.round(fLo/bh)), kHi=Math.min(n-1,Math.round(fHi/bh));
-    let s=0,m=0;
-    for(let k=kLo;k<=kHi;k++){ if(Math.abs(k-ic)<=guard) continue; s+=pw(k); m++; }
-    if(!m) return null;
-    const Lnoise=dbOf(s/m);                         // niveau moyen du bruit dans la bande critique
-    const dL=Lpk-Lnoise;
-    /* critère ISO simplifié : émergence significative si tone-to-noise ratio > seuil
-       dépendant de la fréquence (plus strict en basses fréquences) */
-    const seuil = f0<500 ? 8 : f0<2000 ? 6 : 5;
-    return {dL, fc:f0, tonal:dL>=seuil, method:'iso'};
-  }else{
-    /* pragmatique : bruit = médiane sur ±1/3 d'octave, hors raie */
-    const fLo=f0/Math.pow(2,1/6), fHi=f0*Math.pow(2,1/6);   // 1/3 oct = ±1/6 oct autour
-    const kLo=Math.max(1,Math.round(fLo/bh)), kHi=Math.min(n-1,Math.round(fHi/bh));
-    const vals=[];
-    for(let k=kLo;k<=kHi;k++){ if(Math.abs(k-ic)<=guard) continue; const p=pw(k); if(p>0)vals.push(dbOf(p)); }
-    if(vals.length<3) return null;
-    vals.sort((a,b)=>a-b);
-    const Lnoise=vals[Math.floor(vals.length/2)];   // médiane (robuste aux autres raies)
-    const dL=Lpk-Lnoise;
-    return {dL, fc:f0, tonal:dL>=6, method:'pragmatic'};   // seuil de tonalité +6 dB
-  }
+  const guard=2;                                   // ±2 bins = largeur de la raie, exclus du bruit
+  /* méthode ISO 1996-2 : bande critique de Bark centrée sur f0 (±0,5 Bark) */
+  const z=bark(f0);
+  const fLo=Math.max(20, invBark(z-0.5)), fHi=Math.min(bh*(n-1), invBark(z+0.5));
+  const kLo=Math.max(1,Math.round(fLo/bh)), kHi=Math.min(n-1,Math.round(fHi/bh));
+  let s=0,m=0;
+  for(let k=kLo;k<=kHi;k++){ if(Math.abs(k-ic)<=guard) continue; s+=pw(k); m++; }
+  if(!m) return null;
+  const Lnoise=dbOf(s/m);                           // niveau moyen du bruit dans la bande critique
+  const dL=Lpk-Lnoise;
+  /* "forte" (bandeau automatique) au-delà de 10 dB ; sous ce seuil, visible seulement au curseur */
+  return {dL, fc:f0, strong:dL>=(S.emgThr||10)};
 }
 function invBark(z){ /* inverse approx de bark() par recherche monotone */
   let lo=10,hi=24000;
@@ -1566,7 +1551,7 @@ function drawSpectrum(){
     pts.forEach((pt,i)=>{const y=y2(pt[1],h,sc); i?g.lineTo(pt[0],y):g.moveTo(pt[0],y);});
     g.stroke();
     /* ===== émergence tonale automatique (A) : raie dominante de la fenêtre visible ===== */
-    if(binPow){
+    if(binPow && S.emgOn){
       let bi=-1,bv=-Infinity;
       for(let i=Math.max(2,i0);i<=Math.min(S.fftDb.length-2,i1);i++){
         let p=binPow[i]; if(!isFinite(p)||p<=0)continue; if(wSel)p*=wSel[i];
@@ -1576,21 +1561,27 @@ function drawSpectrum(){
       }
       if(bi>0){
         const emg=tonalEmergence(binPow,bi,wSel);
-        if(emg&&emg.tonal){
-          const pk=parabolicPeak(k=>{let p=binPow[Math.max(1,Math.min(S.fftDb.length-1,k))]||0;if(wSel)p*=wSel[k];return p>0?10*Math.log10(p):-180;},bi,S.binHz);
-          const xx=x2(pk.f);
-          // marqueur sur la raie
-          g.strokeStyle='#FFB454';g.lineWidth=1;g.setLineDash([2,3]);
-          g.beginPath();g.moveTo(xx,2);g.lineTo(xx,h-14);g.stroke();g.setLineDash([]);
-          // bandeau en haut
-          const txt='ÉMERGENCE '+fmtF(pk.f)+'Hz · +'+emg.dL.toFixed(1)+' dB'+(emg.method==='iso'?' (ISO)':'');
-          g.font='bold 9px Arial';g.textAlign='left';
-          const tw=g.measureText(txt).width+12;
-          g.fillStyle='rgba(255,180,84,.18)';g.fillRect(padL,2,tw,14);
-          g.strokeStyle='rgba(255,180,84,.6)';g.lineWidth=1;g.strokeRect(padL+0.5,2.5,tw-1,13);
-          g.fillStyle='#FFCE85';g.fillText(txt,padL+6,12);
-        }
-      }
+        /* hystérésis anti-scintillement : on affiche au-delà du seuil, on ne masque
+           qu'une fois retombé 1,5 dB sous le seuil. Évite le clignotement d'un pic
+           qui oscille juste autour de la valeur d'alerte. */
+        const thr=S.emgThr||10;
+        if(emg){
+          const on = S._emgShown ? emg.dL>=(thr-1.5) : emg.dL>=thr;
+          S._emgShown=on;
+          if(on){
+            const pk=parabolicPeak(k=>{let p=binPow[Math.max(1,Math.min(S.fftDb.length-1,k))]||0;if(wSel)p*=wSel[k];return p>0?10*Math.log10(p):-180;},bi,S.binHz);
+            const xx=x2(pk.f);
+            g.strokeStyle='#FFB454';g.lineWidth=1;g.setLineDash([2,3]);
+            g.beginPath();g.moveTo(xx,2);g.lineTo(xx,h-14);g.stroke();g.setLineDash([]);
+            const txt='ÉMERGENCE '+fmtF(pk.f)+'Hz · +'+emg.dL.toFixed(1)+' dB';
+            g.font='bold 9px Arial';g.textAlign='left';
+            const tw=g.measureText(txt).width+12;
+            g.fillStyle='rgba(255,180,84,.18)';g.fillRect(padL,2,tw,14);
+            g.strokeStyle='rgba(255,180,84,.6)';g.lineWidth=1;g.strokeRect(padL+0.5,2.5,tw-1,13);
+            g.fillStyle='#FFCE85';g.fillText(txt,padL+6,12);
+          }
+        } else { S._emgShown=false; }
+      } else { S._emgShown=false; }
     }
     /* curseur : cherche le pic local près du point visé, puis interpolation parabolique */
     if(S.cursor&&S.cursor.f>=fmin&&S.cursor.f<=fmax&&S.binHz){
@@ -1608,7 +1599,7 @@ function drawSpectrum(){
       g.fillStyle=THEME.cursor;g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
       const emg=tonalEmergence(binPow,bi,wSel);
       let clbl=fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+(S.peakInterp?' ⟂':'');
-      if(emg && emg.tonal) clbl+=' · émg +'+emg.dL.toFixed(1)+'dB';
+      if(S.emgOn && emg) clbl+=' · émg +'+emg.dL.toFixed(1)+'dB';
       cursorLabel(g,w,x,clbl);
     }
     $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz';
@@ -2426,7 +2417,9 @@ function ui(){
   $('mOverlap').querySelector('b').textContent=Math.round(S.overlap*100)+' %';
   $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
   $('mPeakInterp').querySelector('b').textContent=S.peakInterp?'Oui':'Non';
-  $('mEmgMethod').querySelector('b').textContent=S.emgMethod==='iso'?'ISO 1996-2':'Pragmatique';
+  $('mEmg').querySelector('b').textContent=S.emgOn?'Activée':'Désactivée';
+  $('mEmgThr').querySelector('b').textContent=(S.emgThr||10)+' dB';
+  $('mEmgThr').style.opacity=S.emgOn?'1':'.4';
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
 
@@ -2513,13 +2506,14 @@ $('mSgSpeed').onclick=()=>{
   ui();
 };
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
-$('mEmgMethod').onclick=()=>{S.emgMethod=S.emgMethod==='pragmatic'?'iso':'pragmatic';ui();drawActive();};
+$('mEmg').onclick=()=>{S.emgOn=!S.emgOn;ui();drawActive();};
+$('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
 const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['gameboy','Game Boy']];
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
                    'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgMethod'];
+                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
