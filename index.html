@@ -270,6 +270,7 @@ if('serviceWorker' in navigator){
   .calhead{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--ice);font-weight:700;flex:0 0 auto;padding-bottom:5px}
   .calx{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--lcd-dim);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer}
   .calbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:4px;padding-right:2px}
+  .micsel{background:rgba(127,216,255,.08);border:1px solid rgba(127,216,255,.3);color:var(--lcd-ink);font-family:var(--font);font-size:12px;border-radius:6px;padding:4px 8px;max-width:62%}
   .micinfo{background:rgba(79,195,255,.06);border:1px solid rgba(79,195,255,.16);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;gap:3px}
   .microw{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8fa3c4}
   .microw b{color:#DCE9FF;font-family:var(--mono);font-weight:700;font-size:12px;text-align:right;max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -450,7 +451,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.5</div>
+  <div class="splashver">V35.6</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -541,6 +542,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
           <div class="mrow" id="mSg3dMode"><span>Rendu 3D spectrogramme</span><b>Fil de fer</b></div>
           <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
+          <div class="mrow" id="mLsnGain"><span>Gain écoute ♪</span><b>+12 dB</b></div>
           <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
@@ -564,6 +566,7 @@ if('serviceWorker' in navigator){
               <div class="microw"><span>Entrée</span><b id="miLabel">—</b></div>
               <div class="microw"><span>Échantillonnage</span><b id="miRate">—</b></div>
               <div class="microw"><span>Canaux</span><b id="miCh">—</b></div>
+              <div class="microw"><span>Choisir</span><select id="micSel" class="micsel"><option value="">Automatique (défaut système)</option></select></div>
             </div>
             <div class="mnote" style="margin-bottom:6px">Information seule. iOS masque souvent le nom précis et choisit le micro automatiquement.</div>
             <div class="mrow" id="cGeneric"><span>Mode générique auto</span><b id="cGenV">activer</b></div>
@@ -771,7 +774,7 @@ if('serviceWorker' in navigator){
         <li><b>Toucher</b> : poser un curseur de lecture (fréquence + niveau). Toucher le curseur le referme.</li>
         <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
-        <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Pente du filtre réglable au menu expert : 24 / 48 / 96 dB/oct. Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
+        <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
         <li>Spectre (tous modes) : icône <b>VIB</b> = corrélation vibro-acoustique. Pose le téléphone sur la structure vibrante : chaque bande est corrélée (coefficient 0→1) avec l'accéléromètre ; les bandes étrangères à la vibration s'estompent (en bande fine, un voile couvre les zones non corrélées ; en octave, coefficient agrégé), le badge indique le coefficient max. Corrélation sur les enveloppes (fluctuations de niveau, ±250 ms de délai toléré) : une source parfaitement constante ne peut pas être corrélée.</li>
       </ul>
 
@@ -854,7 +857,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null, theme:'oled', sg3dMode:'wire', lsnSlope:24,            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', iirBank:null, theme:'oled', sg3dMode:'wire', lsnSlope:24, lsnGain:12, micId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -1048,7 +1051,7 @@ function lsnBuild(){
   const hp=[],lp=[];
   for(let i=0;i<N;i++){const f=c.createBiquadFilter();f.type='highpass';f.Q.value=0.707;hp.push(f);}
   for(let i=0;i<N;i++){const f=c.createBiquadFilter();f.type='lowpass'; f.Q.value=0.707;lp.push(f);}
-  const gn=c.createGain(); gn.gain.value=1.0;
+  const gn=c.createGain(); gn.gain.value=Math.pow(10,(S.lsnGain||0)/20);   // gain de rattrapage (dB)
   const chain=[...hp,...lp,gn];
   S.srcNode.connect(chain[0]);
   for(let i=0;i<chain.length-1;i++)chain[i].connect(chain[i+1]);
@@ -1078,6 +1081,9 @@ function lsnRebuild(){                     // changement de pente pendant l'éco
   const was=LSN.on;
   lsnOff();
   if(was && lsnBuild()){LSN.on=true;LSN.lastF='';lsnUpdate();}
+}
+function lsnSetGain(){                     // ajuste le gain sans reconstruire la chaîne
+  if(LSN.nodes&&S.ctx) LSN.nodes.gn.gain.setTargetAtTime(Math.pow(10,(S.lsnGain||0)/20),S.ctx.currentTime,0.05);
 }
 function lsnToggle(){
   if(LSN.on){lsnOff();ui();return;}
@@ -1339,9 +1345,9 @@ async function acquireMic(){
   lsnOff();
   if(S.srcNode){try{S.srcNode.disconnect();}catch(e){}}
   if(S.stream){for(const t of S.stream.getTracks()){try{t.stop();}catch(e){}}}
-  S.stream=await navigator.mediaDevices.getUserMedia({audio:{
-    echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1
-  }});
+  const ac={echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1};
+  if(S.micId) ac.deviceId={ideal:S.micId};       // micro choisi (ignoré par iOS qui route en auto)
+  S.stream=await navigator.mediaDevices.getUserMedia({audio:ac});
   S.srcNode=S.ctx.createMediaStreamSource(S.stream);
   S.srcNode.connect(S.analyser);
   S.lcLastCt=S.ctx.currentTime;                 // évite un saut de bloc dans les filtres temporels
@@ -3092,6 +3098,7 @@ function ui(){
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
   $('mSg3dMode').querySelector('b').textContent=S.sg3dMode==='surf'?'Surface':'Fil de fer';
   $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
+  $('mLsnGain').querySelector('b').textContent=(S.lsnGain>=0?'+':'')+(S.lsnGain||0)+' dB';
 
   updScaleLbl();
   $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Expert';
@@ -3202,7 +3209,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
                    'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','sg3dMode','lsnSlope'];
+                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','sg3dMode','lsnSlope','lsnGain','micId'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
@@ -3246,7 +3253,12 @@ $('mTheme').onclick=()=>{
   applyTheme(); ui();
 };
 $('mSg3dMode').onclick=()=>{ S.sg3dMode=S.sg3dMode==='surf'?'wire':'surf'; SG._3dKey=''; ui(); if(S.sg3d)drawSgram(); };
-$('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); };
+$('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); savePrefs(); };
+$('mLsnGain').onclick=()=>{ const O=[0,6,12,18,24,30]; S.lsnGain=O[(O.indexOf(S.lsnGain||0)+1)%O.length]; lsnSetGain(); ui(); savePrefs(); };
+$('micSel').onchange=async(e)=>{
+  S.micId=e.target.value||''; savePrefs();
+  if(S.running){ try{ await acquireMic(); showMicInfo(); }catch(err){ const el=$('err'); if(el){el.style.display='block'; el.textContent='Ce micro n a pas pu être sélectionné (iOS choisit souvent l entrée automatiquement).'; setTimeout(()=>el.style.display='none',5000);} } }
+};
 loadPrefs(); applyTheme(); _prefsReady=true;
 $('mToctSrc').onclick=()=>{
   S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
@@ -3431,6 +3443,15 @@ function applyProfile(p){
 }
 
 /* ===== Rendu de l'écran calibration ===== */
+async function populateMicList(){
+  const sel=$('micSel'); if(!sel)return;
+  try{
+    const devs=await navigator.mediaDevices.enumerateDevices();
+    const ins=devs.filter(d=>d.kind==='audioinput');
+    sel.innerHTML='<option value="">Automatique (défaut système)</option>';
+    ins.forEach((d,i)=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||('Entrée '+(i+1)); if(d.deviceId&&d.deviceId===S.micId)o.selected=true; sel.appendChild(o); });
+  }catch(e){}
+}
 function showMicInfo(){
   const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
   if(tr){
@@ -3444,7 +3465,7 @@ function showMicInfo(){
   }
 }
 function renderCal(){
-  showMicInfo();
+  showMicInfo(); populateMicList();
   $('calDev').textContent='Appareil détecté : '+({iphone:'iPhone',ipad:'iPad',android:'Android',desktop:'Ordinateur'}[S.device]||S.device);
   $('cGenV').textContent=S.corr==='generic'?'actif ✓':'activer';
   $('cProfV').textContent=S.corr==='profile'?(S.corrName||'chargé'):(S.profiles.length?S.profiles.length+' dispo.':'aucun');
