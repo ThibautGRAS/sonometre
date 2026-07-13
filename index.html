@@ -1966,8 +1966,10 @@ function sgBlit(c){
   /* axe fréquence (fenêtre courante) */
   g.fillStyle=THEME.bg;g.fillRect(0,0,padL,H);
   g.fillStyle='#5F7FB8';g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
+  g.fillText('Hz',padL-3*c.dpr,9*c.dpr);              // unité de l'axe
   for(const f of dynTicks(nfmin,nfmax,7)){
     const y=((V1n-TF(f))/(V1n-V0n))*Hu;
+    if(y<14*c.dpr)continue;                            // ne pas chevaucher l'unité
     g.fillText(fmtF(f),padL-3*c.dpr,y+3*c.dpr);
   }
   /* axe temps : secondes avant l'instant présent */
@@ -2209,7 +2211,18 @@ function drawSgram(){
   sgBlit(c);
 }
 
+/* ===== label de la touche ÉCHELLES =====
+   Règle : « Auto » UNIQUEMENT si amplitudes auto (dB + couleurs sgram) ET pleine
+   bande de fréquence (20 Hz – 20 kHz / pleine échelle en lin). Sinon « Manuel ».
+   Rafraîchi à chaque rendu (le zoom au pincement ne passe pas par ui()). */
+let _scaleLbl='';
+function updScaleLbl(){
+  const fullF=S.fview.min<=F_LOW()+0.01 && S.fview.max>=Math.min(20000,nyq())-1;
+  const txt=(S.dbAuto&&S.sgAuto&&fullF)?'Auto':'Manuel';
+  if(txt!==_scaleLbl){_scaleLbl=txt;$('kDynV').textContent=txt;}
+}
 function drawActive(force){
+  updScaleLbl();
   if(S.screen==='spec')drawSpectrum();
   else if(S.screen==='sgram')drawSgram();
   else if(S.screen==='hist')drawHistory();
@@ -2583,11 +2596,7 @@ function ui(){
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
 
-  {
-    const fullF=S.fview.min<=F_LOW()+0.01 && S.fview.max>=Math.min(20000,nyq())-1;
-    const fullT=S.tview.x0<=1e-4 && S.tview.x1>=0.9999;
-    $('kDynV').textContent=(S.dbAuto&&S.sgAuto&&fullF&&fullT)?'Auto':'Manuel';
-  }
+  updScaleLbl();
   $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Expert';
   $('kWV').textContent=S.weight;
   $('kTV').textContent=TIME_LBL[S.time];
