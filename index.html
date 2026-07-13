@@ -2170,15 +2170,25 @@ function drawSgram3D(){
   const baseXof=dz=> marginL + (skewTot>=0 ? skewTot*(1-dz) : absSkew*dz);
   const baseYof=dz=> marginT + (plotH-depth) + depth*dz;
   const lineRow=fi=>Math.round(rBot - fi/(nF-1)*(rBot-rTop));
-  /* profils lissés de toutes les tranches (t ∈ 0..1) */
+  /* profils lissés de toutes les tranches (t ∈ 0..1).
+     ANTI-SCINTILLEMENT : chaque tranche MOYENNE les stepT colonnes de son intervalle
+     (décimation propre) au lieu d'en piocher une seule — sinon le contenu de chaque
+     tranche tressaute entre colonnes intermédiaires à chaque tick (repliement temporel). */
   const P=[];
   {
     const prof=new Float32Array(nF);
     for(let j=0;j<nT;j++){
-      const a=SG.cols[idxs[j]];
+      const xEnd=idxs[j], xStart=Math.max(0,xEnd-stepT+1);
       for(let i=0;i<nF;i++){
-        let L=a?a[lineRow(i)]:lo;
-        if(!isFinite(L)||L<lo)L=lo; if(L>hi)L=hi;
+        const row=lineRow(i);
+        let sum=0,n=0;
+        for(let x=xStart;x<=xEnd;x++){
+          const a=SG.cols[x]; if(!a)continue;
+          let L=a[row]; if(!isFinite(L))continue;
+          sum+=L; n++;
+        }
+        let L=n?sum/n:lo;
+        if(L<lo)L=lo; if(L>hi)L=hi;
         prof[i]=(L-lo)/span;
       }
       const sm=new Float32Array(nF);
