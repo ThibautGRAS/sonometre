@@ -3146,8 +3146,24 @@ $('kStart').onclick=async function(){
       for(let i=0;i<8;i++){S.analyser.getFloatTimeDomainData(tmp);await new Promise(r=>setTimeout(r,20));}}
   }catch(e){
     const el=$('err');el.style.display='block';
-    el.textContent="Micro refusé ou indisponible. Autorise le micro (Réglages ▸ Safari ▸ Micro) et ouvre la page en HTTPS. ("+e.message+")";
-    setTimeout(()=>el.style.display='none',6000);
+    const ua=navigator.userAgent||'';
+    const inApp=/\bwv\b|FBAN|FBAV|Instagram|WhatsApp|Snapchat|LinkedIn|Line\/|MicroMessenger|Teams/i.test(ua);
+    const isAndroid=/Android/i.test(ua);
+    let msg;
+    if(inApp){
+      msg="Tu es dans le navigateur INTÉGRÉ d'une appli (WhatsApp, Teams…) qui bloque le micro. Ouvre le lien dans "+(isAndroid?"Chrome":"Safari")+" : menu ⋮ ou bouton « Ouvrir dans le navigateur ».";
+    }else switch(e&&e.name){
+      case 'NotAllowedError': case 'SecurityError':
+        msg=isAndroid
+          ? "Micro bloqué. Deux niveaux à vérifier : 1) l'icône 🔒 à côté de l'adresse ▸ Autorisations ▸ Micro ▸ Autoriser. 2) Réglages Android ▸ Applications ▸ Chrome ▸ Autorisations ▸ Micro (si Chrome n'a pas la permission système, autoriser dans la page ne suffit pas). Puis recharge."
+          : "Micro bloqué. Touche « aA » à gauche de l'adresse ▸ Réglages du site ▸ Microphone ▸ Autoriser, puis recharge.";
+        break;
+      case 'NotFoundError': msg="Aucun micro détecté sur cet appareil."; break;
+      case 'NotReadableError': msg="Micro occupé par une autre application (appel, dictaphone…). Ferme-la et réessaie."; break;
+      default: msg="Micro indisponible ("+(e&&e.name||'?')+"). Vérifie l'autorisation micro du navigateur"+(isAndroid?" et celle de Chrome dans les réglages Android.":".");
+    }
+    el.textContent=msg;
+    setTimeout(()=>el.style.display='none',12000);
     return;
   }
   S.micReady=true;
