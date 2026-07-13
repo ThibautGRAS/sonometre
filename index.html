@@ -763,7 +763,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null, theme:'marine',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', iirBank:null, theme:'oled',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -2113,7 +2113,7 @@ function drawSgram3D(){
   /* rotation légère autour de l'axe vertical : glisser horizontalement en vue 3D.
      rot ∈ [-1,1] fait passer l'inclinaison de gauche à droite (0,15·plotW par défaut). */
   const rot=(S.sg3dRot===undefined?0:S.sg3dRot);
-  const skewTot=plotW*(0.15+0.30*rot);
+  const skewTot=plotW*(0.15+0.45*rot);   // rotation élargie : de -0,30 à +0,60·plotW
   const absSkew=Math.abs(skewTot);
   const colW=(plotW-absSkew)/nF, ampH=plotH*0.46;
   const baseXof=dz=> marginL + (skewTot>=0 ? skewTot*(1-dz) : absSkew*dz);
@@ -2200,9 +2200,6 @@ function drawSgram3D(){
     g.fillText(Math.round(v), cbX-4, y+3);
   }
   g.save(); g.translate(W-3,(cbY0+cbY1)/2); g.rotate(-Math.PI/2); g.textAlign='center'; g.fillText('dB',0,0); g.restore();
-  /* repère temps : placé SOUS le bouton 2D/3D pour ne pas le chevaucher */
-  g.textAlign='right'; g.fillStyle=THEME.axis; g.font='8px Arial';
-  g.fillText(skewTot>=0?'temps ↗':'temps ↖', cbX-8, marginT+34);
 }
 function drawSgram(){
   const c=CV.sgramCv; if(!c)return;
@@ -2662,7 +2659,7 @@ $('sg3dBtn').onclick=()=>{
   cv.addEventListener('touchmove',e=>{
     if(!S.sg3d||sx===null||e.touches.length!==1)return;
     const dx=e.touches[0].clientX-sx;
-    S.sg3dRot=Math.max(-1,Math.min(1,rot0+dx/180));
+    S.sg3dRot=Math.max(-1,Math.min(1,rot0-dx/150));   // sens naturel : on 'pousse' la scène
     if(!S.running||S.paused)drawSgram();     // en mesure, la boucle redessine déjà
   },{passive:true});
   cv.addEventListener('touchend',()=>{sx=null;});
@@ -2712,7 +2709,7 @@ function loadPrefs(){
     // migration : ancien réglage de thème isolé
     const t=localStorage.getItem('sono_theme'); if(t&&o.theme===undefined) S.theme=t;
   }catch(e){}
-  if(!THEMES.some(x=>x[0]===S.theme)) S.theme='marine';
+  if(!THEMES.some(x=>x[0]===S.theme)) S.theme='oled';
 }
 function resetPrefs(){
   try{ localStorage.removeItem(PREFS_KEY); localStorage.removeItem('sono_theme'); }catch(e){}
