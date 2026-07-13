@@ -2336,23 +2336,28 @@ function drawSgram3D(){
     }
     g.textAlign='left'; g.fillText('Hz', fx0+(nF-1)*colW+4, frontY+12);
   }
-  /* ===== colorbar ===== */
-  const cbX=W-22, cbW=8, cbY0=marginT+8, cbY1=H-marginB-8, cbH=cbY1-cbY0;
-  for(let y=0;y<cbH;y++){
-    const t=1-y/cbH, idx=(Math.round(t*255)|0)*3;
-    g.fillStyle='rgb('+LUT[idx]+','+LUT[idx+1]+','+LUT[idx+2]+')';
-    g.fillRect(cbX,cbY0+y,cbW,1.5);
-  }
-  g.strokeStyle=THEME.grid; g.strokeRect(cbX+0.5,cbY0+0.5,cbW-1,cbH-1);
-  g.fillStyle=THEME.axis; g.font='8px Arial'; g.textAlign='right';
-  const rawStep=span/4, step=rawStep<=6?5:rawStep<=12?10:20;
-  g.strokeStyle=THEME.axis;
+  /* ===== colorbar : MÊMES règles que la 2D (pas 5 dB standard, élargi si la place manque) ===== */
+  const cbX=W-22, cbW=8, cbY0=marginT+14, cbY1=H-marginB-8, cbH=cbY1-cbY0;
+  const grad=g.createLinearGradient(0,cbY0,0,cbY1);
+  for(let s=0;s<=10;s++){const t=s/10;const i=Math.round((1-t)*255)*3;
+    grad.addColorStop(t,'rgb('+LUT[i]+','+LUT[i+1]+','+LUT[i+2]+')');}
+  g.fillStyle=grad; g.fillRect(cbX,cbY0,cbW,cbH);
+  g.strokeStyle='rgba(255,255,255,.25)'; g.lineWidth=1; g.strokeRect(cbX+0.5,cbY0+0.5,cbW-1,cbH-1);
+  g.fillStyle=THEME.axis; g.font='bold 9px Arial'; g.textAlign='center';
+  g.fillText('dB', cbX+cbW/2, cbY0-5);
+  g.font='8px Arial'; g.textAlign='right'; g.strokeStyle=THEME.axis;
+  const minGapPx=12, maxTicks=Math.max(2,Math.floor(cbH/minGapPx));
+  const NICE=[5,10,20,50,100];
+  let step=NICE[NICE.length-1];
+  for(const s of NICE){ if(span/s<=maxTicks){step=s;break;} }
   for(let v=Math.ceil(lo/step)*step; v<=hi; v+=step){
     const y=cbY0+(1-(v-lo)/span)*cbH;
+    if(y<cbY0+4||y>cbY1-1)continue;
     g.beginPath(); g.moveTo(cbX-2,y); g.lineTo(cbX,y); g.stroke();
     g.fillText(Math.round(v), cbX-4, y+3);
   }
-  g.save(); g.translate(W-3,(cbY0+cbY1)/2); g.rotate(-Math.PI/2); g.textAlign='center'; g.fillText('dB',0,0); g.restore();
+  /* étiquette d'entête synchronisée (sinon elle gèle sur les valeurs du dernier rendu 2D) */
+  $('gScale').textContent=Math.round(lo)+'–'+Math.round(hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz';
 }
 function drawSgram(){
   const c=CV.sgramCv; if(!c)return;
