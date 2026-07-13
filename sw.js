@@ -2,7 +2,7 @@
    Rend l'application ouvrable 100 % hors ligne.
    La version est estampillée à chaque déploiement (voir CACHE) : au changement,
    l'ancien cache est purgé et les fichiers re-téléchargés dès qu'un réseau est disponible. */
-const CACHE = 'sono-9eb2d065';
+const CACHE = 'sono-45739b48';
 const ASSETS = [
   './',
   './index.html',
@@ -31,7 +31,7 @@ self.addEventListener('fetch', e => {
   const isDoc = req.mode === 'navigate' || url.pathname.endsWith('index.html') || url.pathname.endsWith('/');
   if (isDoc) {
     e.respondWith(
-      fetch(req).then(res => {
+      fetch(req, {cache:'reload'}).then(res => {   // reload : ignore le cache HTTP du navigateur/CDN, vraie version fraiche
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put('./index.html', copy));
         return res;
