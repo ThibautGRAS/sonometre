@@ -271,6 +271,7 @@ if('serviceWorker' in navigator){
   .calx{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--lcd-dim);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer}
   .calbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:4px;padding-right:2px}
   .micsel{background:rgba(127,216,255,.08);border:1px solid rgba(127,216,255,.3);color:var(--lcd-ink);font-family:var(--font);font-size:12px;border-radius:6px;padding:4px 8px;max-width:62%}
+  .miwarn{background:rgba(255,176,32,.12);border:1px solid rgba(255,176,32,.5);color:#ffc152;font-family:var(--font);font-size:11.5px;line-height:1.35;border-radius:8px;padding:7px 10px;margin-bottom:8px}
   .micinfo{background:rgba(79,195,255,.06);border:1px solid rgba(79,195,255,.16);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;gap:3px}
   .microw{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8fa3c4}
   .microw b{color:#DCE9FF;font-family:var(--mono);font-weight:700;font-size:12px;text-align:right;max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -451,7 +452,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.10</div>
+  <div class="splashver">V35.11</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -569,6 +570,7 @@ if('serviceWorker' in navigator){
               <div class="microw"><span>Choisir</span><select id="micSel" class="micsel"><option value="">Automatique (défaut système)</option></select></div>
             </div>
             <div class="mnote" style="margin-bottom:6px">Information seule. iOS masque souvent le nom précis et choisit le micro automatiquement.</div>
+            <div class="miwarn" id="miWarn" style="display:none"></div>
             <div class="mrow" id="cGeneric"><span>Mode générique auto</span><b id="cGenV">activer</b></div>
             <div class="mrow" id="cProfSel"><span>Profil chargé</span><b id="cProfV">aucun</b></div>
             <div class="curvebox">
@@ -1375,6 +1377,13 @@ async function acquireMic(){
     tr.onended=()=>micLost('coupé');
     tr.onmute =()=>setMicStat('prep');
     tr.onunmute=()=>setMicStat(S.micReady?'ready':'prep');
+    const st=tr.getSettings?tr.getSettings():{};
+    const rate=st.sampleRate||(S.ctx&&S.ctx.sampleRate)||0;
+    if(rate && rate<36000){                     // bande réduite : notifier hors calibration aussi
+      const el=$('err'); if(el){el.style.display='block';
+        el.textContent='⚠ Bande limitée à '+Math.round(rate/2000)+' kHz (micro en mode communication, oreillette branchée). Débranche-la pour analyser jusqu\u2019à ~20 kHz.';
+        setTimeout(()=>{if(el)el.style.display='none';},6500);}
+    }
   }
 }
 function micAlive(){
@@ -3287,7 +3296,19 @@ $('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSl
 $('lsnGainSel').onchange=(e)=>{ S.lsnGain=+e.target.value||0; lsnSetGain(); savePrefs(); };
 $('micSel').onchange=async(e)=>{
   S.micId=e.target.value||''; savePrefs();
-  if(S.running){ try{ await acquireMic(); showMicInfo(); }catch(err){ const el=$('err'); if(el){el.style.display='block'; el.textContent='Ce micro n a pas pu être sélectionné (iOS choisit souvent l entrée automatiquement).'; setTimeout(()=>el.style.display='none',5000);} } }
+  const want=e.target.selectedOptions[0]?e.target.selectedOptions[0].textContent:'';
+  if(S.ctx){                                   // micro déjà initialisé → appliquer tout de suite
+    try{
+      await acquireMic(); showMicInfo(); populateMicList();
+      const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+      const got=tr?tr.label:'';
+      if(want && got && S.micId && got.toLowerCase().indexOf(want.toLowerCase().slice(0,6))<0){
+        const el=$('err'); if(el){el.style.display='block';
+          el.textContent='iOS a gardé « '+got+' » au lieu de « '+want+' » : sur iPhone le choix du micro est imposé par le système.';
+          setTimeout(()=>el.style.display='none',6000);}
+      }
+    }catch(err){ const el=$('err'); if(el){el.style.display='block'; el.textContent='Ce micro n a pas pu être sélectionné (iOS choisit souvent l entrée automatiquement).'; setTimeout(()=>el.style.display='none',5000);} }
+  }
 };
 loadPrefs(); applyTheme(); _prefsReady=true;
 $('mToctSrc').onclick=()=>{
@@ -3484,14 +3505,22 @@ async function populateMicList(){
 }
 function showMicInfo(){
   const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  let rate=0;
   if(tr){
     const st=tr.getSettings?tr.getSettings():{};
     $('miLabel').textContent=tr.label||'Micro (nom masqué)';
-    const rate=st.sampleRate||(S.ctx&&S.ctx.sampleRate)||0;
+    rate=st.sampleRate||(S.ctx&&S.ctx.sampleRate)||0;
     $('miRate').textContent=rate?(rate/1000).toFixed(1).replace('.0','')+' kHz':'—';
     $('miCh').textContent=st.channelCount?(st.channelCount===1?'1 (mono)':st.channelCount):'1 (mono)';
   }else{
     $('miLabel').textContent='micro non actif'; $('miRate').textContent='—'; $('miCh').textContent='—';
+  }
+  const w=$('miWarn');
+  if(w){
+    if(rate && rate<36000){                    // Nyquist < 18 kHz : bande réduite (mode communication)
+      w.style.display='block';
+      w.textContent='⚠ Bande limitée à '+Math.round(rate/2000)+' kHz — micro en mode communication (oreillette/Bluetooth). Débranche-la pour le plein spectre jusqu\u2019à ~20 kHz.';
+    }else w.style.display='none';
   }
 }
 function renderCal(){
