@@ -1394,7 +1394,8 @@ function updateNumbers(L){
       }
       if(bi>0){
         const emg=tonalEmergence(bp,bi,wSel);
-        if(emg) txt='+'+emg.dL.toFixed(1)+' dB @ '+fmtF(emg.fc)+'Hz';
+        if(emg && emg.strong) txt='+'+emg.dL.toFixed(1)+' dB @ '+fmtF(emg.fc)+'Hz';
+        else txt='aucune';
       }
     }
     S._emgValTxt=txt;
