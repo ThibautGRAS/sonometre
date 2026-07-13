@@ -452,7 +452,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.12</div>
+  <div class="splashver">V35.13</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2507,7 +2507,7 @@ function drawSgram3D(){
   const fullT=S.tview.x0<=1e-3 && S.tview.x1>=0.999;
   const wantCols=fullT ? seq : Math.max(8,Math.round((S.tview.x1-S.tview.x0)*Wp));   // « Tout » = tout le tampon (comme la 2D)
   const avail=Math.min(wantCols, seq, Wp);
-  const maxSlices=surf?30:90;
+  const maxSlices=surf?24:90;
   const stepT=Math.max(1,Math.ceil(avail/maxSlices));
   const nT=Math.floor((avail-1)/stepT)+1;
   const idxs=[]; for(let k=nT-1;k>=0;k--)idxs.push(Wp-1-k*stepT);
@@ -2547,7 +2547,7 @@ function drawSgram3D(){
   const depth=plotH*0.46;
   const skewTot=plotW*(0.15+0.45*rot);
   const absSkew=Math.abs(skewTot);
-  const colW=(plotW-absSkew)/nF, ampH=plotH*0.46;
+  const colW=(plotW-absSkew)/nF, ampH=plotH*(surf?0.42:0.46);
   const baseXof=dz=> marginL + (skewTot>=0 ? skewTot*(1-dz) : absSkew*dz);
   const baseYof=dz=> marginT + (plotH-depth) + depth*dz;
   const lineRow=fi=>Math.round(rBot - fi/(nF-1)*(rBot-rTop));
@@ -2624,24 +2624,23 @@ function drawSgram3D(){
   const px=(j,i)=>baseXof(j/(nT-1||1))+i*colW;
   const py=(j,i)=>baseYof(j/(nT-1||1))-P[j][i]*ampH;
   if(surf){
-    /* ===== MODE SURFACE : silhouettes PLEINES colorées avec MASQUAGE arrière =====
-       Même principe que le fil de fer (algorithme du peintre) : chaque tranche est remplie
-       jusqu'à la ligne de base et cache celles derrière. Fini le peigne sur les sons tonaux
-       (sifflement + harmoniques) : les crêtes arrière ne repassent plus au travers.
-       Remplissage = dégradé coloré par la hauteur ; liseré sombre pour séparer les couches ;
-       crête live colorée par-dessus (mêmes couleurs que la colorbar / la 2D). */
+    /* ===== MODE SURFACE : dunes pleines OMBRÉES, masquage arrière (algorithme du peintre) =====
+       Chaque tranche remplie jusqu'à la base cache celles derrière (pas de peigne). Remplissage =
+       dégradé coloré par la hauteur + OMBRAGE vertical (base assombrie) : ça donne le relief et
+       sépare les couches SANS traits de contour. Crête live colorée par-dessus. */
     const ridgePath=j=>{
       g.moveTo(px(j,0),py(j,0));
       for(let i=1;i<nF-1;i++) g.quadraticCurveTo(px(j,i),py(j,i),(px(j,i)+px(j,i+1))/2,(py(j,i)+py(j,i+1))/2);
       g.lineTo(px(j,nF-1),py(j,nF-1));
     };
     for(let j=0;j<nT;j++){
-      const dz=j/(nT-1||1), baseY=baseYof(dz), fade=0.45+0.55*dz;
+      const dz=j/(nT-1||1), baseY=baseYof(dz), fade=0.42+0.58*dz;
       const gr=g.createLinearGradient(px(j,0),0,px(j,nF-1),0);
       for(let i=0;i<nF;i+=2){
         const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
         gr.addColorStop(i/(nF-1),'rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')');
       }
+      g.save();
       g.beginPath();
       g.moveTo(px(j,0),baseY);
       g.lineTo(px(j,0),py(j,0));
@@ -2649,10 +2648,11 @@ function drawSgram3D(){
       g.lineTo(px(j,nF-1),baseY);
       g.closePath();
       g.fillStyle=gr; g.fill();
-      if(j<nT-1){                          // liseré sombre : sépare discrètement les couches
-        g.beginPath(); ridgePath(j);
-        g.lineWidth=0.8; g.strokeStyle='rgba(0,0,0,.22)'; g.stroke();
-      }
+      g.clip();                                   // ombrage confiné à la silhouette
+      const sh=g.createLinearGradient(0,baseY-ampH,0,baseY);
+      sh.addColorStop(0,'rgba(0,0,0,0)'); sh.addColorStop(1,'rgba(0,0,0,.45)');
+      g.fillStyle=sh; g.fillRect(px(j,0),baseY-ampH,(nF-1)*colW+2,ampH+1);
+      g.restore();
     }
     /* crête vive de la tranche live, colorée segment par segment */
     { const j=nT-1; g.lineWidth=1.6;
