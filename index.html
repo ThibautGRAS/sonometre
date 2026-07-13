@@ -951,8 +951,14 @@ function tonalEmergence(binPow, ic, wSel){
   if(!m) return null;
   const Lnoise=dbOf(s/m);                           // niveau moyen du bruit dans la bande critique
   const dL=Lpk-Lnoise;
-  /* "forte" (bandeau automatique) au-delà de 10 dB ; sous ce seuil, visible seulement au curseur */
-  return {dL, fc:f0, strong:dL>=(S.emgThr||10)};
+  /* critère de VRAIE tonalité (sinon un simple max de bruit déclencherait le ⚠) :
+     - le pic doit dominer nettement le bruit VOISIN immédiat (juste au-delà du guard)
+     - et être localisé (retombe vite de part et d'autre)
+     Sur du bruit de fond, le "pic" est plat par rapport à ses voisins → non tonal. */
+  const neighL=dbOf(pw(ic-guard-1)), neighR=dbOf(pw(ic+guard+1));
+  const proeminence=Lpk-Math.max(neighL,neighR);    // saillie locale vs voisins proches
+  const tonal = dL>=(S.emgThr||10) && proeminence>=3;   // saillie ≥3 dB = pic net, pas du bruit
+  return {dL, fc:f0, strong:tonal};
 }
 function invBark(z){ /* inverse approx de bark() par recherche monotone */
   let lo=10,hi=24000;
