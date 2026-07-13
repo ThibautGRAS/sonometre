@@ -14,7 +14,15 @@
 /* enregistrement du service worker : ouverture hors ligne garantie après le 1er chargement en ligne */
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
+    // updateViaCache:'none' → le navigateur va TOUJOURS chercher sw.js sur le réseau (jamais son cache HTTP)
+    navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
+      reg.update();                                   // vérifie une mise à jour à chaque ouverture
+      // un nouveau SW a pris la main → recharge une fois pour servir la version fraîche
+      let reloaded=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(reloaded)return; reloaded=true; location.reload();
+      });
+    }).catch(()=>{});
   });
 }
 </script>
@@ -332,14 +340,17 @@ if('serviceWorker' in navigator){
   /* ---- transport universel : ▶ ■ ⏸ ---- */
   .tico{width:26px;height:26px;display:block;fill:#fff;transform:translateZ(0);filter:drop-shadow(0 1px 2px rgba(0,0,0,.35)) drop-shadow(0 0 4px rgba(255,255,255,.4))}
   .key-start{
-    background:linear-gradient(180deg,#43D97A 0%,#22A855 45%,#137A39 100%);
-    box-shadow:0 3px 0 #0A4A22, inset 0 1px 0 rgba(255,255,255,.28);
-  }
-  .key-start:active{transform:translateY(2px);box-shadow:0 1px 0 #0A4A22, inset 0 1px 0 rgba(255,255,255,.28)}
-  .key-start.running{
     background:linear-gradient(180deg,#FF5A6B 0%,var(--red) 45%,#B21226 100%);
     box-shadow:0 3px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25);
   }
+  .key-start:active{transform:translateY(2px);box-shadow:0 1px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25)}
+  /* en mesure : même rouge, forme carrée (stop) + halo pulsé pour signaler l'enregistrement actif */
+  .key-start.running{
+    background:linear-gradient(180deg,#FF5A6B 0%,var(--red) 45%,#B21226 100%);
+    box-shadow:0 3px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25), 0 0 0 0 rgba(255,90,107,.5);
+    animation:recPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes recPulse{0%,100%{box-shadow:0 3px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25), 0 0 0 0 rgba(255,90,107,.55)}50%{box-shadow:0 3px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25), 0 0 14px 2px rgba(255,90,107,.55)}}
   .key-start.running:active{box-shadow:0 1px 0 #700A16, inset 0 1px 0 rgba(255,255,255,.25)}
   .key-start.mic-wait{filter:grayscale(.75) brightness(.7);opacity:.7}
   .key-pause{
