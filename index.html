@@ -2103,9 +2103,8 @@ function drawSgram3D(){
   /* SENS DU DÉFILEMENT : la tranche la plus RÉCENTE est DEVANT (en bas, à gauche),
      les anciennes reculent vers le fond (haut-droite). Le bord "live" est au premier plan. */
   const colAt=jj=>{                        // jj: 0=le plus ANCIEN des nT ... nT-1=le plus récent
-    const col=(seq-nT+jj);
-    const idx=((col%Wp)+Wp)%Wp;
-    return SG.cols[idx]||null;
+    /* SG.cols est un tampon DÉCALÉ : la colonne la plus récente est TOUJOURS à Wp-1 */
+    return SG.cols[Wp-nT+jj]||null;
   };
   const lineRow=fi=>Math.round(fi/(nF-1)*(bufH-1));
   const prof=new Float32Array(nF), sm=new Float32Array(nF);
