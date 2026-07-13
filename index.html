@@ -55,7 +55,7 @@ if('serviceWorker' in navigator){
   /* Clair labo : robe claire, texte marine, vignettage doux */
   body.th-clair{--face0:#F4F7FB; --face1:#DFE7F2; --face2:#C3CFE0; --ink:#0A1F42;
     --plate0:#B9C6D9; --plate1:rgba(140,160,190,.25); --vig:rgba(30,50,90,.14); --logo-fill:#12234B;
-    --lcd-bg:#12233F; --lcd-bg2:#1B3255; --lcd-solid:#14243F; --lcd-grid:rgba(150,190,240,.16); --lcd-gridline:rgba(150,190,240,.16); --lcd-axis:#8FB0D8; --lcd-dim:#8FB0D8; --cap0:#C7D2E2; --cap1:#9DAAC0; --cap-dot:rgba(40,60,95,.30);
+    --lcd-bg:#12233F; --lcd-bg2:#1B3255; --lcd-solid:#14243F; --lcd-grid:rgba(150,190,240,.16); --lcd-gridline:rgba(150,190,240,.16); --lcd-axis:#8FB0D8; --lcd-dim:#8FB0D8; --cap0:#C7D2E2; --cap1:#9DAAC0; --cap-dot:rgba(40,60,95,.30); --cap-sh:rgba(60,80,110,.25);
     --key-top:#F2F6FC; --key-mid:#E1E9F4; --key-bot:#CBD7E8; --key-edge:#9DAAC0; --key-lbl:#42536E; --key-txt:#0A1F42; --key-hi:rgba(255,255,255,.6);
     --plot-bar-lo:#2E9BFF; --plot-bar-mid:#FF9F1C; --plot-bar-hi:#FF4D5E;
     --plot-line:#7FD4FF; --plot-line-eq:#FF6B7A; --plot-peak:#FFFFFF; --plot-cursor:#FFFFFF}
@@ -71,7 +71,7 @@ if('serviceWorker' in navigator){
     --ice:#0F380F; --red:#A83A6E;
     --lcd-bg:#9BBC0F; --lcd-bg2:#8BAC0F; --lcd-solid:#9BBC0F;
     --lcd-ink:#0F380F; --lcd-dim:#306230; --lcd-grid:rgba(15,56,15,.22); --lcd-gridline:rgba(15,56,15,.22);
-    --lcd-axis:#306230; --lcd-title:#0F380F; --logo-fill:#12234B; --cap0:#C2BEB6; --cap1:#A5A199; --cap-dot:rgba(42,44,54,.62);
+    --lcd-axis:#306230; --lcd-title:#0F380F; --logo-fill:#12234B; --cap0:#C2BEB6; --cap1:#A5A199; --cap-dot:rgba(42,44,54,.62); --cap-sh:rgba(70,70,84,.30);
     --key-top:#C4C0B8; --key-mid:#AFABA3; --key-bot:#96928A; --key-edge:#6E6A62; --key-lbl:#2E2C7A; --key-txt:#21207A;
     --plot-bar-lo:#306230; --plot-bar-mid:#1E4D1E; --plot-bar-hi:#0F380F;
     --plot-line:#0F380F; --plot-line-eq:#8B2C2C; --plot-peak:#0F380F; --plot-cursor:#0F380F}
@@ -114,12 +114,12 @@ if('serviceWorker' in navigator){
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}
   .hdricons{display:flex;align-items:center;gap:12px;flex:0 0 auto}
-  .helpbtn{width:24px;height:24px;border-radius:50%;border:1.5px solid rgba(79,195,255,.5);background:rgba(79,195,255,.10);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
-  .helpbtn:active{background:rgba(79,195,255,.25)}
+  .helpbtn{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);opacity:.55;font-family:var(--font);font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .helpbtn:active{opacity:.95}
   .micstat .micic{width:20px;height:20px}
   .micstat .micic path{fill:currentColor;stroke:currentColor}
   .micstat .micic path[fill="none"]{fill:none}
-  .micstat .micslash{position:absolute;left:50%;top:50%;width:26px;height:2.5px;background:currentColor;border-radius:2px;transform:translate(-50%,-50%) rotate(-45deg);box-shadow:0 0 0 1.5px #0A1F42}
+  .micstat .micslash{position:absolute;left:50%;top:50%;width:26px;height:2.5px;background:currentColor;border-radius:2px;transform:translate(-50%,-50%) rotate(-45deg);box-shadow:0 0 0 1.5px var(--face1)}
   .micstat.off{color:#EF3346}                 /* micro non prêt : rouge, barré */
   .micstat.ready{color:#2FBF83}               /* micro prêt : vert, débarré */
   .micstat.ready .micslash{display:none}
@@ -146,7 +146,7 @@ if('serviceWorker' in navigator){
       radial-gradient(circle, var(--cap-dot) 1px, transparent 1.4px) 3px 3px/6px 6px repeat-x,
       radial-gradient(circle, var(--cap-dot) 1px, transparent 1.4px) 6px 8px/6px 6px repeat-x,
       linear-gradient(180deg,var(--cap0),var(--cap1));
-    box-shadow:inset 0 -3px 7px rgba(0,0,0,.55);
+    box-shadow:inset 0 -3px 7px var(--cap-sh,rgba(0,0,0,.55));
   }
 
   .bezel{
