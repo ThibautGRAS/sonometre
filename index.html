@@ -2196,24 +2196,39 @@ function drawSgram3D(){
       for(let i=1;i<nF-1;i++) sm[i]=(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
       P.push(sm);
     }
+    /* lissage LE LONG DU TEMPS : moyenne entre tranches voisines — supprime le jitter
+       résiduel des longues fenêtres. La tranche live reste brute (réactivité). */
+    if(nT>3){
+      const Q=[P[0]];
+      for(let j=1;j<nT-1;j++){
+        const q=new Float32Array(nF);
+        for(let i=0;i<nF;i++) q[i]=0.25*P[j-1][i]+0.5*P[j][i]+0.25*P[j+1][i];
+        Q.push(q);
+      }
+      Q.push(P[nT-1]);
+      P.length=0; P.push(...Q);
+    }
   }
   const px=(j,i)=>baseXof(j/(nT-1||1))+i*colW;
   const py=(j,i)=>baseYof(j/(nT-1||1))-P[j][i]*ampH;
   if(surf){
-    /* ===== MODE SURFACE : maillage de quadrilatères colorés par l'amplitude ===== */
+    /* ===== MODE SURFACE : rubans à DÉGRADÉ CONTINU le long de la fréquence =====
+       (un ruban = bande entre deux tranches, rempli d'un dégradé linéaire :
+        plus de facettes ni de marches de couleur → surface lisse) */
     for(let j=0;j<nT-1;j++){
       const fade=0.45+0.55*((j+1)/(nT-1||1));
-      for(let i=0;i<nF-1;i++){
-        const t=(P[j][i]+P[j][i+1]+P[j+1][i]+P[j+1][i+1])*0.25;
+      const gr=g.createLinearGradient(px(j+1,0),0,px(j+1,nF-1),0);
+      for(let i=0;i<nF;i+=2){
+        const t=(P[j][i]+P[j+1][i])*0.5;
         const idx=(Math.max(0,Math.min(255,Math.round(t*255)))|0)*3;
-        g.fillStyle='rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')';
-        g.beginPath();
-        g.moveTo(px(j,i),  py(j,i));
-        g.lineTo(px(j,i+1),py(j,i+1));
-        g.lineTo(px(j+1,i+1),py(j+1,i+1));
-        g.lineTo(px(j+1,i),py(j+1,i));
-        g.closePath(); g.fill();
+        gr.addColorStop(i/(nF-1),'rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')');
       }
+      g.fillStyle=gr;
+      g.beginPath();
+      g.moveTo(px(j,0),py(j,0));
+      for(let i=1;i<nF;i++) g.lineTo(px(j,i),py(j,i));
+      for(let i=nF-1;i>=0;i--) g.lineTo(px(j+1,i),py(j+1,i));
+      g.closePath(); g.fill();
     }
     /* arête vive sur la tranche live */
     g.lineWidth=1.4; const j=nT-1;
