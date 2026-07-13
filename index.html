@@ -451,7 +451,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.8</div>
+  <div class="splashver">V35.9</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2498,7 +2498,7 @@ function drawSgram3D(){
   const fullT=S.tview.x0<=1e-3 && S.tview.x1>=0.999;
   const wantCols=fullT ? 56 : Math.max(8,Math.round((S.tview.x1-S.tview.x0)*Wp));
   const avail=Math.min(wantCols, seq, Wp);
-  const maxSlices=surf?48:90;
+  const maxSlices=surf?30:90;
   const stepT=Math.max(1,Math.ceil(avail/maxSlices));
   const nT=Math.floor((avail-1)/stepT)+1;
   const idxs=[]; for(let k=nT-1;k>=0;k--)idxs.push(Wp-1-k*stepT);
@@ -2583,9 +2583,11 @@ function drawSgram3D(){
            lissage doux : la crête devient un relief continu au lieu d'aiguilles empilées. */
         const dil=new Float32Array(nF);
         for(let i=0;i<nF;i++){ let m=prof[i]; if(i>0&&prof[i-1]>m)m=prof[i-1]; if(i<nF-1&&prof[i+1]>m)m=prof[i+1]; dil[i]=m; }
-        const s=new Float32Array(nF); s[0]=dil[0]; s[nF-1]=dil[nF-1];
+        let s=new Float32Array(nF); s[0]=dil[0]; s[nF-1]=dil[nF-1];
         for(let i=1;i<nF-1;i++) s[i]=(dil[i-1]+2*dil[i]+dil[i+1])*0.25;
-        sm=s;
+        const s2=new Float32Array(nF); s2[0]=s[0]; s2[nF-1]=s[nF-1];   // 2e passe → crête bien arrondie
+        for(let i=1;i<nF-1;i++) s2[i]=(s[i-1]+2*s[i]+s[i+1])*0.25;
+        sm=s2;
       }else{
         /* fil de fer : préservation stricte des pics → raies nettes */
         const o=new Float32Array(nF); o[0]=prof[0]; o[nF-1]=prof[nF-1];
@@ -2597,7 +2599,7 @@ function drawSgram3D(){
     /* lissage LE LONG DU TEMPS : moyenne entre tranches voisines — supprime le jitter
        résiduel des longues fenêtres. La tranche live reste brute (réactivité).
        Surface : 2 passes → crête lisse le long du temps (fini les dents). */
-    for(let pass=0,tP=(surf?2:1); pass<tP; pass++){
+    for(let pass=0,tP=(surf?3:1); pass<tP; pass++){
       if(nT>3){
         const Q=[P[0]];
         for(let j=1;j<nT-1;j++){
