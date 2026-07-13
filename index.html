@@ -1013,12 +1013,13 @@ function lsnToggle(){
   }
   if(lsnBuild()){
     LSN.on=true; LSN.lastF=''; lsnUpdate(); ui();
-    if(!LSN.warned){
-      LSN.warned=true;
-      const el=$('err');el.style.display='block';
-      el.textContent="Écoute filtrée active — branche des ÉCOUTEURS : sur haut-parleur, risque de larsen. Le filtre suit la bande zoomée.";
-      setTimeout(()=>el.style.display='none',7000);
-    }
+    const lat=Math.round(((S.ctx.baseLatency||0)+(S.ctx.outputLatency||0))*1000);
+    const latTxt=lat>0?(' Latence ≈ '+lat+' ms (hors Bluetooth : +100-200 ms).'):'';
+    const el=$('err');el.style.display='block';
+    el.textContent=(LSN.warned?"Écoute filtrée active."+latTxt
+      :"Écoute filtrée active — branche des ÉCOUTEURS : sur haut-parleur, risque de larsen. Le filtre suit la bande zoomée."+latTxt);
+    LSN.warned=true;
+    setTimeout(()=>el.style.display='none',7000);
   }
 }
 /* ===== corrélation vibro-acoustique (accéléromètre) =====
