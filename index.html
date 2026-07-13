@@ -2109,8 +2109,14 @@ function drawSgram3D(){
   const nF=96;
   const marginL=14, marginR=34, marginT=16, marginB=26;   // droite élargie pour la colorbar
   const plotW=W-marginL-marginR, plotH=H-marginT-marginB;
-  const depth=plotH*0.46, skew=plotW*0.15;
-  const colW=(plotW-skew)/nF, ampH=plotH*0.46;
+  const depth=plotH*0.46;
+  /* rotation légère autour de l'axe vertical : glisser horizontalement en vue 3D.
+     rot ∈ [-1,1] fait passer l'inclinaison de gauche à droite (0,15·plotW par défaut). */
+  const rot=(S.sg3dRot===undefined?0:S.sg3dRot);
+  const skewTot=plotW*(0.15+0.30*rot);
+  const absSkew=Math.abs(skewTot);
+  const colW=(plotW-absSkew)/nF, ampH=plotH*0.46;
+  const baseXof=dz=> marginL + (skewTot>=0 ? skewTot*(1-dz) : absSkew*dz);
   const colAt=jj=>SG.cols[Wp-nT+jj]||null;          // tampon décalé : récent à Wp-1
   /* FRÉQUENCES BASSES À GAUCHE : la ligne 0 du tampon = fréquence HAUTE,
      donc on inverse le parcours (i=0 à gauche → dernière ligne = graves) */
@@ -2119,7 +2125,7 @@ function drawSgram3D(){
   for(let j=0;j<nT;j++){
     const a=colAt(j);
     const dz=j/(nT-1||1);                  // 0 = ancien (fond) → 1 = récent (devant)
-    const baseX=marginL + skew*(1-dz);
+    const baseX=baseXof(dz);
     const baseY=marginT + (plotH-depth) + depth*dz;
     for(let i=0;i<nF;i++){
       let L=a?a[lineRow(i)]:lo;
@@ -2153,13 +2159,14 @@ function drawSgram3D(){
     const lab = f=> f>=1000 ? (f/1000)+'k' : (f===31.5?'31':''+Math.round(f));
     g.font='8px Arial'; g.textAlign='center'; g.fillStyle=THEME.axis;
     g.strokeStyle=THEME.grid; g.lineWidth=1;
+    const fx0=baseXof(1);                            // origine du premier plan (suit la rotation)
     for(const f of ticks){
       const u=(TF(f)-V0)/(V1-V0); if(u<0||u>1)continue;
-      const x=marginL + u*(nF-1)*colW;               // premier plan : baseX = marginL
+      const x=fx0 + u*(nF-1)*colW;
       g.beginPath(); g.moveTo(x,frontY); g.lineTo(x,frontY+3); g.stroke();
       g.fillText(lab(f), x, frontY+12);
     }
-    g.textAlign='left'; g.fillText('Hz', marginL+(nF-1)*colW+4, frontY+12);
+    g.textAlign='left'; g.fillText('Hz', fx0+(nF-1)*colW+4, frontY+12);
   }
   /* ===== colorbar (droite) ===== */
   const cbX=W-22, cbW=8, cbY0=marginT+8, cbY1=H-marginB-8, cbH=cbY1-cbY0;
@@ -2170,12 +2177,18 @@ function drawSgram3D(){
   }
   g.strokeStyle=THEME.grid; g.strokeRect(cbX+0.5,cbY0+0.5,cbW-1,cbH-1);
   g.fillStyle=THEME.axis; g.font='8px Arial'; g.textAlign='right';
-  g.fillText(Math.round(hi), cbX-3, cbY0+7);
-  g.fillText(Math.round(lo), cbX-3, cbY1);
+  /* graduations : pas arrondi visant ~4 niveaux intermédiaires */
+  const rawStep=span/4, step=rawStep<=6?5:rawStep<=12?10:20;
+  g.strokeStyle=THEME.axis;
+  for(let v=Math.ceil(lo/step)*step; v<=hi; v+=step){
+    const y=cbY0+(1-(v-lo)/span)*cbH;
+    g.beginPath(); g.moveTo(cbX-2,y); g.lineTo(cbX,y); g.stroke();
+    g.fillText(Math.round(v), cbX-4, y+3);
+  }
   g.save(); g.translate(W-3,(cbY0+cbY1)/2); g.rotate(-Math.PI/2); g.textAlign='center'; g.fillText('dB',0,0); g.restore();
-  /* repère temps (le passé recule vers le haut-droite) */
+  /* repère temps : placé SOUS le bouton 2D/3D pour ne pas le chevaucher */
   g.textAlign='right'; g.fillStyle=THEME.axis; g.font='8px Arial';
-  g.fillText('temps ↗', cbX-8, marginT+2);
+  g.fillText(skewTot>=0?'temps ↗':'temps ↖', cbX-8, marginT+34);
 }
 function drawSgram(){
   const c=CV.sgramCv; if(!c)return;
@@ -2210,6 +2223,7 @@ function resetView(){
 }
 function attachZoomPan(id,axis,opts){
   const cv=$(id), padL=26, axH=13, padR=(opts&&opts.padR)||0;
+  const off3d=()=>id==='sgramCv'&&S.sg3d;   // en vue 3D, les gestes 2D sont désactivés (la rotation prend le relais)
   const uOf=(t,r)=>axis==='x'
     ? ((t.clientX-r.left)-padL)/Math.max(1,r.width-padL-padR-4)
     : (t.clientY-r.top)/Math.max(1,r.height-axH);
@@ -2231,6 +2245,7 @@ function attachZoomPan(id,axis,opts){
   let mode=null,pinchAx='main',panAx=null,anchV=0,anchB=0,anchors=null,moved=false,sX=0,sY=0,lastTap=0,pinchMoved=false;
 
   cv.addEventListener('touchstart',e=>{
+    if(off3d())return;
     e.preventDefault();
     const r=cv.getBoundingClientRect();
     if(e.touches.length>=2){
@@ -2267,6 +2282,7 @@ function attachZoomPan(id,axis,opts){
   },{passive:false});
 
   cv.addEventListener('touchmove',e=>{
+    if(off3d())return;
     e.preventDefault();
     const r=cv.getBoundingClientRect();
     if(mode==='pinch'&&e.touches.length>=2){
@@ -2349,6 +2365,7 @@ function attachZoomPan(id,axis,opts){
   },{passive:false});
 
   cv.addEventListener('touchend',e=>{
+    if(off3d())return;
     if(mode==='pinch'&&!pinchMoved&&e.touches.length===0&&opts.onTap2){
       opts.onTap2();                       // tap deux doigts immobile
     }else if(mode==='pan'&&!moved&&opts.onTap){
@@ -2617,6 +2634,21 @@ $('sg3dBtn').onclick=()=>{
   $('sg3dBtn').textContent=S.sg3d?'2D':'3D';
   drawSgram();
 };
+/* rotation légère autour de l'axe vertical : glissement horizontal à un doigt en vue 3D */
+(function(){
+  const cv=$('sgramCv'); let sx=null, rot0=0;
+  cv.addEventListener('touchstart',e=>{
+    if(!S.sg3d||e.touches.length!==1)return;
+    sx=e.touches[0].clientX; rot0=S.sg3dRot||0;
+  },{passive:true});
+  cv.addEventListener('touchmove',e=>{
+    if(!S.sg3d||sx===null||e.touches.length!==1)return;
+    const dx=e.touches[0].clientX-sx;
+    S.sg3dRot=Math.max(-1,Math.min(1,rot0+dx/180));
+    if(!S.running||S.paused)drawSgram();     // en mesure, la boucle redessine déjà
+  },{passive:true});
+  cv.addEventListener('touchend',()=>{sx=null;});
+})();
 $('mFscale').onclick=()=>{S.fscale=S.fscale==='log'?'lin':'log';SG.init=false;resetView();ui();};
 $('mWin').onclick=()=>{
   S.win=WIN_ORDER[(WIN_ORDER.indexOf(S.win)+1)%WIN_ORDER.length];
