@@ -2653,16 +2653,17 @@ function drawSgram3D(){
     }
     g.textAlign='left'; g.fillText('Hz', fx0+(nF-1)*colW+4, frontY+12);
   }
-  /* ===== colorbar : MÊMES règles que la 2D (pas 5 dB standard, élargi si la place manque) ===== */
-  const cbX=W-22, cbW=8, cbY0=marginT+14, cbY1=H-marginB-8, cbH=cbY1-cbY0;
+  /* ===== colorbar : IDENTIQUE à la 2D (barre 10px, étiquettes à DROITE de la barre,
+     couleur #8FB2E8, pas de traits de graduation, mêmes pas adaptatifs) ===== */
+  const cbW=10, cbX=W-28, cbY0=30, cbY1=H-marginB-2, cbH=cbY1-cbY0;
+  g.fillStyle='#8FB2E8'; g.font='bold 9px Arial'; g.textAlign='center';
+  g.fillText('dB', cbX+cbW/2, cbY0-8);
   const grad=g.createLinearGradient(0,cbY0,0,cbY1);
   for(let s=0;s<=10;s++){const t=s/10;const i=Math.round((1-t)*255)*3;
     grad.addColorStop(t,'rgb('+LUT[i]+','+LUT[i+1]+','+LUT[i+2]+')');}
   g.fillStyle=grad; g.fillRect(cbX,cbY0,cbW,cbH);
   g.strokeStyle='rgba(255,255,255,.25)'; g.lineWidth=1; g.strokeRect(cbX+0.5,cbY0+0.5,cbW-1,cbH-1);
-  g.fillStyle=THEME.axis; g.font='bold 9px Arial'; g.textAlign='center';
-  g.fillText('dB', cbX+cbW/2, cbY0-5);
-  g.font='8px Arial'; g.textAlign='right'; g.strokeStyle=THEME.axis;
+  g.fillStyle='#8FB2E8'; g.font='8px Arial'; g.textAlign='left';
   const minGapPx=12, maxTicks=Math.max(2,Math.floor(cbH/minGapPx));
   const NICE=[5,10,20,50,100];
   let step=NICE[NICE.length-1];
@@ -2670,8 +2671,7 @@ function drawSgram3D(){
   for(let v=Math.ceil(lo/step)*step; v<=hi; v+=step){
     const y=cbY0+(1-(v-lo)/span)*cbH;
     if(y<cbY0+4||y>cbY1-1)continue;
-    g.beginPath(); g.moveTo(cbX-2,y); g.lineTo(cbX,y); g.stroke();
-    g.fillText(Math.round(v), cbX-4, y+3);
+    g.fillText(Math.round(v), cbX+cbW+2, y+3);
   }
   /* étiquette d'entête synchronisée (sinon elle gèle sur les valeurs du dernier rendu 2D) */
   $('gScale').textContent=Math.round(lo)+'–'+Math.round(hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz';
