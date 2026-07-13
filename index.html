@@ -450,7 +450,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.2</div>
+  <div class="splashver">V35.3</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -3978,9 +3978,29 @@ const TR={
  "TIERS D'OCTAVE":{en:'1/3 OCTAVE',es:'TERCIO DE OCTAVA'},'BANDES FINES':{en:'NARROWBAND',es:'BANDA FINA'},
  'OCTAVE':{en:'OCTAVE',es:'OCTAVA'},'POND. ':{en:'WEIGHT ',es:'POND. '},
  'MODE EXPERT · TRAITEMENT DU SIGNAL':{en:'EXPERT MODE · SIGNAL PROCESSING',es:'MODO EXPERTO · PROCESADO DE SEÑAL'},
- 'CALIBRATION':{en:'CALIBRATION',es:'CALIBRACIÓN'}
+ 'CALIBRATION':{en:'CALIBRATION',es:'CALIBRACIÓN'},
+ 'Synthèse FFT':{en:'FFT synthesis',es:'Síntesis FFT'},
+ 'Filtres IEC 61260':{en:'IEC 61260 filters',es:'Filtros IEC 61260'},
+ 'Oui':{en:'Yes',es:'Sí'},'Non':{en:'No',es:'No'},
+ 'activer':{en:'enable',es:'activar'},'désactiver':{en:'disable',es:'desactivar'},
+ 'aucun':{en:'none',es:'ninguno'},
+ 'Marine':{en:'Marine',es:'Marino'},'Acier':{en:'Steel',es:'Acero'},
+ 'Rectangle':{en:'Rectangle',es:'Rectángulo'},
+ 'Profil':{en:'Profile',es:'Perfil'},'Offset':{en:'Offset',es:'Offset'},
+ 'choisir':{en:'choose',es:'elegir'},
+ 'correction désactivée':{en:'correction off',es:'corrección desactivada'},
 };
+const TR_KEYS=Object.keys(TR).sort((a,b)=>b.length-a.length);
 function T(s){ if(I18.lang==='fr')return s; const e=TR[s]; return e?(e[I18.lang]||s):s; }
+/* traduit une VALEUR : essaie la correspondance exacte, sinon remplace les mots connus
+   (pour les libellés composés type « Profil · 120.0 », « Filtres IEC 61260 ») */
+function Tstr(s){
+  if(I18.lang==='fr'||s==null)return s;
+  if(TR[s])return TR[s][I18.lang]||s;
+  let out=s;
+  for(const k of TR_KEYS){ if(out.indexOf(k)>=0)out=out.split(k).join(TR[k][I18.lang]||k); }
+  return out;
+}
 function trEl(el){
   if(!el)return;
   if(el.dataset.fr===undefined)el.dataset.fr=el.textContent;
@@ -4002,10 +4022,10 @@ function translatePass(){
   safe(()=>document.querySelectorAll('.key .kf').forEach(trEl));
   safe(()=>document.querySelectorAll('.key .kv').forEach(el=>{
     if(el.children.length)return;               // ⏸ / ▶ : le contenu est un SVG, ne pas l'écraser
-    el.dataset.fr=el.textContent; el.textContent=T(el.textContent);
+    el.textContent=Tstr(el.textContent);        // ui() vient de poser le texte français
   }));
   safe(()=>document.querySelectorAll('.mrow span').forEach(trEl));
-  safe(()=>document.querySelectorAll('.mrow b').forEach(el=>{ const s=el.textContent; const t=T(s); if(t!==s)el.textContent=t; }));
+  safe(()=>document.querySelectorAll('.mrow b').forEach(el=>{ el.textContent=Tstr(el.textContent); }));
   safe(()=>document.querySelectorAll('.exp-item b,.exp-item span').forEach(trEl));
   safe(()=>trTokens($('gTitle')));
   const safe2=f=>{try{f();}catch(e){}};
