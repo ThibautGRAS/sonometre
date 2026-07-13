@@ -712,6 +712,9 @@ if('serviceWorker' in navigator){
       <h3>Émergence tonale</h3>
       <p>Dans l'écran <b>Valeurs</b> (page 2), la cellule « Émergence tonale » indique la raie tonale dominante : <b>+X dB @ Y Hz</b>, ou « aucune » s'il n'y a pas de vraie composante tonale. Calcul par la méthode <b>ISO 1996-2</b> (bande critique de Bark), avec confirmation sur plusieurs mesures pour ne retenir que les raies stables dans le temps (une raie tonale persiste, un pic de bruit saute). Menu expert : <b>Émergence tonale</b> (activer/désactiver) et <b>Seuil d'alerte</b> (6 à 15 dB). Indicateur de diagnostic, non certifié.</p>
 
+      <h3>Vue 3D du spectrogramme</h3>
+      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène. La <b>fenêtre de temps</b> suit le réglage TEMPS de la touche ÉCHELLES : « Tout » = mode auto (≈ 3 s) ; un preset 3/5/10 s affiche cette durée. Le zoom de fréquence et la colorbar suivent la zone affichée.</p>
+
       <h3>Optimiser le spectrogramme</h3>
       <p>Menu expert ▸ <b>Optimiser le spectrogramme</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse et échelle. <b>Tonal</b> (résolution fréquence max, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, pour chocs/parole), <b>Équilibré</b> (polyvalent). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
 
@@ -2095,7 +2098,16 @@ function drawSgram3D(){
   if(!SG.cols){ return; }
   const Wp=SG.Wp, bufH=SG.bufH, seq=SG.colSeq||0;
   if(seq<2){ g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
-  const nT=Math.min(56, seq, Wp);
+  /* FENÊTRE DE TEMPS : suit le réglage TEMPS du popover ÉCHELLES (S.tview, comme la 2D).
+     'Tout' (pleine fenêtre) = mode AUTO : ~3 s (56 colonnes). Un preset 3/5/10 s ou un
+     réglage fin = cette durée. Sous-échantillonnage à 120 tranches max pour la fluidité. */
+  const fullT=S.tview.x0<=1e-3 && S.tview.x1>=0.999;
+  const wantCols=fullT ? 56 : Math.max(8,Math.round((S.tview.x1-S.tview.x0)*Wp));
+  const avail=Math.min(wantCols, seq, Wp);
+  const maxSlices=120, stepT=Math.max(1,Math.ceil(avail/maxSlices));
+  const idxs=[]; for(let x=Wp-avail;x<Wp;x+=stepT)idxs.push(x);
+  if(idxs[idxs.length-1]!==Wp-1)idxs[idxs.length-1]=Wp-1;   // la tranche LIVE reste devant
+  const nT=idxs.length;
   const nF=96;
   /* fenêtre de fréquence visible (zoom ÉCHELLES) — calculée AVANT l'échelle couleur */
   const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
@@ -2114,7 +2126,7 @@ function drawSgram3D(){
     let dlo=Infinity,dhi=-Infinity;
     const r0=Math.min(rTop,rBot), r1=Math.max(rTop,rBot);
     const stR=Math.max(1,Math.round((r1-r0+1)/160));
-    for(let x=Wp-nT;x<Wp;x++){
+    for(const x of idxs){
       const a=SG.cols[x]; if(!a)continue;
       for(let r=r0;r<=r1;r+=stR){const v=a[r];if(v>-90){if(v<dlo)dlo=v;if(v>dhi)dhi=v;}}
     }
@@ -2132,7 +2144,7 @@ function drawSgram3D(){
   const absSkew=Math.abs(skewTot);
   const colW=(plotW-absSkew)/nF, ampH=plotH*0.46;
   const baseXof=dz=> marginL + (skewTot>=0 ? skewTot*(1-dz) : absSkew*dz);
-  const colAt=jj=>SG.cols[Wp-nT+jj]||null;          // tampon décalé : récent à Wp-1
+  const colAt=jj=>SG.cols[idxs[jj]]||null;          // colonnes de la fenêtre choisie (récent à la fin)
   /* fréquences basses à gauche : mappage des nF profils sur la plage visible */
   const lineRow=fi=>Math.round(rBot - fi/(nF-1)*(rBot-rTop));
   const prof=new Float32Array(nF), sm=new Float32Array(nF);
@@ -2225,7 +2237,8 @@ function drawSgram(){
 let _scaleLbl='';
 function updScaleLbl(){
   const fullF=S.fview.min<=F_LOW()+0.01 && S.fview.max>=Math.min(20000,nyq())-1;
-  const txt=(S.dbAuto&&S.sgAuto&&fullF)?'Auto':'Manuel';
+  const fullT=S.tview.x0<=1e-3 && S.tview.x1>=0.999 && !S.histView;
+  const txt=(S.dbAuto&&S.sgAuto&&fullF&&fullT)?'Auto':'Manuel';
   if(txt!==_scaleLbl){_scaleLbl=txt;$('kDynV').textContent=txt;}
 }
 function drawActive(force){
