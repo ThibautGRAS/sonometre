@@ -200,6 +200,7 @@ if('serviceWorker' in navigator){
   .sg3dbtn{position:absolute;top:6px;right:34px;z-index:6;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.06em;border-radius:7px;padding:4px 9px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
   .sg3dbtn.on{background:rgba(79,195,255,.28);color:#EAF6FF}
+  #emgBtn.on{background:rgba(255,180,84,.24);border-color:rgba(255,180,84,.65);color:#FFD9A0}
   .gpane.on{display:block}
   canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 
@@ -442,7 +443,7 @@ if('serviceWorker' in navigator){
     <div class="graphzone">
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
-      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas></div>
+      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="emgBtn">ÉMG</button></div>
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
@@ -706,6 +707,7 @@ if('serviceWorker' in navigator){
         <li><b>Glisser</b> : déplacer la vue.</li>
         <li><b>Toucher</b> : poser un curseur de lecture (fréquence + niveau). Toucher le curseur le referme.</li>
         <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
+        <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection d'émergence tonale (encadré orange, seuil réglable au menu expert).</li>
       </ul>
 
       <h3>Indices</h3>
@@ -1642,11 +1644,12 @@ function drawSpectrum(){
     g.beginPath();g.strokeStyle=THEME.line;g.lineWidth=1.3;
     pts.forEach((pt,i)=>{const y=y2(pt[1],h,sc); i?g.lineTo(pt[0],y):g.moveTo(pt[0],y);});
     g.stroke();
-    /* (émergence tonale : détection uniquement dans l'écran Valeurs, pas de bandeau ici) */
+    /* helpers communs curseur / émergence / max */
+    const n=S.fftDb?S.fftDb.length:0;
+    const getDb=k=>{let p=binPow?binPow[Math.max(1,Math.min(n-1,k))]:0;if(!isFinite(p)||p<=0)return -180;if(wSel)p*=wSel[Math.max(1,Math.min(n-1,k))];return 10*Math.log10(p);};
+    let labY=2;                                   // empilement vertical des étiquettes
     /* curseur : cherche le pic local près du point visé, puis interpolation parabolique */
     if(S.cursor&&S.cursor.f>=fmin&&S.cursor.f<=fmax&&S.binHz){
-      const n=S.fftDb.length;
-      const getDb=k=>{let p=binPow?binPow[Math.max(1,Math.min(n-1,k))]:0;if(!isFinite(p)||p<=0)return -180;if(wSel)p*=wSel[Math.max(1,Math.min(n-1,k))];return 10*Math.log10(p);};
       let ic=Math.max(1,Math.min(n-1,Math.round(S.cursor.f/S.binHz)));
       // accroche le maximum local dans une petite fenêtre (±0,5 % ou ≥2 bins) autour du tap
       const half=Math.max(2,Math.round(ic*0.02));
@@ -1660,18 +1663,45 @@ function drawSpectrum(){
       const emg=tonalEmergence(binPow,bi,wSel);
       let clbl=fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+S.weight+(S.peakInterp?' ⟂':'');
       if(S.emgOn && emg) clbl+=' · émg +'+emg.dL.toFixed(1)+'dB';
-      cursorLabel(g,w,x,clbl);
+      cursorLabel(g,w,x,clbl,labY); labY+=19;
+    }
+    /* ===== ÉMERGENCE TONALE confirmée : encadré ORANGE (sous l'encadré curseur s'il existe) ===== */
+    if(S.emgOn && S._emgHits>=3 && S._emgCand && S.binHz){
+      const e=S._emgCand.emg;
+      if(e.fc>=fmin && e.fc<=fmax){
+        const x=x2(e.fc);
+        g.strokeStyle='#FFB454';g.lineWidth=1;g.setLineDash([2,3]);
+        g.beginPath();g.moveTo(x,labY);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
+        labelBox(g,w,x,'émergence +'+e.dL.toFixed(1)+' dB · '+fmtF(e.fc)+'Hz',labY,'#3A2404','#FFB454','#FFD9A0');
+        labY+=19;
+      }
+    }
+    /* ===== curseur SUIVEUR DE MAX (tap à deux doigts) : max de la fenêtre zoomée ===== */
+    if(S.maxCur && binPow && S.binHz && n){
+      const i0=Math.max(1,Math.ceil(fmin/S.binHz)), i1=Math.min(n-1,Math.floor(fmax/S.binHz));
+      let bi=-1,bv=-Infinity;
+      for(let k=i0;k<=i1;k++){const v=getDb(k);if(v>bv){bv=v;bi=k;}}
+      if(bi>0){
+        const pk=parabolicPeak(getDb,bi,S.binHz);
+        const L=pk.L+S.offset, x=x2(Math.max(fmin,Math.min(fmax,pk.f)));
+        g.strokeStyle=THEME.peak;g.lineWidth=1.2;
+        g.beginPath();g.moveTo(x,labY);g.lineTo(x,h-14);g.stroke();
+        g.fillStyle=THEME.peak;g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
+        labelBox(g,w,x,'max '+fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+S.weight,labY,'#0B2B14','#4FE08A','#CFF5DC');
+      }
     }
     $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz';
   }
 }
-function cursorLabel(g,w,x,txt){
+function labelBox(g,w,x,txt,y,bg,edge,ink){
+  y=y||2;
   g.font='bold 10px Arial';
   const tw=g.measureText(txt).width+10;
   let lx=Math.max(2,Math.min(w-tw-2,x-tw/2));
-  g.fillStyle='#08306B';g.fillRect(lx,2,tw,15);g.strokeStyle='rgba(79,195,255,.5)';g.strokeRect(lx+0.5,2.5,tw-1,14);
-  g.fillStyle='#CFEBFF';g.textAlign='left';g.fillText(txt,lx+5,13);
+  g.fillStyle=bg;g.fillRect(lx,y,tw,15);g.strokeStyle=edge;g.strokeRect(lx+0.5,y+0.5,tw-1,14);
+  g.fillStyle=ink;g.textAlign='left';g.fillText(txt,lx+5,y+11);
 }
+function cursorLabel(g,w,x,txt,y){ labelBox(g,w,x,txt,y,'#08306B','rgba(79,195,255,.5)','#CFEBFF'); }
 
 function drawHistory(){
   const c=CV.histCv; if(!c)return;
@@ -2138,7 +2168,7 @@ function drawSgram3D(){
   const rBot=Math.max(0,Math.min(bufH-1,Math.round(rOf(Vlo))));
   const rTop=Math.max(0,Math.min(bufH-1,Math.round(rOf(Vhi))));
   /* échelle amplitude/couleur persistante, balayée sur l'AFFICHÉ (anti-scintillement autoRange) */
-  if(!S.scale.sg3d)S.scale.sg3d={lo:10,hi:60};
+  /* échelle couleur PARTAGÉE avec le spectrogramme 2D (mêmes couleurs = mêmes dB) */
   let sc;
   if(!S.sgAuto){ sc={lo:S.sgMin,hi:S.sgMax}; }
   else{
@@ -2149,8 +2179,8 @@ function drawSgram3D(){
       const a=SG.cols[x]; if(!a)continue;
       for(let r=r0;r<=r1;r+=stR){const v=a[r];if(v>-90){if(v<dlo)dlo=v;if(v>dhi)dhi=v;}}
     }
-    if(isFinite(dlo)) autoRange(S.scale.sg3d, Math.max(10,dlo), dhi, 20, true);
-    sc=S.scale.sg3d;
+    if(isFinite(dlo)) autoRange(S.scale.sgram, Math.max(10,dlo), dhi, 20, true);
+    sc=S.scale.sgram;
   }
   const lo=sc.lo, hi=sc.hi, span=Math.max(1,hi-lo);
   /* rotation */
@@ -2558,7 +2588,8 @@ attachZoomPan('specCv','x',{
   yZoom:true,
   freezeMain:()=>S.mode!=='fft',      // tiers/octave : barres figées (pas de pan/zoom fréquence)
   onChange:()=>{if(!S.running)drawSpectrum();},
-  onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();}
+  onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();},
+  onTap2:()=>{ S.maxCur=!S.maxCur; if(!S.running||S.paused)drawSpectrum(); }
 });
 /* ===== gestes de la courbe d'évolution (temps × dB) ===== */
 (function(){
@@ -2713,6 +2744,8 @@ function ui(){
   $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
   $('mPeakInterp').querySelector('b').textContent=S.peakInterp?'Oui':'Non';
   $('mEmg').querySelector('b').textContent=S.emgOn?'Activée':'Désactivée';
+  $('emgBtn').classList.toggle('on',S.emgOn);
+  $('emgBtn').style.display=S.mode==='fft'?'block':'none';
   $('mEmgThr').querySelector('b').textContent=(S.emgThr||10)+' dB';
   $('mEmgThr').style.opacity=S.emgOn?'1':'.4';
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
@@ -2819,6 +2852,7 @@ $('mSgSpeed').onclick=()=>{
 };
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
 $('mEmg').onclick=()=>{S.emgOn=!S.emgOn;ui();drawActive();};
+$('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();drawActive();};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
 const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['gameboy','Game Boy'],['matrix','Matrice']];
 /* ===== préférences persistantes ===== */
