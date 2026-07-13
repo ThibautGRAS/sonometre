@@ -2083,7 +2083,6 @@ function drawSgram3D(){
   const g=cvInfo.g, W=cvInfo.w, H=cvInfo.h;
   g.fillStyle=THEME.bg; g.fillRect(0,0,W,H);
   if(!SG.cols){ return; }
-  /* échelle amplitude/couleur : reprend la logique auto/manuel de la 2D */
   let sc={lo:S.sgMin,hi:S.sgMax};
   if(S.sgAuto){
     const Wp0=SG.Wp,Hb=SG.bufH; let lo=Infinity,hi=-Infinity;
@@ -2095,29 +2094,27 @@ function drawSgram3D(){
   const lo=sc.lo, hi=sc.hi, span=Math.max(1,hi-lo);
   const Wp=SG.Wp, bufH=SG.bufH, seq=SG.colSeq||0;
   if(seq<2){ g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
-  /* fenêtre TEMPORELLE : uniquement les colonnes déjà acquises (démarrage immédiat),
-     plafonnée aux ~7 dernières secondes visuelles */
   const nT=Math.min(56, seq, Wp);
   const nF=96;
   const marginL=34, marginR=12, marginT=18, marginB=24;
   const plotW=W-marginL-marginR, plotH=H-marginT-marginB;
   const depth=plotH*0.46, skew=plotW*0.15;
   const colW=(plotW-skew)/nF, ampH=plotH*0.46;
-  const colAt=jj=>{                        // jj: 0=le plus ANCIEN des nT, nT-1=le plus récent
+  /* SENS DU DÉFILEMENT : la tranche la plus RÉCENTE est DEVANT (en bas, à gauche),
+     les anciennes reculent vers le fond (haut-droite). Le bord "live" est au premier plan. */
+  const colAt=jj=>{                        // jj: 0=le plus ANCIEN des nT ... nT-1=le plus récent
     const col=(seq-nT+jj);
     const idx=((col%Wp)+Wp)%Wp;
     return SG.cols[idx]||null;
   };
   const lineRow=fi=>Math.round(fi/(nF-1)*(bufH-1));
-  /* couleur du fond pour l'occlusion des silhouettes */
-  const occ=THEME.bg;
-  /* petit lissage 3 points du profil pour des crêtes nettes */
   const prof=new Float32Array(nF), sm=new Float32Array(nF);
+  /* on dessine du FOND (ancien, jj=0) vers l AVANT (récent, jj=nT-1) : occlusion correcte */
   for(let j=0;j<nT;j++){
     const a=colAt(j);
-    const dz=j/(nT-1||1);
-    const baseX=marginL + skew*(1-dz);
-    const baseY=marginT + depth*(1-dz) + (plotH-depth);
+    const dz=j/(nT-1||1);                  // 0 = ancien (fond) → 1 = récent (devant)
+    const baseX=marginL + skew*(1-dz);     // le fond est décalé à droite
+    const baseY=marginT + (plotH-depth) + depth*dz;   // le fond est en HAUT, le récent en BAS
     for(let i=0;i<nF;i++){
       let L=a?a[lineRow(i)]:lo;
       if(!isFinite(L)||L<lo)L=lo; if(L>hi)L=hi;
@@ -2125,31 +2122,29 @@ function drawSgram3D(){
     }
     sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
     for(let i=1;i<nF-1;i++) sm[i]=(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
-    /* 1) silhouette OPAQUE sombre : occulte proprement les tranches derrière */
+    /* silhouette opaque = occlusion nette */
     g.beginPath();
     g.moveTo(baseX, baseY);
     for(let i=0;i<nF;i++) g.lineTo(baseX+i*colW, baseY-sm[i]*ampH);
     g.lineTo(baseX+(nF-1)*colW, baseY);
     g.closePath();
-    g.fillStyle=occ; g.fill();
-    /* voile de profondeur discret sur la silhouette (plus sombre au loin) */
-    g.fillStyle='rgba(0,0,0,'+(0.22*(1-dz)).toFixed(3)+')'; g.fill();
-    /* 2) crête colorée par l'amplitude (segments) */
-    g.lineWidth = 1 + 0.8*dz;
+    g.fillStyle=THEME.bg; g.fill();
+    /* crête : couleur PLEINE (pas de transparence), assombrie avec la distance */
+    const fade=0.45+0.55*dz;               // 1 = devant plein éclat, fond atténué
+    g.lineWidth = j===nT-1 ? 1.6 : 1;
     for(let i=0;i<nF-1;i++){
       const t=sm[i];
       const idx=(Math.max(0,Math.min(255,Math.round(t*255)))|0)*3;
-      g.strokeStyle='rgba('+LUT[idx]+','+LUT[idx+1]+','+LUT[idx+2]+','+(0.45+0.55*dz).toFixed(2)+')';
+      g.strokeStyle='rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')';
       g.beginPath();
       g.moveTo(baseX+i*colW, baseY-sm[i]*ampH);
       g.lineTo(baseX+(i+1)*colW, baseY-sm[i+1]*ampH);
       g.stroke();
     }
   }
-  /* repères sobres */
   g.fillStyle=THEME.axis; g.font='8px Arial';
   g.textAlign='left';  g.fillText('fréquence →', marginL, H-6);
-  g.textAlign='right'; g.fillText('temps ↗', W-6, marginT+2);
+  g.textAlign='right'; g.fillText('passé ↗', W-6, marginT+8);
   g.fillText(Math.round(hi)+' dB', marginL-4, marginT+8);
   g.fillText(Math.round(lo)+' dB', marginL-4, H-marginB+2);
 }
