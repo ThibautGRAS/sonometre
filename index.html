@@ -1771,27 +1771,44 @@ function sgBlit(c){
     }else{
       /* mode INTERPOLÉ : rendu à la résolution NATIVE des données visibles (colonnes × lignes-bin),
          puis upscale bilinéaire par le blit final → dégradés lisses sans blocs */
-      const cols0=Math.max(1,Math.floor(sx)), cols1=Math.min(Wp-1,Math.ceil(sx+sw));
+      const cols0=Math.max(0,Math.floor(sx)), cols1=Math.min(Wp-1,Math.ceil(sx+sw));
       const nC=Math.max(1,cols1-cols0+1);
       const rows0=Math.max(0,Math.floor(sy)), rows1=Math.min(Hb-1,Math.ceil(sy+sh));
-      const nR=Math.max(1,Math.min(1600,rows1-rows0+1));
+      const spanR=rows1-rows0+1;
+      /* résolution verticale de la source = min(lignes de données visibles, hauteur écran×2)
+         → on ne sous-échantillonne jamais en-dessous des données, et on plafonne au double
+         de la hauteur d'affichage (suffisant pour un blit bilinéaire net) */
+      const nR=Math.max(1,Math.min(spanR, Hu*2, 1600));
       if(!SG.src)SG.src=document.createElement('canvas');
       SG.src.width=nC; SG.src.height=nR;
       const sg=SG.src.getContext('2d');
       const img=sg.createImageData(nC,nR), d=img.data;
-      const rr=new Int32Array(nR);
-      for(let y=0;y<nR;y++)rr[y]=Math.max(0,Math.min(Hb-1,Math.round(rows0+(y+0.5)/nR*(rows1-rows0+1))));
+      /* pour chaque rangée source, bornes de lignes-données à MOYENNER (anti-aliasing dB) */
+      const rLo=new Int32Array(nR), rHi=new Int32Array(nR);
+      for(let y=0;y<nR;y++){
+        const a0=rows0+ y   /nR*spanR;
+        const a1=rows0+(y+1)/nR*spanR;
+        rLo[y]=Math.max(0,Math.min(Hb-1,Math.floor(a0)));
+        rHi[y]=Math.max(rLo[y],Math.min(Hb-1,Math.ceil(a1)-1));
+      }
       for(let x=0;x<nC;x++){
         const a=SG.cols[Math.min(Wp-1,cols0+x)];
         for(let y=0;y<nR;y++){
           let i3=0;
-          if(a){let t=(a[rr[y]]-lo)*inv;t=t<0?0:t>255?255:t;i3=(t|0)*3;}
+          if(a){
+            /* MOYENNE des lignes couvertes, en dB (énergie perçue), avant conversion couleur */
+            let s=0,n=0;
+            for(let r=rLo[y];r<=rHi[y];r++){const v=a[r]; if(v>-120){s+=v;n++;}}
+            if(n){
+              let t=(s/n - lo)*inv; t=t<0?0:t>255?255:t; i3=(t|0)*3;
+            }
+          }
           const o=(y*nC+x)*4;
           d[o]=LUT[i3];d[o+1]=LUT[i3+1];d[o+2]=LUT[i3+2];d[o+3]=255;
         }
       }
       sg.putImageData(img,0,0);
-      /* étale la source native sur le canvas d'affichage (lissage activé) */
+      /* étale la source (haute résolution, moyennée) sur l'affichage avec lissage bilinéaire */
       SG.vg.imageSmoothingEnabled=true;SG.vg.imageSmoothingQuality='high';
       SG.vg.clearRect(0,0,Wp,Hu);
       SG.vg.drawImage(SG.src,0,0,nC,nR,0,0,Wp,Hu);
