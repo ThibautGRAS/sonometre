@@ -387,17 +387,19 @@ if('serviceWorker' in navigator){
 
   <header>
     <div class="brandwrap">
-      <svg class="logo" viewBox="0 0 300 96" aria-label="CETIM">
-        <!-- glyphe CETIM vectorisé fidèlement depuis le logo officiel -->
+      <svg class="logo" viewBox="0 0 322 96" aria-label="CETIM">
+        <!-- glyphe CETIM : proportions mesurées au pixel sur le logo officiel
+             (module u≈13,5 : barre haute 51→110 h20 + descente droite 90→110,
+              pièce gauche 0→51 h20 + descente 0→20, carré rouge 51,40 19×20) -->
         <g transform="translate(2,16)">
           <g fill="var(--logo-fill)">
-            <path d="M40 4 h44 a7 7 0 0 1 7 7 v49 h-16 V18 h-35 z"/>
-            <path d="M0 18 h40 v18 h-24 v24 h-16 z"/>
+            <path d="M51 2 h52 a7 7 0 0 1 7 7 v53 h-20 V22 h-39 z"/>
+            <path d="M0 22 h51 v20 h-31 v20 h-20 z"/>
           </g>
-          <rect x="40" y="36" width="16" height="16" fill="#EF3346"/>
+          <rect x="51" y="42" width="19" height="20" fill="#EF3346"/>
         </g>
         <!-- mot CETIM -->
-        <text x="104" y="66" fill="var(--logo-fill)" font-family="Arial Nova, Arial, sans-serif" font-weight="700" font-size="58" letter-spacing="1">CETIM</text>
+        <text x="124" y="69" fill="var(--logo-fill)" font-family="Arial Nova, Arial, sans-serif" font-weight="700" font-size="58" letter-spacing="1">CETIM</text>
       </svg>
       <span class="wordmark">Sonomètre</span>
     </div>
@@ -1593,7 +1595,7 @@ function drawSpectrum(){
       const Lp=peak[b];
       if(Lp>sc.lo){g.fillStyle=THEME.peak;g.fillRect(x+1,y2(Lp,h,sc)-1,Math.max(1,bw-2),2);}
       if(labelSet.includes(names[b])){
-        g.fillStyle='#5F7FB8';
+        g.fillStyle=THEME.axis;
         g.fillText(names[b]>=1000?(names[b]/1000)+'k':names[b],x+bw/2,h-4);
       }
     }
@@ -1980,7 +1982,7 @@ function sgBlit(c){
   g.drawImage(SG.view,padL,0);
   /* axe fréquence (fenêtre courante) */
   g.fillStyle=THEME.bg;g.fillRect(0,0,padL,H);
-  g.fillStyle='#5F7FB8';g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
+  g.fillStyle=THEME.axis;g.font=(8*c.dpr)+'px Arial';g.textAlign='right';
   g.fillText('Hz',padL-3*c.dpr,9*c.dpr);              // unité de l'axe
   for(const f of dynTicks(nfmin,nfmax,7)){
     const y=((V1n-TF(f))/(V1n-V0n))*Hu;
@@ -1989,7 +1991,7 @@ function sgBlit(c){
   }
   /* axe temps : secondes avant l'instant présent */
   g.fillStyle=THEME.bg;g.fillRect(padL,H-SG.axH,Wp,SG.axH);
-  g.fillStyle='#5F7FB8';
+  g.fillStyle=THEME.axis;
   const Tbuf=sgBufDur();                             // durée totale du tampon
   const agoL=(1-S.tview.x0)*Tbuf, agoM=(1-(S.tview.x0+S.tview.x1)/2)*Tbuf, agoR=(1-S.tview.x1)*Tbuf;
   const ft=t=>t<0.05?'0 s':'−'+(t<10?t.toFixed(1):Math.round(t))+' s';
@@ -3009,7 +3011,7 @@ function drawCurve(){
   gmin=Math.floor((gmin-1)/2)*2; gmax=Math.ceil((gmax+1)/2)*2;
   const y2=v=>(1-(v-gmin)/(gmax-gmin))*(h-padB-2)+2;
   // grille + libellés
-  g.strokeStyle='rgba(79,195,255,.12)';g.fillStyle='#5F7FB8';g.font='7px Arial';g.lineWidth=1;
+  g.strokeStyle=THEME.grid;g.fillStyle=THEME.axis;g.font='7px Arial';g.lineWidth=1;
   g.textAlign='right';
   for(let v=gmin;v<=gmax;v+= (gmax-gmin)>12?4:2){const y=y2(v);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText((v>0?'+':'')+v,padL-2,y+2.5);}
   // ligne 0 dB accentuée
@@ -3020,9 +3022,9 @@ function drawCurve(){
     g.fillStyle='#FFB454';g.textAlign='left';g.font='bold 7.5px Arial';
     g.fillText('offset '+offTxt,padL+3,y2(off)-3);
   }
-  g.textAlign='center';g.fillStyle='#5F7FB8';g.font='7px Arial';
+  g.textAlign='center';g.fillStyle=THEME.axis;g.font='7px Arial';
   for(const f of [31.5,125,500,2000,8000]){g.fillText(f>=1000?(f/1000)+'k':f,x2(f),h-3);}
-  if(!curve&&!hasOff){g.fillStyle='#5F7FB8';g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);$('curveRange').textContent=gmin+'…+'+gmax+' dB';return;}
+  if(!curve&&!hasOff){g.fillStyle=THEME.axis;g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);$('curveRange').textContent=gmin+'…+'+gmax+' dB';return;}
   // courbe TOTALE effective (fréquentielle + offset), telle qu'appliquée réellement
   g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.6;
   let st=false;
