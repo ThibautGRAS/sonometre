@@ -3006,6 +3006,7 @@ function ui(){
     : S.screen==='menu' ? 'MODE EXPERT · TRAITEMENT DU SIGNAL'
     : S.screen==='cal' ? 'CALIBRATION · CORRECTION AMPLITUDE' : 'VALEURS DE LA MESURE';
   $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='menu'?'Expert':'Valeurs';
+  $('kMode').classList.toggle('locked',S.screen!=='spec');   // ANALYSE n'a de sens que sur le spectre
   /* lignes du mode expert */
   $('mFscale').querySelector('b').textContent=S.fscale==='log'?'LOG':'LINÉAIRE';
   const fs=S.ctx?S.ctx.sampleRate:48000;
