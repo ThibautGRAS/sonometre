@@ -452,7 +452,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.13</div>
+  <div class="splashver">V35.14</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2605,18 +2605,18 @@ function drawSgram3D(){
       }
       P.push(sm);
     }
-    /* lissage LE LONG DU TEMPS : moyenne entre tranches voisines — supprime le jitter
-       résiduel des longues fenêtres. La tranche live reste brute (réactivité).
-       Surface : 2 passes → crête lisse le long du temps (fini les dents). */
-    for(let pass=0,tP=(surf?3:1); pass<tP; pass++){
+    /* lissage LE LONG DU TEMPS : moyenne glissante à BORDS RÉPLIQUÉS (aucune tranche
+       privilégiée). Avant, garder les tranches extrêmes brutes tout en lissant le milieu
+       creusait un « U » : un niveau constant semblait chuter au milieu puis remonter aux bouts. */
+    for(let pass=0,tP=(surf?2:1); pass<tP; pass++){
       if(nT>3){
-        const Q=[P[0]];
-        for(let j=1;j<nT-1;j++){
+        const Q=[];
+        for(let j=0;j<nT;j++){
+          const a=P[Math.max(0,j-1)], b=P[j], c=P[Math.min(nT-1,j+1)];
           const q=new Float32Array(nF);
-          for(let i=0;i<nF;i++) q[i]=0.25*P[j-1][i]+0.5*P[j][i]+0.25*P[j+1][i];
+          for(let i=0;i<nF;i++) q[i]=0.25*a[i]+0.5*b[i]+0.25*c[i];
           Q.push(q);
         }
-        Q.push(P[nT-1]);
         P.length=0; P.push(...Q);
       }
     }
@@ -2634,7 +2634,7 @@ function drawSgram3D(){
       g.lineTo(px(j,nF-1),py(j,nF-1));
     };
     for(let j=0;j<nT;j++){
-      const dz=j/(nT-1||1), baseY=baseYof(dz), fade=0.42+0.58*dz;
+      const dz=j/(nT-1||1), baseY=baseYof(dz), fade=0.72+0.28*dz;
       const gr=g.createLinearGradient(px(j,0),0,px(j,nF-1),0);
       for(let i=0;i<nF;i+=2){
         const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
