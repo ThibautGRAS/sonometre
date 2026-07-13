@@ -1379,12 +1379,16 @@ function updateNumbers(L){
   $('vLAeq').textContent=fmt(laeq); $('vLCeq').textContent=fmt(lceq);
   $('vLZeq').textContent=fmt(S.eqT>0?lvl(S.eq.Z/S.eqT):-99);
   $('vMax').textContent=fmt(S.lafMax); $('vMin').textContent=fmt(S.lafMin);
-  /* émergence tonale de la raie dominante (recalcul 1×/s, sur le spectre fin pleine bande) */
-  if(nowS-(S.emgT||0)>1000){
+  /* ===== émergence tonale de la raie dominante avec CONFIRMATION TEMPORELLE =====
+     Une vraie raie tonale est stable dans le temps ; un pic de bruit saute d'une frame
+     à l'autre. On échantillonne ~5×/s la raie dominante candidate, et on ne l'affiche
+     que si elle reste cohérente (même bin ± tolérance) plusieurs échantillons de suite.
+     Hystérésis : il faut aussi plusieurs échantillons "absents" pour retirer l'affichage. */
+  if(nowS-(S.emgT||0)>200){
     S.emgT=nowS;
     const bp=S.time==='F'?S.binPowF:S.time==='S'?S.binPowS:S.binPowV;
     const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
-    let txt='--';
+    let cand=null;
     if(S.emgOn && bp){
       const n=bp.length; let bi=-1,bv=-Infinity;
       for(let i=2;i<n-1;i++){
@@ -1392,13 +1396,30 @@ function updateNumbers(L){
         let pl=bp[i-1]||0,pr=bp[i+1]||0; if(wSel){pl*=wSel[i-1];pr*=wSel[i+1];}
         if(p>=pl&&p>=pr&&p>bv){bv=p;bi=i;}
       }
-      if(bi>0){
-        const emg=tonalEmergence(bp,bi,wSel);
-        if(emg && emg.strong) txt='+'+emg.dL.toFixed(1)+' dB @ '+fmtF(emg.fc)+'Hz';
-        else txt='aucune';
-      }
+      if(bi>0){ const emg=tonalEmergence(bp,bi,wSel); if(emg && emg.strong) cand={bi,emg}; }
     }
-    S._emgValTxt=txt;
+    /* suivi de persistance */
+    if(cand){
+      const tol=Math.max(2,Math.round(cand.bi*0.03));      // tolérance de position (±3 %)
+      if(S._emgLast!=null && Math.abs(cand.bi-S._emgLast)<=tol){
+        S._emgHits=(S._emgHits||0)+1;                       // même raie qu'avant → confirme
+      }else{
+        S._emgHits=1;                                       // nouvelle raie → repart
+      }
+      S._emgLast=cand.bi; S._emgMiss=0; S._emgCand=cand;
+    }else{
+      S._emgMiss=(S._emgMiss||0)+1;
+      if(S._emgMiss>=3){ S._emgHits=0; S._emgLast=null; S._emgCand=null; }  // absente 3× → oubli
+    }
+    /* affichage : confirmée après 3 détections cohérentes (~0,6 s) */
+    if(S._emgHits>=3 && S._emgCand){
+      const e=S._emgCand.emg;
+      S._emgValTxt='+'+e.dL.toFixed(1)+' dB @ '+fmtF(e.fc)+'Hz';
+    }else if(S.emgOn){
+      S._emgValTxt='aucune';
+    }else{
+      S._emgValTxt='--';
+    }
   }
   $('vEmg').textContent=S._emgValTxt||'--';
   $('barFill').style.width=Math.max(0,Math.min(100,(L-30)))+'%';
