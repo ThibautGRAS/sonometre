@@ -482,6 +482,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mEmgThr"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
           <div class="mrow" id="mSg3dMode"><span>Rendu 3D spectrogramme</span><b>Fil de fer</b></div>
+          <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
           <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
@@ -711,7 +712,7 @@ if('serviceWorker' in navigator){
         <li><b>Toucher</b> : poser un curseur de lecture (fréquence + niveau). Toucher le curseur le referme.</li>
         <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection d'émergence tonale (encadré orange, seuil réglable au menu expert).</li>
-        <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
+        <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Pente du filtre réglable au menu expert : 24 / 48 / 96 dB/oct. Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
         <li>Spectre (tous modes) : icône <b>VIB</b> = corrélation vibro-acoustique. Pose le téléphone sur la structure vibrante : chaque bande est corrélée (coefficient 0→1) avec l'accéléromètre ; les bandes étrangères à la vibration s'estompent (en bande fine, un voile couvre les zones non corrélées ; en octave, coefficient agrégé), le badge indique le coefficient max. Corrélation sur les enveloppes (fluctuations de niveau, ±250 ms de délai toléré) : une source parfaitement constante ne peut pas être corrélée.</li>
       </ul>
 
@@ -794,7 +795,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null, theme:'oled', sg3dMode:'wire',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', iirBank:null, theme:'oled', sg3dMode:'wire', lsnSlope:24,            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -967,12 +968,17 @@ const LSN={on:false, nodes:null, lastF:'', warned:false};
 function lsnBuild(){
   if(!S.ctx||!S.srcNode)return false;
   const c=S.ctx;
-  const hp1=c.createBiquadFilter(),hp2=c.createBiquadFilter(),lp1=c.createBiquadFilter(),lp2=c.createBiquadFilter();
-  hp1.type='highpass';hp2.type='highpass';lp1.type='lowpass';lp2.type='lowpass';
-  [hp1,hp2,lp1,lp2].forEach(f=>{f.Q.value=0.707;});
+  /* pente réglable (menu expert) : chaque biquad = 12 dB/oct → N = pente/12 par côté */
+  const N=Math.max(1,Math.round((S.lsnSlope||24)/12));
+  const hp=[],lp=[];
+  for(let i=0;i<N;i++){const f=c.createBiquadFilter();f.type='highpass';f.Q.value=0.707;hp.push(f);}
+  for(let i=0;i<N;i++){const f=c.createBiquadFilter();f.type='lowpass'; f.Q.value=0.707;lp.push(f);}
   const gn=c.createGain(); gn.gain.value=1.0;
-  S.srcNode.connect(hp1);hp1.connect(hp2);hp2.connect(lp1);lp1.connect(lp2);lp2.connect(gn);gn.connect(c.destination);
-  LSN.nodes={hp1,hp2,lp1,lp2,gn};
+  const chain=[...hp,...lp,gn];
+  S.srcNode.connect(chain[0]);
+  for(let i=0;i<chain.length-1;i++)chain[i].connect(chain[i+1]);
+  gn.connect(c.destination);
+  LSN.nodes={hp,lp,gn,first:chain[0]};
   return true;
 }
 function lsnUpdate(){
@@ -982,18 +988,21 @@ function lsnUpdate(){
   if(key===LSN.lastF)return;
   LSN.lastF=key;
   const t=S.ctx.currentTime;
-  LSN.nodes.hp1.frequency.setTargetAtTime(f0,t,0.05);
-  LSN.nodes.hp2.frequency.setTargetAtTime(f0,t,0.05);
-  LSN.nodes.lp1.frequency.setTargetAtTime(f1,t,0.05);
-  LSN.nodes.lp2.frequency.setTargetAtTime(f1,t,0.05);
+  for(const f of LSN.nodes.hp)f.frequency.setTargetAtTime(f0,t,0.05);
+  for(const f of LSN.nodes.lp)f.frequency.setTargetAtTime(f1,t,0.05);
 }
 function lsnOff(){
   if(LSN.nodes){
-    try{S.srcNode&&S.srcNode.disconnect(LSN.nodes.hp1);}catch(e){}
+    try{S.srcNode&&S.srcNode.disconnect(LSN.nodes.first);}catch(e){}
     try{LSN.nodes.gn.disconnect();}catch(e){}
     LSN.nodes=null;
   }
   LSN.on=false; LSN.lastF='';
+}
+function lsnRebuild(){                     // changement de pente pendant l'écoute
+  const was=LSN.on;
+  lsnOff();
+  if(was && lsnBuild()){LSN.on=true;LSN.lastF='';lsnUpdate();}
 }
 function lsnToggle(){
   if(LSN.on){lsnOff();ui();return;}
@@ -2981,6 +2990,7 @@ function ui(){
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
   $('mSg3dMode').querySelector('b').textContent=S.sg3dMode==='surf'?'Surface':'Fil de fer';
+  $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
 
   updScaleLbl();
   $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Expert';
@@ -3091,7 +3101,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
                    'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','sg3dMode'];
+                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','sg3dMode','lsnSlope'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
@@ -3135,6 +3145,7 @@ $('mTheme').onclick=()=>{
   applyTheme(); ui();
 };
 $('mSg3dMode').onclick=()=>{ S.sg3dMode=S.sg3dMode==='surf'?'wire':'surf'; SG._3dKey=''; ui(); if(S.sg3d)drawSgram(); };
+$('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); };
 loadPrefs(); applyTheme(); _prefsReady=true;
 $('mToctSrc').onclick=()=>{
   S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
