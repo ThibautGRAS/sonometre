@@ -33,7 +33,7 @@ Déploiement via l'API GitHub Contents (`api.github.com`), pas de build local (t
 
 - **Charte CETIM** : marine `#001E50`, rouge `#EF3346`, police Arial Nova. Logo vectorisé (traçage de contours) inclus en SVG.
 - **Thèmes** : Marine (défaut CSS), Acier, Clair labo, OLED noir (défaut applicatif), Game Boy DMG-01, Matrice. Tout suit le thème via variables CSS.
-- **Persistance** : préférences dans `localStorage` sous `sono_prefs` ; langue sous `sono_lang` ; profils de calibration sous une clé dédiée.
+- **Persistance** : préférences dans `localStorage` (local à chaque appareil/navigateur, **jamais** sur Git) sous `sono_prefs` ; langue sous `sono_lang` ; profils de calibration sous une clé dédiée. Survit aux mises à jour, effacé si l'utilisateur vide les données du site.
 - **Langues** : FR (source), EN, ES — bascule par drapeaux en tête de l'aide, dictionnaire `TR` + `translatePass()`.
 
 ## 4. Pièges techniques connus
@@ -51,7 +51,8 @@ Déploiement via l'API GitHub Contents (`api.github.com`), pas de build local (t
   - **pas** de `location.reload()` automatique sur `controllerchange` (il provoquait un double-chargement visible à chaque mise à jour).
 - Service worker : `updateViaCache:'none'` à l'enregistrement + `fetch(req,{cache:'reload'})` pour le document → la version fraîche est servie sans dépendre du cache HTTP.
 - Icônes flottantes des graphes (`.sg3dbtn`) : taille uniforme 46×26, estompage automatique après 3,5 s d'inactivité.
-- Traduction : ne jamais écraser le contenu d'une touche qui contient un SVG (icônes ▶ ■ ⏸) — garde `if(el.children.length)return`.
+- Traduction : ne jamais écraser le contenu d'une touche qui contient un SVG (icônes ▶ ■ ⏸) — garde `if(el.children.length)return`. Valeurs composées traduites mot à mot (`Tstr`), pas par correspondance exacte.
+- Spectrogramme 3D : réduire une tranche de fréquence par **max**, pas par moyenne (une raie fine serait diluée) ; lisser en **préservant les maxima locaux** (sinon le 1-2-1 rabaisse les raies). Les valeurs 3D doivent correspondre à la 2D.
 
 ## 5. Fonctions principales
 
