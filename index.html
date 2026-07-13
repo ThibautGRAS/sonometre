@@ -936,10 +936,16 @@ function tonalEmergence(binPow, ic, wSel){
   const dbOf=p=>p>0?10*Math.log10(p):-180;
   const Lpk=dbOf(pw(ic));
   const guard=2;                                   // ±2 bins = largeur de la raie, exclus du bruit
-  /* méthode ISO 1996-2 : bande critique de Bark centrée sur f0 (±0,5 Bark) */
+  /* méthode ISO 1996-2 : bande critique de Bark centrée sur f0 (±0,5 Bark).
+     On garantit une largeur minimale (guard+3 bins de chaque côté) pour toujours
+     disposer de bins de bruit, y compris en basses fréquences où la bande de Bark
+     est très étroite — sinon l'émergence renverrait null et rien ne s'afficherait. */
   const z=bark(f0);
-  const fLo=Math.max(20, invBark(z-0.5)), fHi=Math.min(bh*(n-1), invBark(z+0.5));
-  const kLo=Math.max(1,Math.round(fLo/bh)), kHi=Math.min(n-1,Math.round(fHi/bh));
+  let kLo=Math.max(1,Math.round(invBark(z-0.5)/bh));
+  let kHi=Math.min(n-1,Math.round(invBark(z+0.5)/bh));
+  const need=guard+3;
+  if(ic-kLo<need) kLo=Math.max(1,ic-need);
+  if(kHi-ic<need) kHi=Math.min(n-1,ic+need);
   let s=0,m=0;
   for(let k=kLo;k<=kHi;k++){ if(Math.abs(k-ic)<=guard) continue; s+=pw(k); m++; }
   if(!m) return null;
