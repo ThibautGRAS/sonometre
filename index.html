@@ -452,7 +452,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.14</div>
+  <div class="splashver">V35.15</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2569,7 +2569,10 @@ function drawSgram3D(){
   {
     const prof=new Float32Array(nF);
     for(let j=0;j<nT;j++){
-      const xEnd=idxs[j], xStart=Math.max(0,xEnd-stepT+1);
+      /* chaque tranche moyenne au moins ~4 colonnes, même quand le pas de décimation est
+         petit (fenêtres 3/5/10 s) : sinon une tranche = 1 colonne → elle saute à chaque
+         nouvelle colonne = scintillement. Les fenêtres voisines se recouvrent (lissage). */
+      const xEnd=idxs[j], xStart=Math.max(0,xEnd-Math.max(stepT,4)+1);
       for(let i=0;i<nF;i++){
         /* MOYENNE dans le TEMPS d'un MAX en FRÉQUENCE : une raie fine (1-2 lignes) noyée
            dans un bin large n'est plus diluée par la moyenne — elle ressort à son vrai
