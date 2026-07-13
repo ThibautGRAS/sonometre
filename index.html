@@ -450,7 +450,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.4</div>
+  <div class="splashver">V35.5</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2551,30 +2551,38 @@ function drawSgram3D(){
         if(L<lo)L=lo; if(L>hi)L=hi;
         prof[i]=(L-lo)/span;
       }
-      /* lissage PRÉSERVANT LES PICS : un maximum local (raie tonale) n'est pas rabaissé ;
-         seuls les creux (bruit) sont lissés. Sinon le 1-2-1 étalait la raie et la faisait chuter. */
-      const smooth=src=>{
-        const o=new Float32Array(nF); o[0]=src[0]; o[nF-1]=src[nF-1];
-        for(let i=1;i<nF-1;i++){
-          o[i]=(src[i]>=src[i-1]&&src[i]>=src[i+1]) ? src[i] : (src[i-1]+2*src[i]+src[i+1])*0.25;
-        }
-        return o;
-      };
-      let sm=smooth(prof);
-      if(surf) sm=smooth(sm);        // surface : 2e passe (toujours en préservant les pics)
+      let sm;
+      if(surf){
+        /* surface : arrondir la crête pour une dorsale LISSE (fini le peigne d'aiguilles).
+           Dilatation (élargit une raie fine à ~3 points, sans perdre de hauteur) puis
+           lissage doux : la crête devient un relief continu au lieu d'aiguilles empilées. */
+        const dil=new Float32Array(nF);
+        for(let i=0;i<nF;i++){ let m=prof[i]; if(i>0&&prof[i-1]>m)m=prof[i-1]; if(i<nF-1&&prof[i+1]>m)m=prof[i+1]; dil[i]=m; }
+        const s=new Float32Array(nF); s[0]=dil[0]; s[nF-1]=dil[nF-1];
+        for(let i=1;i<nF-1;i++) s[i]=(dil[i-1]+2*dil[i]+dil[i+1])*0.25;
+        sm=s;
+      }else{
+        /* fil de fer : préservation stricte des pics → raies nettes */
+        const o=new Float32Array(nF); o[0]=prof[0]; o[nF-1]=prof[nF-1];
+        for(let i=1;i<nF-1;i++) o[i]=(prof[i]>=prof[i-1]&&prof[i]>=prof[i+1])?prof[i]:(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
+        sm=o;
+      }
       P.push(sm);
     }
     /* lissage LE LONG DU TEMPS : moyenne entre tranches voisines — supprime le jitter
-       résiduel des longues fenêtres. La tranche live reste brute (réactivité). */
-    if(nT>3){
-      const Q=[P[0]];
-      for(let j=1;j<nT-1;j++){
-        const q=new Float32Array(nF);
-        for(let i=0;i<nF;i++) q[i]=0.25*P[j-1][i]+0.5*P[j][i]+0.25*P[j+1][i];
-        Q.push(q);
+       résiduel des longues fenêtres. La tranche live reste brute (réactivité).
+       Surface : 2 passes → crête lisse le long du temps (fini les dents). */
+    for(let pass=0,tP=(surf?2:1); pass<tP; pass++){
+      if(nT>3){
+        const Q=[P[0]];
+        for(let j=1;j<nT-1;j++){
+          const q=new Float32Array(nF);
+          for(let i=0;i<nF;i++) q[i]=0.25*P[j-1][i]+0.5*P[j][i]+0.25*P[j+1][i];
+          Q.push(q);
+        }
+        Q.push(P[nT-1]);
+        P.length=0; P.push(...Q);
       }
-      Q.push(P[nT-1]);
-      P.length=0; P.push(...Q);
     }
   }
   const px=(j,i)=>baseXof(j/(nT-1||1))+i*colW;
