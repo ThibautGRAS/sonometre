@@ -360,6 +360,9 @@ if('serviceWorker' in navigator){
   .ppopt b{font-size:14px;color:#EAF4FF}
   .ppopt span{font-size:11.5px;line-height:1.45;color:#B9C7E2}
   .ppopt em{font-size:10.5px;color:#8FB2E8;font-style:normal;font-family:var(--mono);letter-spacing:.02em}
+  .langbar{display:flex;gap:8px;padding:8px 12px 2px}
+  .langbtn{flex:1;background:rgba(127,216,255,.08);border:1px solid rgba(127,216,255,.25);color:var(--lcd-ink);font-family:var(--font);font-size:12px;font-weight:700;border-radius:8px;padding:7px 0;cursor:pointer}
+  .langbtn.on{background:rgba(127,216,255,.22);border-color:rgba(127,216,255,.6)}
   .helpbody{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-right:4px}
   .helpbody h3{font-size:13px;color:var(--ice);letter-spacing:.06em;margin:14px 0 5px;font-weight:700}
   .helpbody h3.warn{color:#FFB454}
@@ -447,7 +450,7 @@ if('serviceWorker' in navigator){
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
       <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="emgBtn">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="right:86px">VIB</button></div>
-      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn" style="top:38px">♪ SON</button></div>
+      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn" style="right:auto;left:10px">3D</button><button class="sg3dbtn" id="lsnBtn" style="right:auto;left:10px;top:38px">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
@@ -683,6 +686,7 @@ if('serviceWorker' in navigator){
 
   <div id="helpPop" class="calpop"><div class="calpop-in helppop">
     <div class="cp-head">AIDE &amp; GUIDE <button id="hpClose">✕</button></div>
+    <div class="langbar"><button class="langbtn" data-lang="fr">🇫🇷 Français</button><button class="langbtn" data-lang="en">🇬🇧 English</button><button class="langbtn" data-lang="es">🇪🇸 Español</button></div>
     <div class="helpbody">
       <h3>Démarrer</h3>
       <p>Autorise le microphone au premier lancement, puis appuie sur <b>▶</b>. Un court « INIT MICRO… » précède la mesure (le temps que le micro se stabilise). <b>■</b> arrête, <b>⏸</b> met en pause.</p>
@@ -2986,6 +2990,7 @@ function ui(){
   $('vibBtn').classList.toggle('on',VIB.on);
   $('vibBtn').classList.toggle('dis',!VIB.sup);
   $('lsnBtn').classList.toggle('on',LSN.on);
+  $('lsnBtn').style.display=S.sg3d?'none':'block';
   $('mEmgThr').querySelector('b').textContent=(S.emgThr||10)+' dB';
   $('mEmgThr').style.opacity=S.emgOn?'1':'.4';
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
@@ -3053,6 +3058,7 @@ $('sg3dBtn').onclick=()=>{
   S.sg3d=!S.sg3d;
   $('sg3dBtn').classList.toggle('on',S.sg3d);
   $('sg3dBtn').textContent=S.sg3d?'2D':'3D';
+  $('lsnBtn').style.display=S.sg3d?'none':'block';   // l'écoute n'a pas d'icône en 3D
   drawSgram();
 };
 /* rotation légère autour de l'axe vertical : glissement horizontal à un doigt en vue 3D */
@@ -3826,6 +3832,201 @@ function armStart(){
 /* iOS exige parfois un GESTE pour relancer l'audio après une interruption : tout toucher réanime si besoin */
 window.addEventListener('pointerdown',()=>{ if(S.ctx && !micAlive()) reviveMic(true); },{passive:true});
 
+
+/* ===== traduction FR / EN / ES =====
+   Le français est la langue source du code. TR mappe chaque libellé français vers
+   ses traductions ; translatePass() balaie les éléments d'interface en mémorisant
+   le texte source (dataset.fr) pour pouvoir re-traduire dans les deux sens. */
+const I18={lang:localStorage.getItem('sono_lang')||'fr'};
+const TR={
+ 'ÉCRAN':{en:'SCREEN',es:'PANTALLA'},'POND.':{en:'WEIGHT',es:'POND.'},'TEMPS':{en:'TIME',es:'TIEMPO'},
+ 'ANALYSE':{en:'ANALYSIS',es:'ANÁLISIS'},'DURÉE':{en:'DURATION',es:'DURACIÓN'},'CALIB.':{en:'CAL.',es:'CALIB.'},
+ 'MENU':{en:'MENU',es:'MENÚ'},'EXPORT':{en:'EXPORT',es:'EXPORTAR'},'MESURE':{en:'MEASURE',es:'MEDIDA'},'ÉCHELLES':{en:'SCALES',es:'ESCALAS'},
+ 'Spectre':{en:'Spectrum',es:'Espectro'},'Spectrog.':{en:'Spectrog.',es:'Espectrog.'},'Évolution':{en:'History',es:'Evolución'},'Valeurs':{en:'Values',es:'Valores'},
+ 'Réinit':{en:'Reset',es:'Reinic.'},'Partager':{en:'Share',es:'Compartir'},'Expert':{en:'Expert',es:'Experto'},'Fermer':{en:'Close',es:'Cerrar'},
+ 'Auto':{en:'Auto',es:'Auto'},'Manuel':{en:'Manual',es:'Manual'},
+ 'PRÊT':{en:'READY',es:'LISTO'},'MESURE':{en:'MEASURE',es:'MEDIDA'},'PAUSE':{en:'PAUSED',es:'PAUSA'},'ARRÊTÉ':{en:'STOPPED',es:'PARADO'},'INIT MICRO…':{en:'MIC INIT…',es:'INIC. MIC…'},
+ /* lignes du menu expert */
+ 'Optimiser le spectrogramme':{en:'Optimize spectrogram',es:'Optimizar espectrograma'},
+ 'Échelle fréquence':{en:'Frequency scale',es:'Escala de frecuencia'},
+ 'Type de fenêtre':{en:'Window type',es:'Tipo de ventana'},
+ 'Nombre de points (FFT)':{en:'FFT size (points)',es:'Puntos FFT'},
+ 'Résolution · bande':{en:'Resolution · bin',es:'Resolución · banda'},
+ 'Recouvrement (overlap)':{en:'Overlap',es:'Solapamiento'},
+ 'Vitesse spectrogramme':{en:'Spectrogram speed',es:'Velocidad espectrograma'},
+ 'Interpolation de pic (curseurs)':{en:'Peak interpolation (cursors)',es:'Interpolación de pico (cursores)'},
+ 'Émergence tonale (ISO 1996-2)':{en:'Tonal audibility (ISO 1996-2)',es:'Emergencia tonal (ISO 1996-2)'},
+ "Seuil d'alerte émergence":{en:'Tonal alert threshold',es:'Umbral de alerta tonal'},
+ "Tiers d'octave":{en:'1/3-octave source',es:'Tercios de octava'},
+ 'Rendu 3D spectrogramme':{en:'3D spectrogram render',es:'Render 3D espectrograma'},
+ 'Pente filtre écoute ♪':{en:'Listen filter slope ♪',es:'Pendiente filtro escucha ♪'},
+ 'Thème de façade':{en:'Faceplate theme',es:'Tema de fachada'},
+ 'Calibration / correction amplitude':{en:'Calibration / amplitude correction',es:'Calibración / corrección de amplitud'},
+ 'Mode générique auto':{en:'Generic auto mode',es:'Modo genérico auto'},
+ 'Profil chargé':{en:'Loaded profile',es:'Perfil cargado'},
+ 'Réinitialiser les paramètres':{en:'Reset settings',es:'Restablecer ajustes'},
+ 'Vider le spectrogramme':{en:'Clear spectrogram',es:'Vaciar espectrograma'},
+ 'Vider l\u2019historique':{en:'Clear history',es:'Vaciar historial'},
+ 'Aide & guide':{en:'Help & guide',es:'Ayuda y guía'},
+ /* valeurs de lignes */
+ 'Fil de fer':{en:'Wireframe',es:'Alambre'},'Surface':{en:'Surface',es:'Superficie'},
+ 'Activée':{en:'On',es:'Activada'},'Désactivée':{en:'Off',es:'Desactivada'},
+ 'Clair labo':{en:'Light lab',es:'Lab claro'},'OLED noir':{en:'OLED black',es:'OLED negro'},'Matrice':{en:'Matrix',es:'Matriz'},
+ /* popovers */
+ 'AIDE & GUIDE':{en:'HELP & GUIDE',es:'AYUDA Y GUÍA'},
+ 'EXPORTER / PARTAGER':{en:'EXPORT / SHARE',es:'EXPORTAR / COMPARTIR'},
+ 'Partager le CSV':{en:'Share CSV',es:'Compartir CSV'},
+ 'Télécharger le CSV':{en:'Download CSV',es:'Descargar CSV'},
+ "Partager l'image du graphe":{en:'Share graph image',es:'Compartir imagen del gráfico'},
+ "Télécharger l'image (PNG)":{en:'Download image (PNG)',es:'Descargar imagen (PNG)'},
+ 'données complètes · feuille de partage iOS':{en:'full data · iOS share sheet',es:'datos completos · hoja de compartir iOS'},
+ 'enregistrer dans Fichiers':{en:'save to Files',es:'guardar en Archivos'},
+ 'écran courant en PNG · titré':{en:'current screen as titled PNG',es:'pantalla actual en PNG titulado'},
+ 'enregistrer dans Photos/Fichiers':{en:'save to Photos/Files',es:'guardar en Fotos/Archivos'},
+ /* jetons de titres d'écran */
+ 'SPECTRE':{en:'SPECTRUM',es:'ESPECTRO'},'SPECTROGRAMME':{en:'SPECTROGRAM',es:'ESPECTROGRAMA'},
+ 'ÉVOLUTION':{en:'HISTORY',es:'EVOLUCIÓN'},'VALEURS':{en:'VALUES',es:'VALORES'},
+ "TIERS D'OCTAVE":{en:'1/3 OCTAVE',es:'TERCIO DE OCTAVA'},'BANDES FINES':{en:'NARROWBAND',es:'BANDA FINA'},
+ 'OCTAVE':{en:'OCTAVE',es:'OCTAVA'},'POND. ':{en:'WEIGHT ',es:'POND. '},
+ 'MODE EXPERT · TRAITEMENT DU SIGNAL':{en:'EXPERT MODE · SIGNAL PROCESSING',es:'MODO EXPERTO · PROCESADO DE SEÑAL'},
+ 'CALIBRATION':{en:'CALIBRATION',es:'CALIBRACIÓN'}
+};
+function T(s){ if(I18.lang==='fr')return s; const e=TR[s]; return e?(e[I18.lang]||s):s; }
+function trEl(el){
+  if(!el)return;
+  if(el.dataset.fr===undefined)el.dataset.fr=el.textContent;
+  el.textContent=T(el.dataset.fr);
+}
+function trTokens(el){
+  if(!el)return;
+  el.dataset.fr=el.textContent;      // texte dynamique : ui() vient de le réécrire en français
+  let s=el.dataset.fr;
+  if(I18.lang!=='fr'){
+    for(const k of Object.keys(TR).sort((a,b)=>b.length-a.length)){
+      if(s.includes(k))s=s.split(k).join(TR[k][I18.lang]||k);
+    }
+  }
+  el.textContent=s;
+}
+function translatePass(){
+  document.querySelectorAll('.key .kf').forEach(trEl);
+  document.querySelectorAll('.key .kv').forEach(el=>{ el.dataset.fr=el.textContent; el.textContent=T(el.textContent); });
+  document.querySelectorAll('.mrow span').forEach(trEl);
+  document.querySelectorAll('.mrow b').forEach(el=>{ const s=el.textContent; const t=T(s); if(t!==s)el.textContent=t; });
+  document.querySelectorAll('.exp-item b,.exp-item span').forEach(trEl);
+  trTokens($('gTitle'));
+  const st=$('modeBadge');
+  if(st){
+    if(st.dataset.fr===undefined||['PRÊT','MESURE','PAUSE','ARRÊTÉ','INIT MICRO…'].includes(st.textContent))st.dataset.fr=st.textContent;
+    const BD={'PRÊT':{en:'READY',es:'LISTO'},'MESURE':{en:'MEASURE',es:'MEDIDA'},'PAUSE':{en:'PAUSED',es:'PAUSA'},'ARRÊTÉ':{en:'STOPPED',es:'PARADO'},'INIT MICRO…':{en:'MIC INIT…',es:'INIC. MIC…'}};
+    const e=BD[st.dataset.fr];
+    st.textContent=(I18.lang==='fr'||!e)?st.dataset.fr:(e[I18.lang]||st.dataset.fr);
+  }
+  document.querySelectorAll('.cp-head').forEach(el=>{
+    const btn=el.querySelector('button');
+    const txt=el.firstChild;
+    if(txt&&txt.nodeType===3){
+      if(el.dataset.fr===undefined)el.dataset.fr=txt.textContent;
+      let s=el.dataset.fr;
+      if(I18.lang!=='fr')for(const k of Object.keys(TR).sort((a,b)=>b.length-a.length)){ if(s.includes(k))s=s.split(k).join(TR[k][I18.lang]||k); }
+      txt.textContent=s;
+    }
+  });
+  document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('on',b.dataset.lang===I18.lang));
+}
+function setLang(l){
+  I18.lang=l; localStorage.setItem('sono_lang',l);
+  const hb=document.querySelector('.helpbody');
+  if(hb)hb.innerHTML = l==='en'?HELP_EN : l==='es'?HELP_ES : HELP_FR;
+  translatePass(); try{ui();}catch(e){}
+}
+document.querySelectorAll('.langbtn').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
+const HELP_FR=document.querySelector('.helpbody')?document.querySelector('.helpbody').innerHTML:'';
+const HELP_EN=`
+<h3>Getting started</h3>
+<p>Allow the microphone on first launch, then press <b>▶</b>. A short “MIC INIT…” precedes the measurement. <b>■</b> stops, <b>⏸</b> pauses.</p>
+<h3>Screens</h3>
+<p><b>SCREEN</b> cycles: Spectrum → Spectrogram → History → Values. <b>MENU</b> opens the <b>expert mode</b> (FFT, window, interpolation, 1/3-octave source, theme, this help).</p>
+<ul><li><b>Spectrum</b>: level vs frequency (FFT narrowband, or 1/3-octave / octave via ANALYSIS).</li>
+<li><b>Spectrogram</b>: time × frequency map, level as colour.</li>
+<li><b>History</b>: overall level over time.</li>
+<li><b>Values</b>: numeric indices; <b>swipe left</b> for a second page (LAE, Δ LF…).</li></ul>
+<h3>Quick settings</h3>
+<ul><li><b>WEIGHT</b>: A (human ear), C (low frequencies, peaks), Z (linear).</li>
+<li><b>TIME</b>: Fast (0.125 s), Slow (1 s), V-Slow (10 s).</li>
+<li><b>ANALYSIS</b>: 1/3-octave, octave, or narrowband FFT.</li>
+<li><b>DURATION</b>: free (∞) or timed measurement.</li>
+<li><b>SCALES</b>: contextual menu (dB, frequency, time, colours). Long press = everything automatic.</li></ul>
+<h3>Gestures</h3>
+<ul><li><b>Pinch</b>: zoom frequency, time or dB. <b>Drag</b>: pan. <b>Tap</b>: reading cursor; tap it again to close.</li>
+<li>Spectrogram: <b>two fingers</b> = automatic maximum tracking.</li>
+<li>Narrowband spectrum: <b>two fingers</b> = max-tracking cursor in the zoomed window (re-tap to remove) · <b>ÉMG</b> icon = tonal-audibility detection (orange box, threshold in expert menu).</li>
+<li>Spectrogram: <b>🔊</b> icon = real-time filtered listening: the mic is routed to the audio output through a tight band-pass locked on the zoomed frequency band — the filter follows the zoom live. <b>Headphones required</b> (speaker feedback). Slope adjustable in expert menu: 24 / 48 / 96 dB/oct.</li>
+<li>Spectrum (all modes): <b>VIB</b> icon = vibro-acoustic correlation. Put the phone on the vibrating structure: each band is correlated (0→1) with the accelerometer; bands unrelated to the vibration fade out. Envelope correlation (level fluctuations, ±250 ms lag): a perfectly steady source cannot be correlated.</li></ul>
+<h3>Indices</h3>
+<ul><li><b>LAeq</b>: equivalent level over the measurement — the main result.</li>
+<li><b>LCpeak</b>: C-weighted peak (occupational noise).</li>
+<li><b>LAFmax / LAFmin</b>: extreme levels.</li>
+<li><b>L10 / L50 / L90</b>: levels exceeded 10/50/90 % of the time.</li>
+<li><b>LAE (SEL)</b>: exposure level normalised to 1 s.</li>
+<li><b>Δ LF</b>: LCeq − LAeq, low-frequency content indicator.</li></ul>
+<h3>Triggering</h3><p><b>Long-press ▶</b>: delayed start and/or level threshold. Nothing is integrated before the trigger.</p>
+<h3>Calibration</h3><p>Calibration screen (expert menu). <b>Offset</b>: use an acoustic calibrator (94/114 dB). <b>Frequency correction</b>: sweep 1/3-octaves against a reference meter to build a profile. Calibration is device-specific.</p>
+<h3>1/3-octave: FFT or IEC filters</h3><p><b>FFT synthesis</b>: fast, energy sum of bins. <b>IEC 61260 filters</b>: per-band Butterworth filter bank, closer to the normative template (especially at low frequencies).</p>
+<h3>Export</h3><p><b>Share</b> key: iOS share sheet or download, as <b>CSV</b> (metadata + mic + indices + spectrum + history) or titled <b>PNG</b> of the current graph.</p>
+<h3>Tonal audibility</h3><p>Values screen (page 2): dominant tonal line as <b>+X dB @ Y Hz</b>, or “none”. ISO 1996-2 method (Bark critical band) with temporal confirmation. Expert menu: enable/disable and alert threshold (6–15 dB). Diagnostic indicator, not certified.</p>
+<h3>3D spectrogram view</h3><p>On the spectrogram, <b>3D</b> switches to an isometric waterfall: amplitude gives relief and colour, the vivid front slice is “now”. <b>Drag horizontally</b> to rotate. The <b>time window</b> follows the TIME setting of SCALES (“All” = auto ≈ 3 s; presets show that duration). Frequency zoom and colourbar follow the displayed area. Render (expert menu): <b>Wireframe</b> or <b>Surface</b>.</p>
+<h3>Optimising the spectrogram</h3><p>Expert menu ▸ three presets set FFT, window, overlap, speed and scale at once: <b>Tonal</b>, <b>Transient</b>, <b>Balanced</b>. Gabor trade-off: you cannot be sharp in frequency AND time at once.</p>
+<h3>Themes</h3><p>Expert menu ▸ faceplate theme: Marine, Steel, Light lab, OLED black, <b>Game Boy</b> and <b>Matrix</b>. Everything follows the theme; the CETIM logo stays brand-compliant.</p>
+<h3>Preferences</h3><p>All settings are <b>saved automatically</b> and restored. Expert menu ▸ Reset settings (↺) restores defaults.</p>
+<h3>Offline & background</h3><p>After a first online load, the app opens without network. Install to home screen for an app-like experience. In background, iOS cuts the mic: the measurement <b>auto-pauses</b> and resumes manually.</p>
+<h3 class="warn">Accuracy — please read</h3><p>A smartphone is not a certified instrument. Uncalibrated, the app is reliable in <b>relative</b> terms. Calibrated, it approaches a class meter over a given range, but cannot claim class 1/2 compliance. State this in any report.</p>
+<div class="helpfoot">CETIM · Sound level meter — built-in help<br>Author: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
+const HELP_ES=`
+<h3>Primeros pasos</h3>
+<p>Autoriza el micrófono al primer uso y pulsa <b>▶</b>. Un breve «INIC. MIC…» precede la medida. <b>■</b> detiene, <b>⏸</b> pausa.</p>
+<h3>Pantallas</h3>
+<p><b>PANTALLA</b> alterna: Espectro → Espectrograma → Evolución → Valores. <b>MENÚ</b> abre el <b>modo experto</b> (FFT, ventana, interpolación, fuente de tercios, tema, esta ayuda).</p>
+<ul><li><b>Espectro</b>: nivel por frecuencia (banda fina FFT, o tercios/octava según ANÁLISIS).</li>
+<li><b>Espectrograma</b>: mapa tiempo × frecuencia, nivel en color.</li>
+<li><b>Evolución</b>: nivel global en el tiempo.</li>
+<li><b>Valores</b>: índices numéricos; <b>desliza a la izquierda</b> para la segunda página.</li></ul>
+<h3>Ajustes rápidos</h3>
+<ul><li><b>POND.</b>: A (oído humano), C (graves, picos), Z (lineal).</li>
+<li><b>TIEMPO</b>: Fast (0,125 s), Slow (1 s), V-Slow (10 s).</li>
+<li><b>ANÁLISIS</b>: tercios de octava, octava o FFT banda fina.</li>
+<li><b>DURACIÓN</b>: libre (∞) o temporizada.</li>
+<li><b>ESCALAS</b>: menú contextual (dB, frecuencia, tiempo, colores). Pulsación larga = todo automático.</li></ul>
+<h3>Gestos</h3>
+<ul><li><b>Pellizcar</b>: zoom de frecuencia, tiempo o dB. <b>Arrastrar</b>: desplazar. <b>Tocar</b>: cursor de lectura; tócalo de nuevo para cerrarlo.</li>
+<li>Espectrograma: <b>dos dedos</b> = seguimiento automático del máximo.</li>
+<li>Espectro banda fina: <b>dos dedos</b> = cursor de seguimiento del máx. en la ventana ampliada · icono <b>ÉMG</b> = detección de emergencia tonal (recuadro naranja, umbral en menú experto).</li>
+<li>Espectrograma: icono <b>🔊</b> = escucha filtrada en tiempo real: el micro se envía a la salida a través de un paso-banda estrecho fijado a la banda ampliada — el filtro sigue el zoom. <b>Auriculares imprescindibles</b> (acople en altavoz). Pendiente ajustable: 24/48/96 dB/oct.</li>
+<li>Espectro (todos los modos): icono <b>VIB</b> = correlación vibro-acústica. Apoya el teléfono en la estructura vibrante: cada banda se correlaciona (0→1) con el acelerómetro; las bandas ajenas a la vibración se atenúan. Correlación de envolventes (±250 ms): una fuente perfectamente constante no puede correlacionarse.</li></ul>
+<h3>Índices</h3>
+<ul><li><b>LAeq</b>: nivel equivalente — el resultado principal.</li>
+<li><b>LCpeak</b>: pico ponderado C (ruido laboral).</li>
+<li><b>LAFmax / LAFmin</b>: niveles extremos.</li>
+<li><b>L10 / L50 / L90</b>: niveles superados el 10/50/90 % del tiempo.</li>
+<li><b>LAE (SEL)</b>: nivel de exposición normalizado a 1 s.</li>
+<li><b>Δ LF</b>: LCeq − LAeq, contenido de baja frecuencia.</li></ul>
+<h3>Disparo</h3><p><b>Pulsación larga en ▶</b>: inicio diferido y/o umbral de nivel. Nada se integra antes del disparo.</p>
+<h3>Calibración</h3><p>Pantalla de calibración (menú experto). <b>Offset</b>: usa un calibrador acústico (94/114 dB). <b>Corrección en frecuencia</b>: barre los tercios frente a un sonómetro patrón para construir un perfil. La calibración es propia de cada dispositivo.</p>
+<h3>Tercios: FFT o filtros IEC</h3><p><b>Síntesis FFT</b>: rápida, suma de energía. <b>Filtros IEC 61260</b>: banco Butterworth por banda, más fiel a la plantilla normativa (sobre todo en graves).</p>
+<h3>Exportar</h3><p>Tecla <b>Compartir</b>: hoja de compartir de iOS o descarga, en <b>CSV</b> (metadatos + micro + índices + espectro + historial) o <b>PNG</b> titulado del gráfico actual.</p>
+<h3>Emergencia tonal</h3><p>Pantalla Valores (pág. 2): línea tonal dominante como <b>+X dB @ Y Hz</b>, o «ninguna». Método ISO 1996-2 (banda crítica de Bark) con confirmación temporal. Menú experto: activar/desactivar y umbral (6–15 dB). Indicador de diagnóstico, no certificado.</p>
+<h3>Vista 3D del espectrograma</h3><p>El botón <b>3D</b> pasa a una cascada isométrica: la amplitud da relieve y color, la lámina viva delante es el presente. <b>Arrastra horizontalmente</b> para girar. La <b>ventana de tiempo</b> sigue el ajuste TIEMPO de ESCALAS. El zoom de frecuencia y la barra de color siguen la zona mostrada. Render (menú experto): <b>Alambre</b> o <b>Superficie</b>.</p>
+<h3>Optimizar el espectrograma</h3><p>Menú experto ▸ tres presets ajustan FFT, ventana, solapamiento, velocidad y escala: <b>Tonal</b>, <b>Transitorio</b>, <b>Equilibrado</b>. Compromiso de Gabor: no se puede ser fino en frecuencia Y en tiempo a la vez.</p>
+<h3>Temas</h3><p>Menú experto ▸ tema de fachada: Marine, Acero, Lab claro, OLED negro, <b>Game Boy</b> y <b>Matriz</b>. Todo sigue el tema; el logotipo CETIM cumple siempre la carta gráfica.</p>
+<h3>Preferencias</h3><p>Todos los ajustes se <b>guardan automáticamente</b>. Menú experto ▸ Restablecer ajustes (↺).</p>
+<h3>Sin conexión y segundo plano</h3><p>Tras una primera carga con red, la app abre sin conexión. Instálala en la pantalla de inicio. En segundo plano, iOS corta el micro: la medida se <b>pausa automáticamente</b> y se reanuda a mano.</p>
+<h3 class="warn">Precisión — leer</h3><p>Un smartphone no es un instrumento certificado. Sin calibrar, la app es fiable en <b>relativo</b>. Calibrada, se aproxima a un sonómetro de clase en un rango dado, pero no puede reivindicar clase 1/2. Indícalo en cualquier informe.</p>
+<div class="helpfoot">CETIM · Sonómetro — ayuda integrada<br>Autor: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
+if(I18.lang!=='fr')setLang(I18.lang); else translatePass();
+
+/* traduire après chaque rafraîchissement d'interface */
+const _uiOrig=ui; ui=function(){_uiOrig(); translatePass();};
+translatePass();
 </script>
 </body>
 </html>
