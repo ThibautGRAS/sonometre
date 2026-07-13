@@ -178,6 +178,9 @@ if('serviceWorker' in navigator){
   .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--ice);z-index:2;text-shadow:0 0 8px rgba(79,195,255,.4)}
   .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
+  .sg3dbtn{position:absolute;top:6px;right:34px;z-index:6;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.06em;border-radius:7px;padding:4px 9px;cursor:pointer}
+  .sg3dbtn:active{background:rgba(79,195,255,.3)}
+  .sg3dbtn.on{background:rgba(79,195,255,.28);color:#EAF6FF}
   .gpane.on{display:block}
   canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 
@@ -419,7 +422,7 @@ if('serviceWorker' in navigator){
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
       <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas></div>
-      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas></div>
+      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
@@ -2071,9 +2074,90 @@ function sgTick(){
   const now=performance.now();
   if(now-SG.last>=sgInterval()){SG.last=now;sgColumn();}
 }
+/* ===== vue 3D isométrique "waterfall" du spectrogramme =====
+   Chaque colonne (temps) est tracée en profil fréquence→amplitude, projetée en
+   isométrique. L'amplitude donne la HAUTEUR (relief) en plus de la COULEUR.
+   Colonnes récentes au premier plan. */
+function drawSgram3D(){
+  const c=CV.sgramCv; if(!c)return;
+  const g=c.getContext('2d'); const W=c.width,H=c.height;
+  const bg=THEME.bg; g.fillStyle=bg; g.fillRect(0,0,W,H);
+  if(!SG.cols||!SG.map){ return; }
+  /* même échelle couleur/amplitude que la vue 2D */
+  let sc={lo:S.sgMin,hi:S.sgMax};
+  if(S.sgAuto){
+    const Wp0=SG.Wp,Hb=SG.bufH; let lo=Infinity,hi=-Infinity;
+    const stC=Math.max(1,Math.round(Wp0/120)), stR=Math.max(1,Math.round(Hb/160));
+    for(let x=0;x<Wp0;x+=stC){const a=SG.cols[x];if(!a)continue;for(let r=0;r<Hb;r+=stR){const v=a[r];if(v>-90){if(v<lo)lo=v;if(v>hi)hi=v;}}}
+    if(isFinite(lo)){lo=Math.max(10,lo);hi=Math.max(lo+5,hi);sc={lo,hi};}
+    else sc={lo:10,hi:60};
+  }
+  const lo=sc.lo, hi=sc.hi, span=Math.max(1,hi-lo);
+  // sous-échantillonnage pour la fluidité : ~90 colonnes de temps, ~120 lignes de fréquence
+  const Wp=SG.Wp, bufH=SG.bufH;
+  const nT=Math.min(90, Wp), nF=Math.min(120, bufH);
+  // géométrie iso
+  const marginL=38, marginR=14, marginT=24, marginB=30;
+  const plotW=W-marginL-marginR, plotH=H-marginT-marginB;
+  const depth=plotH*0.42;                   // profondeur de la scène (décalage total en Y sur le temps)
+  const skew =plotW*0.16;                   // cisaillement horizontal (effet iso)
+  const colW =(plotW-skew)/nF;              // largeur d'une cellule fréquence à l'écran
+  const ampH =plotH*0.5;                    // hauteur max du relief
+  // helpers de projection : (fréquence i∈[0,nF], temps j∈[0,nT], niveau L) -> écran
+  const seq=SG.colSeq||0;
+  const colAt=jj=>{ // colonne de données pour l'indice temps jj (0=plus ancien, nT-1=récent)
+    const frac=jj/(nT-1||1);
+    const col=Math.round((seq-1) - (1-frac)*(Math.min(Wp,seq)-1));
+    const idx=((col%Wp)+Wp)%Wp;
+    return SG.cols[idx]||null;
+  };
+  const lineRow=fi=>Math.round(fi/(nF-1||1)*(bufH-1));   // ligne de données pour l'indice fréquence
+  // dessin du plus lointain (ancien) au plus proche (récent) pour l'occlusion
+  for(let j=0;j<nT;j++){
+    const a=colAt(j); 
+    const dz=j/(nT-1||1);                   // 0 lointain -> 1 proche
+    const baseX=marginL + skew*(1-dz);
+    const baseY=marginT + depth*(1-dz) + (plotH-depth);
+    // profil de la colonne
+    let started=false;
+    g.beginPath();
+    const pts=[];
+    for(let i=0;i<nF;i++){
+      const row=lineRow(i);
+      let L = a? a[row] : lo;
+      if(!isFinite(L)||L<lo)L=lo; if(L>hi)L=hi;
+      const t=(L-lo)/span;                  // 0..1
+      const x=baseX + i*colW;
+      const y=baseY - t*ampH;
+      pts.push([x,y,t,L]);
+    }
+    // remplissage sous la courbe avec dégradé de couleur par segment (couleur = amplitude)
+    for(let i=0;i<nF-1;i++){
+      const [x0,y0,t0]=pts[i], [x1,y1]=pts[i+1];
+      const idx=(Math.max(0,Math.min(255,Math.round(t0*255)))|0)*3;
+      g.fillStyle='rgb('+LUT[idx]+','+LUT[idx+1]+','+LUT[idx+2]+')';
+      g.beginPath();
+      g.moveTo(x0,y0); g.lineTo(x1,y1);
+      g.lineTo(x1,baseY); g.lineTo(x0,baseY);
+      g.closePath(); g.fill();
+    }
+    // arête supérieure (crête) plus claire pour le relief
+    g.beginPath();
+    pts.forEach((p,i)=>{ i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]); });
+    g.strokeStyle='rgba(255,255,255,'+(0.10+0.22*dz)+')'; g.lineWidth=1; g.stroke();
+  }
+  // axes / repères légers
+  g.fillStyle=THEME.axis; g.font='8px Arial'; g.textAlign='left';
+  g.fillText('fréquence →', marginL, H-8);
+  g.save(); g.translate(10,marginT+8); g.rotate(0);
+  g.fillText('◤ temps', 0, 0); g.restore();
+  g.textAlign='right'; g.fillText(Math.round(hi)+' dB', marginL-4, marginT+8);
+  g.fillText(Math.round(lo)+' dB', marginL-4, H-marginB);
+}
 function drawSgram(){
   const c=CV.sgramCv; if(!c)return;
   const cv=$('sgramCv');
+  if(S.sg3d){ if(!SG.init||SG.W!==cv.width||SG.H!==cv.height||SG.fsc!==S.fscale)sgSetup(c); drawSgram3D(); return; }
   if(!SG.init||SG.W!==cv.width||SG.H!==cv.height||SG.fsc!==S.fscale)sgSetup(c);
   sgBlit(c);
 }
@@ -2509,6 +2593,12 @@ $('presetPop').addEventListener('click',e=>{ if(e.target.id==='presetPop')$('pre
 document.querySelectorAll('.ppopt').forEach(btn=>{
   btn.onclick=()=>{ applyPreset(btn.getAttribute('data-preset')); $('presetPop').classList.remove('on'); };
 });
+$('sg3dBtn').onclick=()=>{
+  S.sg3d=!S.sg3d;
+  $('sg3dBtn').classList.toggle('on',S.sg3d);
+  $('sg3dBtn').textContent=S.sg3d?'2D':'3D';
+  drawSgram();
+};
 $('mFscale').onclick=()=>{S.fscale=S.fscale==='log'?'lin':'log';SG.init=false;resetView();ui();};
 $('mWin').onclick=()=>{
   S.win=WIN_ORDER[(WIN_ORDER.indexOf(S.win)+1)%WIN_ORDER.length];
