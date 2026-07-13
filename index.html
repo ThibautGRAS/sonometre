@@ -451,7 +451,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.6</div>
+  <div class="splashver">V35.7</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1042,7 +1042,7 @@ document.addEventListener('DOMContentLoaded',()=>{
    fenêtre de fréquence zoomée (2× passe-haut + 2× passe-bas Butterworth ≈ 24 dB/oct de
    chaque côté). Le filtre SUIT le zoom en direct. Écouteurs fortement recommandés :
    sur haut-parleur, le micro réentend la sortie → larsen. */
-const LSN={on:false, nodes:null, lastF:'', warned:false};
+const LSN={on:false, nodes:null, lastF:'', warned:false, _raf:0};
 function lsnBuild(){
   if(!S.ctx||!S.srcNode)return false;
   const c=S.ctx;
@@ -1070,6 +1070,7 @@ function lsnUpdate(){
   for(const f of LSN.nodes.lp)f.frequency.setTargetAtTime(f1,t,0.05);
 }
 function lsnOff(){
+  if(LSN._raf){cancelAnimationFrame(LSN._raf);LSN._raf=0;}
   if(LSN.nodes){
     try{S.srcNode&&S.srcNode.disconnect(LSN.nodes.first);}catch(e){}
     try{LSN.nodes.gn.disconnect();}catch(e){}
@@ -1085,15 +1086,33 @@ function lsnRebuild(){                     // changement de pente pendant l'éco
 function lsnSetGain(){                     // ajuste le gain sans reconstruire la chaîne
   if(LSN.nodes&&S.ctx) LSN.nodes.gn.gain.setTargetAtTime(Math.pow(10,(S.lsnGain||0)/20),S.ctx.currentTime,0.05);
 }
-function lsnToggle(){
+/* garde le filtre calé sur la bande zoomée même sans mesure (loop() ne tourne pas alors).
+   En mesure, loop() appelle déjà lsnUpdate → ici on ne fait que reprogrammer la frame. */
+function lsnTick(){
+  if(!LSN.on){LSN._raf=0;return;}
+  if(!S.running) lsnUpdate();
+  LSN._raf=requestAnimationFrame(lsnTick);
+}
+async function lsnToggle(){
   if(LSN.on){lsnOff();ui();return;}
-  if(!S.micReady||!S.srcNode){
+  /* amorcer l'audio SANS démarrer de mesure : le clic est un geste utilisateur,
+     donc l'autorisation micro passe. Écoute filtrée possible dès le micro autorisé. */
+  try{
+    if(!S.ctx) await initAudio();
+    else if(!micAlive()) await reviveMic(true);
+    if(S.ctx && S.ctx.state==='suspended') await S.ctx.resume();
+  }catch(e){
     const el=$('err');el.style.display='block';
-    el.textContent="Démarre d'abord la mesure (le micro doit être actif) puis réactive ♪ SON.";
+    el.textContent="Micro indisponible : autorise l'accès au micro puis réessaie ♪ SON.";
     setTimeout(()=>el.style.display='none',5000);return;
   }
+  if(!S.srcNode){
+    const el=$('err');el.style.display='block';
+    el.textContent="Micro non prêt — réessaie dans un instant.";
+    setTimeout(()=>el.style.display='none',4000);return;
+  }
   if(lsnBuild()){
-    LSN.on=true; LSN.lastF=''; lsnUpdate(); ui();
+    LSN.on=true; LSN.lastF=''; lsnUpdate(); lsnTick(); ui();
     const lat=Math.round(((S.ctx.baseLatency||0)+(S.ctx.outputLatency||0))*1000);
     const latTxt=lat>0?(' Latence ≈ '+lat+' ms (hors Bluetooth : +100-200 ms).'):'';
     const el=$('err');el.style.display='block';
