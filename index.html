@@ -451,7 +451,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.9</div>
+  <div class="splashver">V35.10</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -542,7 +542,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
           <div class="mrow" id="mSg3dMode"><span>Rendu 3D spectrogramme</span><b>Fil de fer</b></div>
           <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
-          <div class="mrow" id="mLsnGain"><span>Gain écoute ♪</span><b>+12 dB</b></div>
+          <div class="mrow" id="mLsnGain"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
           <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
@@ -3128,7 +3128,7 @@ function ui(){
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
   $('mSg3dMode').querySelector('b').textContent=S.sg3dMode==='surf'?'Surface':'Fil de fer';
   $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
-  $('mLsnGain').querySelector('b').textContent=(S.lsnGain>=0?'+':'')+(S.lsnGain||0)+' dB';
+  { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=String(S.lsnGain||0); }
 
   updScaleLbl();
   $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Expert';
@@ -3284,7 +3284,7 @@ $('mTheme').onclick=()=>{
 };
 $('mSg3dMode').onclick=()=>{ S.sg3dMode=S.sg3dMode==='surf'?'wire':'surf'; SG._3dKey=''; ui(); if(S.sg3d)drawSgram(); };
 $('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); savePrefs(); };
-$('mLsnGain').onclick=()=>{ const O=[0,6,12,18,24,30]; S.lsnGain=O[(O.indexOf(S.lsnGain||0)+1)%O.length]; lsnSetGain(); ui(); savePrefs(); };
+$('lsnGainSel').onchange=(e)=>{ S.lsnGain=+e.target.value||0; lsnSetGain(); savePrefs(); };
 $('micSel').onchange=async(e)=>{
   S.micId=e.target.value||''; savePrefs();
   if(S.running){ try{ await acquireMic(); showMicInfo(); }catch(err){ const el=$('err'); if(el){el.style.display='block'; el.textContent='Ce micro n a pas pu être sélectionné (iOS choisit souvent l entrée automatiquement).'; setTimeout(()=>el.style.display='none',5000);} } }
