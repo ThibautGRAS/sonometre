@@ -39,7 +39,9 @@ Le traitement du signal est intégralement écrit à la main en JavaScript : FFT
 ### Confort
 - **Hors ligne** : après un premier chargement en ligne, l'application s'ouvre sans réseau (service worker)
 - **Installable** sur l'écran d'accueil comme une application (PWA)
-- **Thèmes de façade** : Marine, Acier, Clair labo, OLED noir (charte CETIM conservée)
+- **Pause automatique en arrière-plan** : quand l'app est masquée, iOS coupe le micro ; la mesure se met en pause au lieu d'intégrer des données fausses, et reprend au retour
+- **Préférences persistantes** : thème, pondération, temps, mode, échelles, FFT, fenêtre, tiers d'octave, déclenchement et calibration sont enregistrés et restaurés à la réouverture ; option de réinitialisation dans le mode expert
+- **Thèmes de façade** : Marine, Acier, Clair labo, OLED noir et Game Boy (écran vert monochrome). Façade, écran, capsule, touches et couleurs des courbes suivent le thème ; le logo reste conforme à la charte (blanc ou bleu)
 - Interface entièrement en français, pensée pour l'usage à une main sur iPhone
 
 ## Utilisation
@@ -54,8 +56,9 @@ Le traitement du signal est intégralement écrit à la main en JavaScript : FFT
 - Touche **ÉCRAN** : appui court pour changer d'affichage, appui long pour le mode expert
 - Touche **▶** : appui long pour le menu de déclenchement
 - Sur les graphes : pincer pour zoomer, glisser pour déplacer, toucher pour poser un curseur
+- Bouton **?** dans l'en-tête : ouvre l'aide
 
-Une **page d'aide** complète est accessible depuis le menu expert de l'application.
+Une **page d'aide** complète est accessible depuis le bouton **?** de l'en-tête.
 
 ## Précision et limites
 
@@ -79,7 +82,9 @@ Ces réserves doivent accompagner tout usage en contexte de rapport ou de décis
 
 Le dépôt est publié via **GitHub Pages** (branche `main`, racine). Toute modification de `index.html` poussée sur `main` est mise en ligne automatiquement. Le service worker est ré-estampillé à chaque version pour forcer la mise à jour du cache sur les appareils.
 
-## Licence et marque
+## Auteur et licence
+
+Développé par **Thibaut Gras** (CETIM), 2026 — thibaut.gras@cetim.fr
 
 Le logo et le nom CETIM sont la propriété du CETIM. Ce projet est développé dans le cadre d'un usage interne d'ingénierie acoustique. Toute diffusion externe doit être validée par le service concerné.
 
