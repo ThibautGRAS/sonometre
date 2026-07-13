@@ -197,6 +197,9 @@ if('serviceWorker' in navigator){
   .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--ice);z-index:2;text-shadow:0 0 8px rgba(79,195,255,.4)}
   .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
+  .sg3dbtn{transition:opacity .35s ease;}
+  .sg3dbtn.fade{opacity:.18}
+  .sg3dbtn:active{opacity:1}
   .sg3dbtn{position:absolute;top:6px;right:34px;z-index:6;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.06em;border-radius:7px;padding:4px 9px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
   .sg3dbtn.on{background:rgba(79,195,255,.28);color:#EAF6FF}
@@ -963,6 +966,22 @@ function parabolicPeak(getDb, i, binHz){
   const Lpk=y0-0.25*(ym1-yp1)*delta;           // amplitude au sommet (corrige le scalloping)
   return {f:(i+delta)*binHz, L:Lpk};
 }
+/* ===== estompage automatique des icônes flottantes des graphes =====
+   Motif « contrôles de lecteur vidéo » : pleinement visibles à l'interaction,
+   quasi transparents après 3,5 s pour laisser lire les étiquettes d'axes dessous. */
+const FADE={t:null};
+function fadeWake(){
+  document.querySelectorAll('.sg3dbtn').forEach(b=>b.classList.remove('fade'));
+  clearTimeout(FADE.t);
+  FADE.t=setTimeout(()=>{
+    document.querySelectorAll('.sg3dbtn').forEach(b=>b.classList.add('fade'));
+  },3500);
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const zone=document.querySelector('.lcd')||document.body;
+  ['touchstart','mousedown'].forEach(ev=>zone.addEventListener(ev,fadeWake,{passive:true}));
+  fadeWake();
+});
 /* ===== écoute filtrée en temps réel =====
    Réinjecte le micro vers la sortie audio à travers un passe-bande cascade calé sur la
    fenêtre de fréquence zoomée (2× passe-haut + 2× passe-bas Butterworth ≈ 24 dB/oct de
@@ -1789,6 +1808,9 @@ function drawSpectrum(){
     }
     autoRange(sc,dLo,dHi);
     grid(g,w,h,sc,padL,10);
+    g.fillStyle=THEME.axis;g.font='8px Arial';
+    g.textAlign='right';g.fillText('dB',padL-3,9);            // unité axe Y
+    g.textAlign='right';g.fillText('Hz',w-2,h-4);             // unité axe X
     const bw=(w-padL-4)/nb;
     g.textAlign='center';
     const labelSet=(S.mode==='oct'||nb<=12)?names:[31.5,125,500,2000,8000];
@@ -1854,6 +1876,9 @@ function drawSpectrum(){
     }
     autoRange(sc,dLo,dHi);
     grid(g,w,h,sc,padL,10);
+    g.fillStyle=THEME.axis;g.font='8px Arial';
+    g.textAlign='right';g.fillText('dB',padL-3,9);
+    g.textAlign='right';g.fillText('Hz',w-2,h-4);
     g.strokeStyle=THEME.grid;g.fillStyle=THEME.axis;g.font='8px Arial';g.textAlign='center';
     for(const f of dynTicks(fmin,fmax,6)){
       const x=x2(f);g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();
@@ -1960,6 +1985,9 @@ function drawHistory(){
   }
   autoRange(sc,dLo,dHi);
   grid(g,w,h,sc,padL,10);
+  g.fillStyle=THEME.axis;g.font='8px Arial';
+  g.textAlign='right';g.fillText('dB',padL-3,9);
+  g.textAlign='right';g.fillText('s',w-2,h-4);
   const x2=t=>padL+((t-t0)/span)*(w-padL-4);
   g.beginPath();g.strokeStyle=THEME.line;g.lineWidth=1.1;let st=false;
   for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const x=x2(pt.t),y=y2(pt.L,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
