@@ -202,6 +202,7 @@ if('serviceWorker' in navigator){
   .sg3dbtn.on{background:rgba(79,195,255,.28);color:#EAF6FF}
   #emgBtn.on{background:rgba(255,180,84,.24);border-color:rgba(255,180,84,.65);color:#FFD9A0}
   #vibBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
+  #lsnBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
   #vibBtn.dis{opacity:.35}
   .gpane.on{display:block}
   canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
@@ -446,7 +447,7 @@ if('serviceWorker' in navigator){
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
       <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="emgBtn">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="right:86px">VIB</button></div>
-      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button></div>
+      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn" style="top:38px">♪ SON</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
@@ -710,6 +711,7 @@ if('serviceWorker' in navigator){
         <li><b>Toucher</b> : poser un curseur de lecture (fréquence + niveau). Toucher le curseur le referme.</li>
         <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection d'émergence tonale (encadré orange, seuil réglable au menu expert).</li>
+        <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
         <li>Spectre (tous modes) : icône <b>VIB</b> = corrélation vibro-acoustique. Pose le téléphone sur la structure vibrante : chaque bande est corrélée (coefficient 0→1) avec l'accéléromètre ; les bandes étrangères à la vibration s'estompent (en bande fine, un voile couvre les zones non corrélées ; en octave, coefficient agrégé), le badge indique le coefficient max. Corrélation sur les enveloppes (fluctuations de niveau, ±250 ms de délai toléré) : une source parfaitement constante ne peut pas être corrélée.</li>
       </ul>
 
@@ -956,6 +958,60 @@ function parabolicPeak(getDb, i, binHz){
   const Lpk=y0-0.25*(ym1-yp1)*delta;           // amplitude au sommet (corrige le scalloping)
   return {f:(i+delta)*binHz, L:Lpk};
 }
+/* ===== écoute filtrée en temps réel =====
+   Réinjecte le micro vers la sortie audio à travers un passe-bande cascade calé sur la
+   fenêtre de fréquence zoomée (2× passe-haut + 2× passe-bas Butterworth ≈ 24 dB/oct de
+   chaque côté). Le filtre SUIT le zoom en direct. Écouteurs fortement recommandés :
+   sur haut-parleur, le micro réentend la sortie → larsen. */
+const LSN={on:false, nodes:null, lastF:'', warned:false};
+function lsnBuild(){
+  if(!S.ctx||!S.srcNode)return false;
+  const c=S.ctx;
+  const hp1=c.createBiquadFilter(),hp2=c.createBiquadFilter(),lp1=c.createBiquadFilter(),lp2=c.createBiquadFilter();
+  hp1.type='highpass';hp2.type='highpass';lp1.type='lowpass';lp2.type='lowpass';
+  [hp1,hp2,lp1,lp2].forEach(f=>{f.Q.value=0.707;});
+  const gn=c.createGain(); gn.gain.value=1.0;
+  S.srcNode.connect(hp1);hp1.connect(hp2);hp2.connect(lp1);lp1.connect(lp2);lp2.connect(gn);gn.connect(c.destination);
+  LSN.nodes={hp1,hp2,lp1,lp2,gn};
+  return true;
+}
+function lsnUpdate(){
+  if(!LSN.on||!LSN.nodes||!S.ctx)return;
+  const f0=Math.max(20,S.fview.min), f1=Math.max(f0*1.2,Math.min(S.fview.max,nyq()-200));
+  const key=(f0|0)+'|'+(f1|0);
+  if(key===LSN.lastF)return;
+  LSN.lastF=key;
+  const t=S.ctx.currentTime;
+  LSN.nodes.hp1.frequency.setTargetAtTime(f0,t,0.05);
+  LSN.nodes.hp2.frequency.setTargetAtTime(f0,t,0.05);
+  LSN.nodes.lp1.frequency.setTargetAtTime(f1,t,0.05);
+  LSN.nodes.lp2.frequency.setTargetAtTime(f1,t,0.05);
+}
+function lsnOff(){
+  if(LSN.nodes){
+    try{S.srcNode&&S.srcNode.disconnect(LSN.nodes.hp1);}catch(e){}
+    try{LSN.nodes.gn.disconnect();}catch(e){}
+    LSN.nodes=null;
+  }
+  LSN.on=false; LSN.lastF='';
+}
+function lsnToggle(){
+  if(LSN.on){lsnOff();ui();return;}
+  if(!S.micReady||!S.srcNode){
+    const el=$('err');el.style.display='block';
+    el.textContent="Démarre d'abord la mesure (le micro doit être actif) puis réactive ♪ SON.";
+    setTimeout(()=>el.style.display='none',5000);return;
+  }
+  if(lsnBuild()){
+    LSN.on=true; LSN.lastF=''; lsnUpdate(); ui();
+    if(!LSN.warned){
+      LSN.warned=true;
+      const el=$('err');el.style.display='block';
+      el.textContent="Écoute filtrée active — branche des ÉCOUTEURS : sur haut-parleur, risque de larsen. Le filtre suit la bande zoomée.";
+      setTimeout(()=>el.style.display='none',7000);
+    }
+  }
+}
 /* ===== corrélation vibro-acoustique (accéléromètre) =====
    Principe : l'accéléromètre du téléphone (≈60 Hz via devicemotion) ne permet pas de
    corréler les formes d'onde, mais on corrèle les ENVELOPPES : coefficient de Pearson
@@ -1195,6 +1251,7 @@ async function initAudio(){
 }
 /* (ré)acquiert le flux micro et le branche sur l'analyseur existant */
 async function acquireMic(){
+  lsnOff();
   if(S.srcNode){try{S.srcNode.disconnect();}catch(e){}}
   if(S.stream){for(const t of S.stream.getTracks()){try{t.stop();}catch(e){}}}
   S.stream=await navigator.mediaDevices.getUserMedia({audio:{
@@ -1506,6 +1563,7 @@ function loop(ts){
   if(S.duration>0 && S.elapsed>=S.duration){stopMeasure(true);}
 
   sgTick();                 // le spectrogramme continue même si un autre écran ou le menu est affiché
+  lsnUpdate();              // l'écoute filtrée suit la fenêtre de fréquence zoomée
   updateNumbers(L);
   drawActive();
 }
@@ -2917,6 +2975,7 @@ function ui(){
   $('vibBtn').style.display='block';   // dispo en 1/3 oct, octave et bande fine
   $('vibBtn').classList.toggle('on',VIB.on);
   $('vibBtn').classList.toggle('dis',!VIB.sup);
+  $('lsnBtn').classList.toggle('on',LSN.on);
   $('mEmgThr').querySelector('b').textContent=(S.emgThr||10)+' dB';
   $('mEmgThr').style.opacity=S.emgOn?'1':'.4';
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
@@ -3025,6 +3084,7 @@ $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
 $('mEmg').onclick=()=>{S.emgOn=!S.emgOn;ui();drawActive();};
 $('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();drawActive();};
 $('vibBtn').onclick=()=>{vibToggle();};
+$('lsnBtn').onclick=()=>{lsnToggle();};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
 const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['gameboy','Game Boy'],['matrix','Matrice']];
 /* ===== préférences persistantes ===== */
