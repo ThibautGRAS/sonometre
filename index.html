@@ -450,7 +450,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.3</div>
+  <div class="splashver">V35.4</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2537,26 +2537,31 @@ function drawSgram3D(){
     for(let j=0;j<nT;j++){
       const xEnd=idxs[j], xStart=Math.max(0,xEnd-stepT+1);
       for(let i=0;i<nF;i++){
+        /* MOYENNE dans le TEMPS d'un MAX en FRÉQUENCE : une raie fine (1-2 lignes) noyée
+           dans un bin large n'est plus diluée par la moyenne — elle ressort à son vrai
+           niveau, comme sur la 2D. Le temps reste moyenné (décimation propre). */
         let sum=0,n=0;
         for(let x=xStart;x<=xEnd;x++){
           const a=SG.cols[x]; if(!a)continue;
-          for(let r=rowA[i];r<=rowB[i];r++){
-            const L=a[r]; if(isFinite(L)){sum+=L;n++;}
-          }
+          let mx=-Infinity;
+          for(let r=rowA[i];r<=rowB[i];r++){ const L=a[r]; if(isFinite(L)&&L>mx)mx=L; }
+          if(mx>-Infinity){ sum+=mx; n++; }
         }
         let L=n?sum/n:lo;
         if(L<lo)L=lo; if(L>hi)L=hi;
         prof[i]=(L-lo)/span;
       }
-      let sm=new Float32Array(nF);
-      sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
-      for(let i=1;i<nF-1;i++) sm[i]=(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
-      if(surf){                     // surface : 2e passe de lissage → relief doux
-        const s2=new Float32Array(nF);
-        s2[0]=sm[0]; s2[nF-1]=sm[nF-1];
-        for(let i=1;i<nF-1;i++) s2[i]=(sm[i-1]+2*sm[i]+sm[i+1])*0.25;
-        sm=s2;
-      }
+      /* lissage PRÉSERVANT LES PICS : un maximum local (raie tonale) n'est pas rabaissé ;
+         seuls les creux (bruit) sont lissés. Sinon le 1-2-1 étalait la raie et la faisait chuter. */
+      const smooth=src=>{
+        const o=new Float32Array(nF); o[0]=src[0]; o[nF-1]=src[nF-1];
+        for(let i=1;i<nF-1;i++){
+          o[i]=(src[i]>=src[i-1]&&src[i]>=src[i+1]) ? src[i] : (src[i-1]+2*src[i]+src[i+1])*0.25;
+        }
+        return o;
+      };
+      let sm=smooth(prof);
+      if(surf) sm=smooth(sm);        // surface : 2e passe (toujours en préservant les pics)
       P.push(sm);
     }
     /* lissage LE LONG DU TEMPS : moyenne entre tranches voisines — supprime le jitter
