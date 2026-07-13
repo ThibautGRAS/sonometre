@@ -142,9 +142,11 @@ if('serviceWorker' in navigator){
   .miccap{flex:0 0 auto;display:flex;justify-content:center;margin:0 0 5px}
   .miccap i{
     width:92px;height:15px;border-radius:0 0 14px 14px;border:1px solid var(--line);border-top:0;
+    /* phase du motif calée sur la largeur utile (92 px, pas 6 px) : centres de points à
+       4 px des DEUX bords (92-2·4 divisible par 6) → symétrique, aucun point coupé */
     background:
-      radial-gradient(circle, var(--cap-dot) 1px, transparent 1.4px) 3px 3px/6px 6px repeat-x,
-      radial-gradient(circle, var(--cap-dot) 1px, transparent 1.4px) 6px 8px/6px 6px repeat-x,
+      radial-gradient(circle, var(--cap-dot) 1px, transparent 1.4px) 1px 3px/6px 6px repeat-x,
+      radial-gradient(circle, var(--cap-dot) 1px, transparent 1.4px) 1px 8px/6px 6px repeat-x,
       linear-gradient(180deg,var(--cap0),var(--cap1));
     box-shadow:inset 0 -3px 7px var(--cap-sh,rgba(0,0,0,.55));
   }
