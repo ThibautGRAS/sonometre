@@ -148,6 +148,13 @@ if('serviceWorker' in navigator){
       linear-gradient(180deg,var(--cap0),var(--cap1));
     box-shadow:inset 0 -3px 7px var(--cap-sh,rgba(0,0,0,.55));
   }
+  /* Game Boy : pas de capsule (la coque DMG n'a rien à cet endroit) */
+  body.th-gameboy .miccap{display:none}
+  /* Thèmes clairs : fente lisse en creux, sans rayures (les fentes diagonales font tache sur fond clair) */
+  body.th-clair .miccap i{
+    background:linear-gradient(180deg,var(--cap0),var(--cap1));
+    box-shadow:inset 0 2px 4px rgba(60,80,110,.30), inset 0 -1px 2px rgba(255,255,255,.55);
+  }
 
   .bezel{
     flex:1 1 auto;min-height:0;display:flex;position:relative;
