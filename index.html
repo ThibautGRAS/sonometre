@@ -1824,7 +1824,7 @@ function drawSpectrum(){
     /* badge d'état de la corrélation vibratoire */
     if(VIB.on&&VIB.kind==='bands'){
       const msg=VIB.coef?('corr. vib max '+VIB.cGlob.toFixed(2)):(VIB.nAcc<10?'accéléro : pose le téléphone sur la structure…':'corr. vib : acquisition… (~5 s)');
-      labelBox(g,w,padL+90,msg,2,'#0B2B14','#4FE08A','#CFF5DC');
+      labelBox(g,w,padL+90,msg,36,'#0B2B14','#4FE08A','#CFF5DC');
     }
     /* curseur : bande sélectionnée */
     if(S.cursor){
@@ -1832,7 +1832,7 @@ function drawSpectrum(){
       const x=padL+b*bw, L=lvl(pw[b]);
       g.strokeStyle=THEME.cursor;g.lineWidth=1.5;
       g.strokeRect(x+0.5,y2(Math.max(L,sc.lo),h,sc)-0.5,Math.max(1,bw-2)+1,Math.max(1,y2(sc.lo,h,sc)-y2(Math.max(L,sc.lo),h,sc))+1);
-      cursorLabel(g,w,x+bw/2,fmtF(names[b])+'Hz · '+fmt(L)+' dB');
+      cursorLabel(g,w,x+bw/2,fmtF(names[b])+'Hz · '+fmt(L)+' dB',36);
     }
     $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
   }else{
@@ -1882,7 +1882,7 @@ function drawSpectrum(){
     /* helpers communs curseur / émergence / max */
     const n=S.fftDb?S.fftDb.length:0;
     const getDb=k=>{let p=binPow?binPow[Math.max(1,Math.min(n-1,k))]:0;if(!isFinite(p)||p<=0)return -180;if(wSel)p*=wSel[Math.max(1,Math.min(n-1,k))];return 10*Math.log10(p);};
-    let labY=2;                                   // empilement vertical des étiquettes
+    let labY=36;                                  // empilement vertical : démarre SOUS les boutons VIB/ÉMG (y 6..32)
     /* curseur : cherche le pic local près du point visé, puis interpolation parabolique */
     if(S.cursor&&S.cursor.f>=fmin&&S.cursor.f<=fmax&&S.binHz){
       let ic=Math.max(1,Math.min(n-1,Math.round(S.cursor.f/S.binHz)));
@@ -3909,20 +3909,25 @@ function trTokens(el){
   el.textContent=s;
 }
 function translatePass(){
-  document.querySelectorAll('.key .kf').forEach(trEl);
-  document.querySelectorAll('.key .kv').forEach(el=>{ el.dataset.fr=el.textContent; el.textContent=T(el.textContent); });
-  document.querySelectorAll('.mrow span').forEach(trEl);
-  document.querySelectorAll('.mrow b').forEach(el=>{ const s=el.textContent; const t=T(s); if(t!==s)el.textContent=t; });
-  document.querySelectorAll('.exp-item b,.exp-item span').forEach(trEl);
-  trTokens($('gTitle'));
+  const safe=f=>{try{f();}catch(e){}};
+  safe(()=>document.querySelectorAll('.key .kf').forEach(trEl));
+  safe(()=>document.querySelectorAll('.key .kv').forEach(el=>{
+    if(el.children.length)return;               // ⏸ / ▶ : le contenu est un SVG, ne pas l'écraser
+    el.dataset.fr=el.textContent; el.textContent=T(el.textContent);
+  }));
+  safe(()=>document.querySelectorAll('.mrow span').forEach(trEl));
+  safe(()=>document.querySelectorAll('.mrow b').forEach(el=>{ const s=el.textContent; const t=T(s); if(t!==s)el.textContent=t; }));
+  safe(()=>document.querySelectorAll('.exp-item b,.exp-item span').forEach(trEl));
+  safe(()=>trTokens($('gTitle')));
+  const safe2=f=>{try{f();}catch(e){}};
   const st=$('modeBadge');
-  if(st){
+  if(st)safe2(()=>{
     if(st.dataset.fr===undefined||['PRÊT','MESURE','PAUSE','ARRÊTÉ','INIT MICRO…'].includes(st.textContent))st.dataset.fr=st.textContent;
     const BD={'PRÊT':{en:'READY',es:'LISTO'},'MESURE':{en:'MEASURE',es:'MEDIDA'},'PAUSE':{en:'PAUSED',es:'PAUSA'},'ARRÊTÉ':{en:'STOPPED',es:'PARADO'},'INIT MICRO…':{en:'MIC INIT…',es:'INIC. MIC…'}};
     const e=BD[st.dataset.fr];
     st.textContent=(I18.lang==='fr'||!e)?st.dataset.fr:(e[I18.lang]||st.dataset.fr);
-  }
-  document.querySelectorAll('.cp-head').forEach(el=>{
+  });
+  safe2(()=>document.querySelectorAll('.cp-head').forEach(el=>{
     const btn=el.querySelector('button');
     const txt=el.firstChild;
     if(txt&&txt.nodeType===3){
@@ -3931,8 +3936,8 @@ function translatePass(){
       if(I18.lang!=='fr')for(const k of Object.keys(TR).sort((a,b)=>b.length-a.length)){ if(s.includes(k))s=s.split(k).join(TR[k][I18.lang]||k); }
       txt.textContent=s;
     }
-  });
-  document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('on',b.dataset.lang===I18.lang));
+  }));
+  safe2(()=>document.querySelectorAll('.langbtn').forEach(b=>b.classList.toggle('on',b.dataset.lang===I18.lang)));
 }
 function setLang(l){
   I18.lang=l; localStorage.setItem('sono_lang',l);
@@ -4025,7 +4030,8 @@ const HELP_ES=`
 if(I18.lang!=='fr')setLang(I18.lang); else translatePass();
 
 /* traduire après chaque rafraîchissement d'interface */
-const _uiOrig=ui; ui=function(){_uiOrig(); translatePass();};
+try{ const _uiOrig=ui; ui=function(){_uiOrig(); translatePass();}; }catch(e){}
+setInterval(()=>{ if(I18.lang!=='fr'){ try{translatePass();}catch(e){} } },500);
 translatePass();
 </script>
 </body>
