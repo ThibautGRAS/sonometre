@@ -477,6 +477,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mEmg"><span>Émergence tonale (ISO 1996-2)</span><b>Activée</b></div>
           <div class="mrow" id="mEmgThr"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
+          <div class="mrow" id="mSg3dMode"><span>Rendu 3D spectrogramme</span><b>Fil de fer</b></div>
           <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
           <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
@@ -733,7 +734,7 @@ if('serviceWorker' in navigator){
       <p>Dans l'écran <b>Valeurs</b> (page 2), la cellule « Émergence tonale » indique la raie tonale dominante : <b>+X dB @ Y Hz</b>, ou « aucune » s'il n'y a pas de vraie composante tonale. Calcul par la méthode <b>ISO 1996-2</b> (bande critique de Bark), avec confirmation sur plusieurs mesures pour ne retenir que les raies stables dans le temps (une raie tonale persiste, un pic de bruit saute). Menu expert : <b>Émergence tonale</b> (activer/désactiver) et <b>Seuil d'alerte</b> (6 à 15 dB). Indicateur de diagnostic, non certifié.</p>
 
       <h3>Vue 3D du spectrogramme</h3>
-      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène. La <b>fenêtre de temps</b> suit le réglage TEMPS de la touche ÉCHELLES : « Tout » = mode auto (≈ 3 s) ; un preset 3/5/10 s affiche cette durée. Le zoom de fréquence et la colorbar suivent la zone affichée.</p>
+      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène. La <b>fenêtre de temps</b> suit le réglage TEMPS de la touche ÉCHELLES : « Tout » = mode auto (≈ 3 s) ; un preset 3/5/10 s affiche cette durée. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>rendu</b> se choisit dans le mode expert : <b>Fil de fer</b> (crêtes) ou <b>Surface</b> (maillage plein coloré).</p>
 
       <h3>Optimiser le spectrogramme</h3>
       <p>Menu expert ▸ <b>Optimiser le spectrogramme</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse et échelle. <b>Tonal</b> (résolution fréquence max, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, pour chocs/parole), <b>Équilibré</b> (polyvalent). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
@@ -786,7 +787,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null, theme:'oled',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', iirBank:null, theme:'oled', sg3dMode:'wire',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -2114,31 +2115,29 @@ function sgTick(){
 function drawSgram3D(){
   const cvInfo=CV.sgramCv; if(!cvInfo)return;
   const g=cvInfo.g, W=cvInfo.w, H=cvInfo.h;
-  g.fillStyle=THEME.bg; g.fillRect(0,0,W,H);
-  if(!SG.cols){ return; }
+  if(!SG.cols){ g.fillStyle=THEME.bg; g.fillRect(0,0,W,H); return; }
   const Wp=SG.Wp, bufH=SG.bufH, seq=SG.colSeq||0;
-  if(seq<2){ g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
-  /* FENÊTRE DE TEMPS : suit le réglage TEMPS du popover ÉCHELLES (S.tview, comme la 2D).
-     'Tout' (pleine fenêtre) = mode AUTO : ~3 s (56 colonnes). Un preset 3/5/10 s ou un
-     réglage fin = cette durée. Sous-échantillonnage à 120 tranches max pour la fluidité. */
+  if(seq<2){ g.fillStyle=THEME.bg; g.fillRect(0,0,W,H); g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
+  const surf=(S.sg3dMode==='surf');
+  /* FENÊTRE DE TEMPS (réglage TEMPS du popover ÉCHELLES) — échantillonnage ANCRÉ SUR
+     L'AVANT : tranches à pas fixe depuis la colonne live (Wp-1). Fini le re-phasage qui
+     faisait scintiller les longues fenêtres (l'ancien ancrage arrière + live forcé
+     faisait sauter l'espacement des tranches de tête à chaque nouvelle colonne). */
   const fullT=S.tview.x0<=1e-3 && S.tview.x1>=0.999;
   const wantCols=fullT ? 56 : Math.max(8,Math.round((S.tview.x1-S.tview.x0)*Wp));
   const avail=Math.min(wantCols, seq, Wp);
-  const maxSlices=120, stepT=Math.max(1,Math.ceil(avail/maxSlices));
-  const idxs=[]; for(let x=Wp-avail;x<Wp;x+=stepT)idxs.push(x);
-  if(idxs[idxs.length-1]!==Wp-1)idxs[idxs.length-1]=Wp-1;   // la tranche LIVE reste devant
-  const nT=idxs.length;
-  const nF=96;
-  /* fenêtre de fréquence visible (zoom ÉCHELLES) — calculée AVANT l'échelle couleur */
+  const maxSlices=surf?48:90;
+  const stepT=Math.max(1,Math.ceil(avail/maxSlices));
+  const nT=Math.floor((avail-1)/stepT)+1;
+  const idxs=[]; for(let k=nT-1;k>=0;k--)idxs.push(Wp-1-k*stepT);
+  const nF=surf?64:96;
+  /* fenêtre de fréquence visible */
   const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
   const Vlo=TF(fmin), Vhi=TF(fmax);
   const rOf=V=>(SG.V1f-V)/Math.max(1e-9,(SG.V1f-SG.V0f))*(bufH-1);
-  const rBot=Math.max(0,Math.min(bufH-1,Math.round(rOf(Vlo))));   // graves → ligne haute du tampon
+  const rBot=Math.max(0,Math.min(bufH-1,Math.round(rOf(Vlo))));
   const rTop=Math.max(0,Math.min(bufH-1,Math.round(rOf(Vhi))));
-  /* échelle amplitude/couleur PERSISTANTE (anti-scintillement autoRange temporisé),
-     balayée UNIQUEMENT sur ce qui est AFFICHÉ : les nT dernières colonnes et la plage
-     de fréquence visible. Sinon un bruit fort resté dans le tampon (mais sorti de la
-     vue) maintenait la colorbar gonflée pendant des dizaines de secondes. */
+  /* échelle amplitude/couleur persistante, balayée sur l'AFFICHÉ (anti-scintillement autoRange) */
   if(!S.scale.sg3d)S.scale.sg3d={lo:10,hi:60};
   let sc;
   if(!S.sgAuto){ sc={lo:S.sgMin,hi:S.sgMax}; }
@@ -2154,57 +2153,96 @@ function drawSgram3D(){
     sc=S.scale.sg3d;
   }
   const lo=sc.lo, hi=sc.hi, span=Math.max(1,hi-lo);
-  const marginL=14, marginR=34, marginT=16, marginB=26;   // droite élargie pour la colorbar
+  /* rotation */
+  const rot=(S.sg3dRot===undefined?0:S.sg3dRot);
+  /* CACHE : ne redessiner que si quelque chose a changé (données, vue, échelle, thème) */
+  const key=[seq,rot.toFixed(3),S.sg3dMode,lo,hi,fmin|0,fmax|0,S.tview.x0.toFixed(4),S.tview.x1.toFixed(4),S.theme,W,H].join('|');
+  if(SG._3dKey===key)return;
+  SG._3dKey=key;
+  g.fillStyle=THEME.bg; g.fillRect(0,0,W,H);
+  /* géométrie */
+  const marginL=14, marginR=34, marginT=16, marginB=26;
   const plotW=W-marginL-marginR, plotH=H-marginT-marginB;
   const depth=plotH*0.46;
-  /* rotation légère autour de l'axe vertical : glisser horizontalement en vue 3D.
-     rot ∈ [-1,1] fait passer l'inclinaison de gauche à droite (0,15·plotW par défaut). */
-  const rot=(S.sg3dRot===undefined?0:S.sg3dRot);
-  const skewTot=plotW*(0.15+0.45*rot);   // rotation élargie : de -0,30 à +0,60·plotW
+  const skewTot=plotW*(0.15+0.45*rot);
   const absSkew=Math.abs(skewTot);
   const colW=(plotW-absSkew)/nF, ampH=plotH*0.46;
   const baseXof=dz=> marginL + (skewTot>=0 ? skewTot*(1-dz) : absSkew*dz);
-  const colAt=jj=>SG.cols[idxs[jj]]||null;          // colonnes de la fenêtre choisie (récent à la fin)
-  /* fréquences basses à gauche : mappage des nF profils sur la plage visible */
+  const baseYof=dz=> marginT + (plotH-depth) + depth*dz;
   const lineRow=fi=>Math.round(rBot - fi/(nF-1)*(rBot-rTop));
-  const prof=new Float32Array(nF), sm=new Float32Array(nF);
-  for(let j=0;j<nT;j++){
-    const a=colAt(j);
-    const dz=j/(nT-1||1);                  // 0 = ancien (fond) → 1 = récent (devant)
-    const baseX=baseXof(dz);
-    const baseY=marginT + (plotH-depth) + depth*dz;
-    for(let i=0;i<nF;i++){
-      let L=a?a[lineRow(i)]:lo;
-      if(!isFinite(L)||L<lo)L=lo; if(L>hi)L=hi;
-      prof[i]=(L-lo)/span;
-    }
-    sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
-    for(let i=1;i<nF-1;i++) sm[i]=(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
-    g.beginPath();
-    g.moveTo(baseX, baseY);
-    for(let i=0;i<nF;i++) g.lineTo(baseX+i*colW, baseY-sm[i]*ampH);
-    g.lineTo(baseX+(nF-1)*colW, baseY);
-    g.closePath();
-    g.fillStyle=THEME.bg; g.fill();
-    const fade=0.45+0.55*dz;
-    g.lineWidth = j===nT-1 ? 1.6 : 1;
-    for(let i=0;i<nF-1;i++){
-      const idx=(Math.max(0,Math.min(255,Math.round(sm[i]*255)))|0)*3;
-      g.strokeStyle='rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')';
-      g.beginPath();
-      g.moveTo(baseX+i*colW, baseY-sm[i]*ampH);
-      g.lineTo(baseX+(i+1)*colW, baseY-sm[i+1]*ampH);
-      g.stroke();
+  /* profils lissés de toutes les tranches (t ∈ 0..1) */
+  const P=[];
+  {
+    const prof=new Float32Array(nF);
+    for(let j=0;j<nT;j++){
+      const a=SG.cols[idxs[j]];
+      for(let i=0;i<nF;i++){
+        let L=a?a[lineRow(i)]:lo;
+        if(!isFinite(L)||L<lo)L=lo; if(L>hi)L=hi;
+        prof[i]=(L-lo)/span;
+      }
+      const sm=new Float32Array(nF);
+      sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
+      for(let i=1;i<nF-1;i++) sm[i]=(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
+      P.push(sm);
     }
   }
-  /* ===== graduations de fréquence (sous le premier plan) ===== */
+  const px=(j,i)=>baseXof(j/(nT-1||1))+i*colW;
+  const py=(j,i)=>baseYof(j/(nT-1||1))-P[j][i]*ampH;
+  if(surf){
+    /* ===== MODE SURFACE : maillage de quadrilatères colorés par l'amplitude ===== */
+    for(let j=0;j<nT-1;j++){
+      const fade=0.45+0.55*((j+1)/(nT-1||1));
+      for(let i=0;i<nF-1;i++){
+        const t=(P[j][i]+P[j][i+1]+P[j+1][i]+P[j+1][i+1])*0.25;
+        const idx=(Math.max(0,Math.min(255,Math.round(t*255)))|0)*3;
+        g.fillStyle='rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')';
+        g.beginPath();
+        g.moveTo(px(j,i),  py(j,i));
+        g.lineTo(px(j,i+1),py(j,i+1));
+        g.lineTo(px(j+1,i+1),py(j+1,i+1));
+        g.lineTo(px(j+1,i),py(j+1,i));
+        g.closePath(); g.fill();
+      }
+    }
+    /* arête vive sur la tranche live */
+    g.lineWidth=1.4; const j=nT-1;
+    for(let i=0;i<nF-1;i++){
+      const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
+      g.strokeStyle='rgb('+LUT[idx]+','+LUT[idx+1]+','+LUT[idx+2]+')';
+      g.beginPath(); g.moveTo(px(j,i),py(j,i)); g.lineTo(px(j,i+1),py(j,i+1)); g.stroke();
+    }
+  }else{
+    /* ===== MODE FIL DE FER : silhouettes opaques + crêtes colorées ===== */
+    for(let j=0;j<nT;j++){
+      const dz=j/(nT-1||1);
+      const baseY=baseYof(dz);
+      g.beginPath();
+      g.moveTo(px(j,0), baseY);
+      for(let i=0;i<nF;i++) g.lineTo(px(j,i), py(j,i));
+      g.lineTo(px(j,nF-1), baseY);
+      g.closePath();
+      g.fillStyle=THEME.bg; g.fill();
+      const fade=0.45+0.55*dz;
+      g.lineWidth = j===nT-1 ? 1.6 : 1;
+      for(let i=0;i<nF-1;i++){
+        const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
+        g.strokeStyle='rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')';
+        g.beginPath();
+        g.moveTo(px(j,i), py(j,i));
+        g.lineTo(px(j,i+1), py(j,i+1));
+        g.stroke();
+      }
+    }
+  }
+  /* ===== graduations de fréquence ===== */
   const frontY=marginT+plotH;
   if(isFinite(Vlo)&&isFinite(Vhi)&&Vhi>Vlo){
     let ticks;
     if(S.fscale==='log'){
       const cand=[20,31.5,63,125,250,500,1000,2000,4000,8000,16000];
       ticks=cand.filter(f=>{const u=(TF(f)-Vlo)/(Vhi-Vlo);return u>=0&&u<=1;});
-      while(ticks.length>6)ticks=ticks.filter((_,k)=>k%2===0);   // pas plus de 6 étiquettes
+      while(ticks.length>6)ticks=ticks.filter((_,k)=>k%2===0);
     }else{
       ticks=[]; for(let k=0;k<=4;k++){const f=fmin+k/4*(fmax-fmin);
         const m=Math.pow(10,Math.floor(Math.log10(Math.max(1,f))))/10;
@@ -2214,7 +2252,7 @@ function drawSgram3D(){
     const lab = f=> f>=1000 ? (Math.round(f/100)/10)+'k' : (f===31.5?'31':''+Math.round(f));
     g.font='8px Arial'; g.textAlign='center'; g.fillStyle=THEME.axis;
     g.strokeStyle=THEME.grid; g.lineWidth=1;
-    const fx0=baseXof(1);                            // origine du premier plan (suit la rotation)
+    const fx0=baseXof(1);
     for(const f of ticks){
       const u=(TF(f)-Vlo)/(Vhi-Vlo); if(u<0||u>1)continue;
       const x=fx0 + u*(nF-1)*colW;
@@ -2223,7 +2261,7 @@ function drawSgram3D(){
     }
     g.textAlign='left'; g.fillText('Hz', fx0+(nF-1)*colW+4, frontY+12);
   }
-  /* ===== colorbar (droite) ===== */
+  /* ===== colorbar ===== */
   const cbX=W-22, cbW=8, cbY0=marginT+8, cbY1=H-marginB-8, cbH=cbY1-cbY0;
   for(let y=0;y<cbH;y++){
     const t=1-y/cbH, idx=(Math.round(t*255)|0)*3;
@@ -2232,7 +2270,6 @@ function drawSgram3D(){
   }
   g.strokeStyle=THEME.grid; g.strokeRect(cbX+0.5,cbY0+0.5,cbW-1,cbH-1);
   g.fillStyle=THEME.axis; g.font='8px Arial'; g.textAlign='right';
-  /* graduations : pas arrondi visant ~4 niveaux intermédiaires */
   const rawStep=span/4, step=rawStep<=6?5:rawStep<=12?10:20;
   g.strokeStyle=THEME.axis;
   for(let v=Math.ceil(lo/step)*step; v<=hi; v+=step){
@@ -2635,6 +2672,7 @@ function ui(){
   $('mEmgThr').style.opacity=S.emgOn?'1':'.4';
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
+  $('mSg3dMode').querySelector('b').textContent=S.sg3dMode==='surf'?'Surface':'Fil de fer';
 
   updScaleLbl();
   $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Expert';
@@ -2742,7 +2780,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
                    'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr'];
+                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','sg3dMode'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
@@ -2766,6 +2804,7 @@ function resetPrefs(){
 }
 function applyTheme(){
   document.body.classList.remove('th-acier','th-clair','th-oled','th-gameboy','th-matrix');
+  SG._3dKey='';
   if(S.theme!=='marine')document.body.classList.add('th-'+S.theme);
   // le fond de la page (html) reprend le métal brossé de la robe du thème : continuité en bas (PWA)
   try{
@@ -2784,6 +2823,7 @@ $('mTheme').onclick=()=>{
   S.theme=THEMES[(i+1)%THEMES.length][0];
   applyTheme(); ui();
 };
+$('mSg3dMode').onclick=()=>{ S.sg3dMode=S.sg3dMode==='surf'?'wire':'surf'; SG._3dKey=''; ui(); if(S.sg3d)drawSgram(); };
 loadPrefs(); applyTheme(); _prefsReady=true;
 $('mToctSrc').onclick=()=>{
   S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
