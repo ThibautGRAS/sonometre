@@ -177,6 +177,7 @@ if('serviceWorker' in navigator){
   @keyframes splashSlide{0%{left:-42%}100%{left:102%}}
   #splash{transition:opacity .42s ease}
   #splash.done{opacity:0;pointer-events:none}
+  .splashver{position:absolute;bottom:26px;font-family:var(--font);font-size:11px;letter-spacing:.12em;color:rgba(159,196,255,.6)}
   .lcd{
     flex:1 1 auto;min-height:0;min-width:0;
     background:
@@ -449,6 +450,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
+  <div class="splashver">V35.1</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -3852,7 +3854,7 @@ requestAnimationFrame(()=>{ sizeAll(); requestAnimationFrame(()=>{
   /* fondu du splash : durée minimale d'affichage pour éviter qu'il clignote lui-même */
   const sp=document.getElementById('splash');
   if(sp){
-    const MIN=1100, el=performance.now()-(window.__t0||0), wait=Math.max(0,MIN-el);
+    const MIN=1400, el=performance.now()-(window.__t0||0), wait=Math.max(0,MIN-el);
     setTimeout(()=>{ sp.classList.add('done'); setTimeout(()=>sp.remove(),450); }, wait);
   }
 }); });
