@@ -452,7 +452,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.11</div>
+  <div class="splashver">V35.12</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -806,7 +806,7 @@ if('serviceWorker' in navigator){
       <p>Dans l'écran <b>Valeurs</b> (page 2), la cellule « Émergence tonale » indique la raie tonale dominante : <b>+X dB @ Y Hz</b>, ou « aucune » s'il n'y a pas de vraie composante tonale. Calcul par la méthode <b>ISO 1996-2</b> (bande critique de Bark), avec confirmation sur plusieurs mesures pour ne retenir que les raies stables dans le temps (une raie tonale persiste, un pic de bruit saute). L'émergence est <b>toujours évaluée</b> dans le tableau de valeurs. Le <b>Seuil d'alerte</b> (menu expert, 6 à 15 dB) fixe le niveau à partir duquel une raie est retenue pour le tableau et pour la détection auto (icône <b>ÉMG</b>, encadré orange sur la bande fine). Au <b>curseur unique</b> sur la FFT, l'émergence de la raie visée est affichée en permanence. Indicateur de diagnostic, non certifié.</p>
 
       <h3>Vue 3D du spectrogramme</h3>
-      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène. La <b>fenêtre de temps</b> suit le réglage TEMPS de la touche ÉCHELLES : « Tout » = mode auto (≈ 3 s) ; un preset 3/5/10 s affiche cette durée. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>rendu</b> se choisit dans le mode expert : <b>Fil de fer</b> (crêtes) ou <b>Surface</b> (maillage plein coloré).</p>
+      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène. La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : « Tout » affiche tout le tampon, un preset 3/5/10 s affiche cette durée. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>rendu</b> se choisit dans le mode expert : <b>Fil de fer</b> (crêtes) ou <b>Surface</b> (maillage plein coloré).</p>
 
       <h3>Optimiser le spectrogramme</h3>
       <p>Menu expert ▸ <b>Optimiser le spectrogramme</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse et échelle. <b>Tonal</b> (résolution fréquence max, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, pour chocs/parole), <b>Équilibré</b> (polyvalent). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
@@ -2505,7 +2505,7 @@ function drawSgram3D(){
      faisait scintiller les longues fenêtres (l'ancien ancrage arrière + live forcé
      faisait sauter l'espacement des tranches de tête à chaque nouvelle colonne). */
   const fullT=S.tview.x0<=1e-3 && S.tview.x1>=0.999;
-  const wantCols=fullT ? 56 : Math.max(8,Math.round((S.tview.x1-S.tview.x0)*Wp));
+  const wantCols=fullT ? seq : Math.max(8,Math.round((S.tview.x1-S.tview.x0)*Wp));   // « Tout » = tout le tampon (comme la 2D)
   const avail=Math.min(wantCols, seq, Wp);
   const maxSlices=surf?30:90;
   const stepT=Math.max(1,Math.ceil(avail/maxSlices));
@@ -2710,6 +2710,8 @@ function drawSgram3D(){
       g.fillText(lab(f), x, frontY+12);
     }
     g.textAlign='left'; g.fillText('Hz', fx0+(nF-1)*colW+4, frontY+12);
+    g.fillStyle=THEME.barHi||'#EF3346'; g.textAlign='center';
+    g.fillText('▲ présent', baseXof(1)+(nF-1)*colW*0.5, frontY+22);
   }
   /* ===== colorbar : IDENTIQUE à la 2D (barre 10px, étiquettes à DROITE de la barre,
      couleur #8FB2E8, pas de traits de graduation, mêmes pas adaptatifs) ===== */
@@ -2732,7 +2734,9 @@ function drawSgram3D(){
     g.fillText(Math.round(v), cbX+cbW+2, y+3);
   }
   /* étiquette d'entête synchronisée (sinon elle gèle sur les valeurs du dernier rendu 2D) */
-  $('gScale').textContent=Math.round(lo)+'–'+Math.round(hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz';
+  const dispSec=((nT-1)*stepT)*sgInterval()/1000;
+  const secTxt=dispSec>=10?dispSec.toFixed(0):dispSec.toFixed(1);
+  $('gScale').textContent=Math.round(lo)+'–'+Math.round(hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz · '+secTxt+' s';
 }
 function drawSgram(){
   const c=CV.sgramCv; if(!c)return;
