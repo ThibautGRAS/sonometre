@@ -951,7 +951,7 @@ function tonalEmergence(binPow, ic, wSel){
   if(!m) return null;
   const Lnoise=dbOf(s/m);                           // niveau moyen du bruit dans la bande critique
   const dL=Lpk-Lnoise;
-  /* critère de VRAIE tonalité (sinon un simple max de bruit déclencherait le ⚠) :
+  /* critère de VRAIE tonalité (sinon un simple max de bruit serait signalé à tort) :
      - le pic doit dominer nettement le bruit VOISIN immédiat (juste au-delà du guard)
      - et être localisé (retombe vite de part et d'autre)
      Sur du bruit de fond, le "pic" est plat par rapport à ses voisins → non tonal. */
@@ -1394,7 +1394,7 @@ function updateNumbers(L){
       }
       if(bi>0){
         const emg=tonalEmergence(bp,bi,wSel);
-        if(emg) txt='+'+emg.dL.toFixed(1)+' dB @ '+fmtF(emg.fc)+'Hz'+(emg.strong?' ⚠':'');
+        if(emg) txt='+'+emg.dL.toFixed(1)+' dB @ '+fmtF(emg.fc)+'Hz';
       }
     }
     S._emgValTxt=txt;
