@@ -15,12 +15,13 @@
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     // updateViaCache:'none' → le navigateur va TOUJOURS chercher sw.js sur le réseau (jamais son cache HTTP)
+    const hadController=!!navigator.serviceWorker.controller;   // y avait-il déjà un SW aux commandes ?
     navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
       reg.update();                                   // vérifie une mise à jour à chaque ouverture
-      // un nouveau SW a pris la main → recharge une fois pour servir la version fraîche
       let reloaded=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        if(reloaded)return; reloaded=true; location.reload();
+        if(reloaded||!hadController)return;            // 1er chargement (claim initial) : NE PAS recharger → pas de scintillement
+        reloaded=true; location.reload();
       });
     }).catch(()=>{});
   });
@@ -417,6 +418,16 @@ if('serviceWorker' in navigator){
 </style>
 </head>
 <body>
+<script>
+/* thème appliqué AVANT le premier rendu pour éviter le flash bleu→thème réel */
+(function(){
+  try{
+    var p=JSON.parse(localStorage.getItem('sono_prefs')||'{}');
+    var t=p.theme||'oled';
+    if(t&&t!=='marine')document.body.classList.add('th-'+t);
+  }catch(e){ document.body.classList.add('th-oled'); }
+})();
+</script>
 
   <div class="screw tl"></div><div class="screw tr"></div>
 
