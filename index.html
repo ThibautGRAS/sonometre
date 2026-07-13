@@ -3852,7 +3852,7 @@ requestAnimationFrame(()=>{ sizeAll(); requestAnimationFrame(()=>{
   /* fondu du splash : durée minimale d'affichage pour éviter qu'il clignote lui-même */
   const sp=document.getElementById('splash');
   if(sp){
-    const MIN=550, el=performance.now()-(window.__t0||0), wait=Math.max(0,MIN-el);
+    const MIN=1100, el=performance.now()-(window.__t0||0), wait=Math.max(0,MIN-el);
     setTimeout(()=>{ sp.classList.add('done'); setTimeout(()=>sp.remove(),450); }, wait);
   }
 }); });
