@@ -293,6 +293,7 @@ if('serviceWorker' in navigator){
   .key:active::before{opacity:.5}
   .key .kf{font-size:8px;letter-spacing:.14em;color:var(--key-lbl);font-weight:700;
     text-shadow:0 1px 1px rgba(0,0,0,.35)}   /* légende */
+  #kCalV{font-size:10.5px!important}
   .key .kv{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--key-txt);
     text-shadow:0 1px 1px rgba(0,0,0,.3)}
   .key .kv small{font-size:10px;color:#B9C7E2}
@@ -524,14 +525,15 @@ if('serviceWorker' in navigator){
   <!-- ================= CLAVIER ================= -->
   <div class="keypad">
     <div class="krow">
-      <button class="key" id="kScreen"><span class="kf">ÉCRAN · LONG=EXPERT</span><span class="kv" id="kScreenV">Spectre</span></button>
+      <button class="key" id="kScreen"><span class="kf">ÉCRAN</span><span class="kv" id="kScreenV">Spectre</span></button>
       <button class="key cfg" id="kW"><span class="kf">POND.</span><span class="kv" id="kWV">A</span></button>
       <button class="key cfg" id="kT"><span class="kf">TEMPS</span><span class="kv" id="kTV">Fast</span></button>
       <button class="key cfg" id="kMode"><span class="kf">ANALYSE</span><span class="kv" id="kModeV">1/3 oct</span></button>
     </div>
     <div class="krow">
       <button class="key cfg" id="kDur"><span class="kf">DURÉE</span><span class="kv" id="kDurV">∞</span></button>
-      <button class="key cfg" id="kCal" style="grid-column:span 2"><span class="kf">CALIBRATION</span><span class="kv" id="kCalV">Auto · 120.0</span></button>
+      <button class="key cfg" id="kCal"><span class="kf">CALIB.</span><span class="kv" id="kCalV">Auto</span></button>
+      <button class="key" id="kMenu"><span class="kf">MENU</span><span class="kv" id="kMenuV">Expert</span></button>
       <button class="key" id="kCsv"><span class="kf">EXPORT</span><span class="kv">Partager</span></button>
     </div>
     <div class="krow" style="grid-template-columns:1fr 1fr 1.15fr 1.15fr">
@@ -660,7 +662,7 @@ if('serviceWorker' in navigator){
       <p>Autorise le microphone au premier lancement, puis appuie sur <b>▶</b>. Un court « INIT MICRO… » précède la mesure (le temps que le micro se stabilise). <b>■</b> arrête, <b>⏸</b> met en pause.</p>
 
       <h3>Écrans</h3>
-      <p>La touche <b>ÉCRAN</b> fait défiler : Spectre → Spectrogramme → Évolution → Valeurs. <b>Appui long</b> sur cette touche ouvre le <b>mode expert</b> (réglages FFT, fenêtre, interpolation, source des tiers d'octave, thème, cette aide).</p>
+      <p>La touche <b>ÉCRAN</b> fait défiler : Spectre → Spectrogramme → Évolution → Valeurs. La touche <b>MENU</b> ouvre le <b>mode expert</b> (réglages FFT, fenêtre, interpolation, source des tiers d'octave, thème, cette aide).</p>
       <ul>
         <li><b>Spectre</b> : niveau par fréquence (bandes fines FFT, ou tiers d'octave / octave selon la touche ANALYSE).</li>
         <li><b>Spectrogramme</b> : carte temps (horizontal) × fréquence (vertical), l'intensité en couleur.</li>
@@ -2553,7 +2555,8 @@ function ui(){
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
 
-  $('kDynV').textContent=S.dbAuto?'Auto':(S.dbMin+'–'+S.dbMax);
+  $('kDynV').textContent=(S.dbAuto&&S.sgAuto)?'Auto':'Manuel';
+  $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Expert';
   $('kWV').textContent=S.weight;
   $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':S.mode==='oct'?'1/1 oct':'FFT';
@@ -2571,24 +2574,18 @@ function ui(){
 }
 
 /* ================= Touches ================= */
-/* ÉCRAN : appui court = cycle des affichages, appui long (0,5 s) = MODE EXPERT (bascule) */
-let scrT,scrLong=false;
-$('kScreen').addEventListener('pointerdown',()=>{
-  scrLong=false;
-  scrT=setTimeout(()=>{
-    scrLong=true;
-    if(S.screen==='menu'||S.screen==='cal'){S.screen=S.prevScreen||'spec';}   // referme le menu
-    else{S.prevScreen=S.screen;S.screen='menu';}                              // ouvre le menu
-    ui();
-  },500);
-});
-['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kScreen').addEventListener(ev,()=>clearTimeout(scrT)));
+/* ÉCRAN : cycle des affichages. Le MODE EXPERT a désormais sa touche dédiée (MENU) */
 $('kScreen').addEventListener('click',()=>{
-  if(scrLong){scrLong=false;return;}
   if(S.screen==='menu'||S.screen==='cal'){S.screen=S.prevScreen||'spec';}     // sortie du menu : écran précédent
   else S.screen=S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':'spec';
   if(S.screen!=='sgram')S.sgCursor=null;
   if(S.screen!=='hist')S.histCursor=null;
+  ui();requestAnimationFrame(()=>{sizeAll();});
+});
+/* MENU : bascule du mode expert */
+$('kMenu').addEventListener('click',()=>{
+  if(S.screen==='menu'){S.screen=S.prevScreen||'spec';}
+  else{if(S.screen!=='cal')S.prevScreen=S.screen;S.screen='menu';}
   ui();requestAnimationFrame(()=>{sizeAll();});
 });
 
