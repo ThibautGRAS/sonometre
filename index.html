@@ -1904,9 +1904,10 @@ function beginRun(){
 /* alimente le spectrogramme (appelé par la boucle même quand un autre écran/menu est affiché) */
 /* cadence réelle des colonnes (ms) et durée couverte par le tampon (s) */
 function sgInterval(){
-  const fs=S.ctx?S.ctx.sampleRate:48000;
-  const hopMs=S.fftN*(1-S.overlap)/fs*1000;
-  return Math.max(16,Math.min(S.colMs,hopMs));
+  /* la vitesse choisie (colMs) est une consigne RESPECTÉE : on ajoute une colonne
+     exactement tous les colMs. On ne l'accélère pas au rythme des trames FFT.
+     Plancher de sécurité à 16 ms (≈60 col/s max) pour ne pas saturer le rendu. */
+  return Math.max(16,S.colMs);
 }
 function sgBufDur(){ return (SG.Wp||1)*sgInterval()/1000; }
 function sgTick(){
