@@ -2093,22 +2093,35 @@ function drawSgram3D(){
   const g=cvInfo.g, W=cvInfo.w, H=cvInfo.h;
   g.fillStyle=THEME.bg; g.fillRect(0,0,W,H);
   if(!SG.cols){ return; }
-  /* échelle amplitude/couleur PERSISTANTE avec anti-scintillement (autoRange temporisé) */
-  if(!S.scale.sg3d)S.scale.sg3d={lo:10,hi:60};
-  let sc;
-  if(!S.sgAuto){ sc={lo:S.sgMin,hi:S.sgMax}; }
-  else{
-    const Wp0=SG.Wp,Hb=SG.bufH; let dlo=Infinity,dhi=-Infinity;
-    const stC=Math.max(1,Math.round(Wp0/120)), stR=Math.max(1,Math.round(Hb/160));
-    for(let x=0;x<Wp0;x+=stC){const a=SG.cols[x];if(!a)continue;for(let r=0;r<Hb;r+=stR){const v=a[r];if(v>-90){if(v<dlo)dlo=v;if(v>dhi)dhi=v;}}}
-    if(isFinite(dlo)) autoRange(S.scale.sg3d, Math.max(10,dlo), dhi, 20, true);
-    sc=S.scale.sg3d;
-  }
-  const lo=sc.lo, hi=sc.hi, span=Math.max(1,hi-lo);
   const Wp=SG.Wp, bufH=SG.bufH, seq=SG.colSeq||0;
   if(seq<2){ g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
   const nT=Math.min(56, seq, Wp);
   const nF=96;
+  /* fenêtre de fréquence visible (zoom ÉCHELLES) — calculée AVANT l'échelle couleur */
+  const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
+  const Vlo=TF(fmin), Vhi=TF(fmax);
+  const rOf=V=>(SG.V1f-V)/Math.max(1e-9,(SG.V1f-SG.V0f))*(bufH-1);
+  const rBot=Math.max(0,Math.min(bufH-1,Math.round(rOf(Vlo))));   // graves → ligne haute du tampon
+  const rTop=Math.max(0,Math.min(bufH-1,Math.round(rOf(Vhi))));
+  /* échelle amplitude/couleur PERSISTANTE (anti-scintillement autoRange temporisé),
+     balayée UNIQUEMENT sur ce qui est AFFICHÉ : les nT dernières colonnes et la plage
+     de fréquence visible. Sinon un bruit fort resté dans le tampon (mais sorti de la
+     vue) maintenait la colorbar gonflée pendant des dizaines de secondes. */
+  if(!S.scale.sg3d)S.scale.sg3d={lo:10,hi:60};
+  let sc;
+  if(!S.sgAuto){ sc={lo:S.sgMin,hi:S.sgMax}; }
+  else{
+    let dlo=Infinity,dhi=-Infinity;
+    const r0=Math.min(rTop,rBot), r1=Math.max(rTop,rBot);
+    const stR=Math.max(1,Math.round((r1-r0+1)/160));
+    for(let x=Wp-nT;x<Wp;x++){
+      const a=SG.cols[x]; if(!a)continue;
+      for(let r=r0;r<=r1;r+=stR){const v=a[r];if(v>-90){if(v<dlo)dlo=v;if(v>dhi)dhi=v;}}
+    }
+    if(isFinite(dlo)) autoRange(S.scale.sg3d, Math.max(10,dlo), dhi, 20, true);
+    sc=S.scale.sg3d;
+  }
+  const lo=sc.lo, hi=sc.hi, span=Math.max(1,hi-lo);
   const marginL=14, marginR=34, marginT=16, marginB=26;   // droite élargie pour la colorbar
   const plotW=W-marginL-marginR, plotH=H-marginT-marginB;
   const depth=plotH*0.46;
@@ -2120,13 +2133,7 @@ function drawSgram3D(){
   const colW=(plotW-absSkew)/nF, ampH=plotH*0.46;
   const baseXof=dz=> marginL + (skewTot>=0 ? skewTot*(1-dz) : absSkew*dz);
   const colAt=jj=>SG.cols[Wp-nT+jj]||null;          // tampon décalé : récent à Wp-1
-  /* FRÉQUENCES BASSES À GAUCHE + respect de la FENÊTRE DE FRÉQUENCE (zoom ÉCHELLES) :
-     la ligne 0 du tampon = fréquence HAUTE ; on mappe les nF profils sur la plage visible */
-  const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
-  const Vlo=TF(fmin), Vhi=TF(fmax);
-  const rOf=V=>(SG.V1f-V)/Math.max(1e-9,(SG.V1f-SG.V0f))*(bufH-1);
-  const rBot=Math.max(0,Math.min(bufH-1,rOf(Vlo)));   // graves → ligne haute du tampon
-  const rTop=Math.max(0,Math.min(bufH-1,rOf(Vhi)));
+  /* fréquences basses à gauche : mappage des nF profils sur la plage visible */
   const lineRow=fi=>Math.round(rBot - fi/(nF-1)*(rBot-rTop));
   const prof=new Float32Array(nF), sm=new Float32Array(nF);
   for(let j=0;j<nT;j++){
