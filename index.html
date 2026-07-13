@@ -1622,7 +1622,10 @@ function drawSpectrum(){
       g.strokeStyle=THEME.cursor;g.lineWidth=1;g.setLineDash([3,3]);
       g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
       g.fillStyle=THEME.cursor;g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
-      cursorLabel(g,w,x,fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+(S.peakInterp?' ⟂':''));
+      const emg=tonalEmergence(binPow,bi,wSel);
+      let clbl=fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+(S.peakInterp?' ⟂':'');
+      if(S.emgOn && emg) clbl+=' · émg +'+emg.dL.toFixed(1)+'dB';
+      cursorLabel(g,w,x,clbl);
     }
     $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz';
   }
