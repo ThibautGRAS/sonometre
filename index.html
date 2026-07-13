@@ -2080,10 +2080,10 @@ function sgTick(){
    Colonnes récentes au premier plan. */
 function drawSgram3D(){
   const cvInfo=CV.sgramCv; if(!cvInfo)return;
-  const g=cvInfo.g, W=cvInfo.w, H=cvInfo.h;      // contexte déjà en repère logique (dpr appliqué)
-  const bg=THEME.bg; g.fillStyle=bg; g.fillRect(0,0,W,H);
-  if(!SG.cols||!SG.map){ return; }
-  /* même échelle couleur/amplitude que la vue 2D */
+  const g=cvInfo.g, W=cvInfo.w, H=cvInfo.h;
+  g.fillStyle=THEME.bg; g.fillRect(0,0,W,H);
+  if(!SG.cols){ return; }
+  /* échelle amplitude/couleur : reprend la logique auto/manuel de la 2D */
   let sc={lo:S.sgMin,hi:S.sgMax};
   if(S.sgAuto){
     const Wp0=SG.Wp,Hb=SG.bufH; let lo=Infinity,hi=-Infinity;
@@ -2093,66 +2093,65 @@ function drawSgram3D(){
     else sc={lo:10,hi:60};
   }
   const lo=sc.lo, hi=sc.hi, span=Math.max(1,hi-lo);
-  // sous-échantillonnage pour la fluidité : ~90 colonnes de temps, ~120 lignes de fréquence
-  const Wp=SG.Wp, bufH=SG.bufH;
-  const nT=Math.min(90, Wp), nF=Math.min(120, bufH);
-  // géométrie iso
-  const marginL=38, marginR=14, marginT=24, marginB=30;
+  const Wp=SG.Wp, bufH=SG.bufH, seq=SG.colSeq||0;
+  if(seq<2){ g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
+  /* fenêtre TEMPORELLE : uniquement les colonnes déjà acquises (démarrage immédiat),
+     plafonnée aux ~7 dernières secondes visuelles */
+  const nT=Math.min(56, seq, Wp);
+  const nF=96;
+  const marginL=34, marginR=12, marginT=18, marginB=24;
   const plotW=W-marginL-marginR, plotH=H-marginT-marginB;
-  const depth=plotH*0.42;                   // profondeur de la scène (décalage total en Y sur le temps)
-  const skew =plotW*0.16;                   // cisaillement horizontal (effet iso)
-  const colW =(plotW-skew)/nF;              // largeur d'une cellule fréquence à l'écran
-  const ampH =plotH*0.5;                    // hauteur max du relief
-  // helpers de projection : (fréquence i∈[0,nF], temps j∈[0,nT], niveau L) -> écran
-  const seq=SG.colSeq||0;
-  const colAt=jj=>{ // colonne de données pour l'indice temps jj (0=plus ancien, nT-1=récent)
-    const frac=jj/(nT-1||1);
-    const col=Math.round((seq-1) - (1-frac)*(Math.min(Wp,seq)-1));
+  const depth=plotH*0.46, skew=plotW*0.15;
+  const colW=(plotW-skew)/nF, ampH=plotH*0.46;
+  const colAt=jj=>{                        // jj: 0=le plus ANCIEN des nT, nT-1=le plus récent
+    const col=(seq-nT+jj);
     const idx=((col%Wp)+Wp)%Wp;
     return SG.cols[idx]||null;
   };
-  const lineRow=fi=>Math.round(fi/(nF-1||1)*(bufH-1));   // ligne de données pour l'indice fréquence
-  // dessin du plus lointain (ancien) au plus proche (récent) pour l'occlusion
+  const lineRow=fi=>Math.round(fi/(nF-1)*(bufH-1));
+  /* couleur du fond pour l'occlusion des silhouettes */
+  const occ=THEME.bg;
+  /* petit lissage 3 points du profil pour des crêtes nettes */
+  const prof=new Float32Array(nF), sm=new Float32Array(nF);
   for(let j=0;j<nT;j++){
-    const a=colAt(j); 
-    const dz=j/(nT-1||1);                   // 0 lointain -> 1 proche
+    const a=colAt(j);
+    const dz=j/(nT-1||1);
     const baseX=marginL + skew*(1-dz);
     const baseY=marginT + depth*(1-dz) + (plotH-depth);
-    // profil de la colonne
-    let started=false;
-    g.beginPath();
-    const pts=[];
     for(let i=0;i<nF;i++){
-      const row=lineRow(i);
-      let L = a? a[row] : lo;
+      let L=a?a[lineRow(i)]:lo;
       if(!isFinite(L)||L<lo)L=lo; if(L>hi)L=hi;
-      const t=(L-lo)/span;                  // 0..1
-      const x=baseX + i*colW;
-      const y=baseY - t*ampH;
-      pts.push([x,y,t,L]);
+      prof[i]=(L-lo)/span;
     }
-    // remplissage sous la courbe avec dégradé de couleur par segment (couleur = amplitude)
-    for(let i=0;i<nF-1;i++){
-      const [x0,y0,t0]=pts[i], [x1,y1]=pts[i+1];
-      const idx=(Math.max(0,Math.min(255,Math.round(t0*255)))|0)*3;
-      g.fillStyle='rgb('+LUT[idx]+','+LUT[idx+1]+','+LUT[idx+2]+')';
-      g.beginPath();
-      g.moveTo(x0,y0); g.lineTo(x1,y1);
-      g.lineTo(x1,baseY); g.lineTo(x0,baseY);
-      g.closePath(); g.fill();
-    }
-    // arête supérieure (crête) plus claire pour le relief
+    sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
+    for(let i=1;i<nF-1;i++) sm[i]=(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
+    /* 1) silhouette OPAQUE sombre : occulte proprement les tranches derrière */
     g.beginPath();
-    pts.forEach((p,i)=>{ i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]); });
-    g.strokeStyle='rgba(255,255,255,'+(0.10+0.22*dz)+')'; g.lineWidth=1; g.stroke();
+    g.moveTo(baseX, baseY);
+    for(let i=0;i<nF;i++) g.lineTo(baseX+i*colW, baseY-sm[i]*ampH);
+    g.lineTo(baseX+(nF-1)*colW, baseY);
+    g.closePath();
+    g.fillStyle=occ; g.fill();
+    /* voile de profondeur discret sur la silhouette (plus sombre au loin) */
+    g.fillStyle='rgba(0,0,0,'+(0.22*(1-dz)).toFixed(3)+')'; g.fill();
+    /* 2) crête colorée par l'amplitude (segments) */
+    g.lineWidth = 1 + 0.8*dz;
+    for(let i=0;i<nF-1;i++){
+      const t=sm[i];
+      const idx=(Math.max(0,Math.min(255,Math.round(t*255)))|0)*3;
+      g.strokeStyle='rgba('+LUT[idx]+','+LUT[idx+1]+','+LUT[idx+2]+','+(0.45+0.55*dz).toFixed(2)+')';
+      g.beginPath();
+      g.moveTo(baseX+i*colW, baseY-sm[i]*ampH);
+      g.lineTo(baseX+(i+1)*colW, baseY-sm[i+1]*ampH);
+      g.stroke();
+    }
   }
-  // axes / repères légers
-  g.fillStyle=THEME.axis; g.font='8px Arial'; g.textAlign='left';
-  g.fillText('fréquence →', marginL, H-8);
-  g.save(); g.translate(10,marginT+8); g.rotate(0);
-  g.fillText('◤ temps', 0, 0); g.restore();
-  g.textAlign='right'; g.fillText(Math.round(hi)+' dB', marginL-4, marginT+8);
-  g.fillText(Math.round(lo)+' dB', marginL-4, H-marginB);
+  /* repères sobres */
+  g.fillStyle=THEME.axis; g.font='8px Arial';
+  g.textAlign='left';  g.fillText('fréquence →', marginL, H-6);
+  g.textAlign='right'; g.fillText('temps ↗', W-6, marginT+2);
+  g.fillText(Math.round(hi)+' dB', marginL-4, marginT+8);
+  g.fillText(Math.round(lo)+' dB', marginL-4, H-marginB+2);
 }
 function drawSgram(){
   const c=CV.sgramCv; if(!c)return;
