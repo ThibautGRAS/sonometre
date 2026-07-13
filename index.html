@@ -2079,8 +2079,8 @@ function sgTick(){
    isométrique. L'amplitude donne la HAUTEUR (relief) en plus de la COULEUR.
    Colonnes récentes au premier plan. */
 function drawSgram3D(){
-  const c=CV.sgramCv; if(!c)return;
-  const g=c.getContext('2d'); const W=c.width,H=c.height;
+  const cvInfo=CV.sgramCv; if(!cvInfo)return;
+  const g=cvInfo.g, W=cvInfo.w, H=cvInfo.h;      // contexte déjà en repère logique (dpr appliqué)
   const bg=THEME.bg; g.fillStyle=bg; g.fillRect(0,0,W,H);
   if(!SG.cols||!SG.map){ return; }
   /* même échelle couleur/amplitude que la vue 2D */
