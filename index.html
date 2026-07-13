@@ -2174,26 +2174,42 @@ function drawSgram3D(){
      ANTI-SCINTILLEMENT : chaque tranche MOYENNE les stepT colonnes de son intervalle
      (décimation propre) au lieu d'en piocher une seule — sinon le contenu de chaque
      tranche tressaute entre colonnes intermédiaires à chaque tick (repliement temporel). */
+  /* bornes de lignes par bin de fréquence : chaque point du profil MOYENNE toutes les
+     lignes de son intervalle (anti-vaguelettes : le point-sampling d'une seule ligne
+     sur ~16 laissait ressortir le bruit fin) */
+  const rowA=new Int32Array(nF), rowB=new Int32Array(nF);
+  for(let i=0;i<nF;i++){
+    const rA=Math.round(rBot-(i-0.5)/(nF-1)*(rBot-rTop));
+    const rB=Math.round(rBot-(i+0.5)/(nF-1)*(rBot-rTop));
+    rowA[i]=Math.max(0,Math.min(bufH-1,Math.min(rA,rB)));
+    rowB[i]=Math.max(0,Math.min(bufH-1,Math.max(rA,rB)));
+  }
   const P=[];
   {
     const prof=new Float32Array(nF);
     for(let j=0;j<nT;j++){
       const xEnd=idxs[j], xStart=Math.max(0,xEnd-stepT+1);
       for(let i=0;i<nF;i++){
-        const row=lineRow(i);
         let sum=0,n=0;
         for(let x=xStart;x<=xEnd;x++){
           const a=SG.cols[x]; if(!a)continue;
-          let L=a[row]; if(!isFinite(L))continue;
-          sum+=L; n++;
+          for(let r=rowA[i];r<=rowB[i];r++){
+            const L=a[r]; if(isFinite(L)){sum+=L;n++;}
+          }
         }
         let L=n?sum/n:lo;
         if(L<lo)L=lo; if(L>hi)L=hi;
         prof[i]=(L-lo)/span;
       }
-      const sm=new Float32Array(nF);
+      let sm=new Float32Array(nF);
       sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
       for(let i=1;i<nF-1;i++) sm[i]=(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
+      if(surf){                     // surface : 2e passe de lissage → relief doux
+        const s2=new Float32Array(nF);
+        s2[0]=sm[0]; s2[nF-1]=sm[nF-1];
+        for(let i=1;i<nF-1;i++) s2[i]=(sm[i-1]+2*sm[i]+sm[i+1])*0.25;
+        sm=s2;
+      }
       P.push(sm);
     }
     /* lissage LE LONG DU TEMPS : moyenne entre tranches voisines — supprime le jitter
@@ -2225,9 +2241,13 @@ function drawSgram3D(){
       }
       g.fillStyle=gr;
       g.beginPath();
+      /* contours en courbes quadratiques (points de contrôle aux sommets, passage aux milieux) */
       g.moveTo(px(j,0),py(j,0));
-      for(let i=1;i<nF;i++) g.lineTo(px(j,i),py(j,i));
-      for(let i=nF-1;i>=0;i--) g.lineTo(px(j+1,i),py(j+1,i));
+      for(let i=1;i<nF-1;i++) g.quadraticCurveTo(px(j,i),py(j,i),(px(j,i)+px(j,i+1))/2,(py(j,i)+py(j,i+1))/2);
+      g.lineTo(px(j,nF-1),py(j,nF-1));
+      g.lineTo(px(j+1,nF-1),py(j+1,nF-1));
+      for(let i=nF-2;i>=1;i--) g.quadraticCurveTo(px(j+1,i),py(j+1,i),(px(j+1,i)+px(j+1,i-1))/2,(py(j+1,i)+py(j+1,i-1))/2);
+      g.lineTo(px(j+1,0),py(j+1,0));
       g.closePath(); g.fill();
     }
     /* arête vive sur la tranche live */
