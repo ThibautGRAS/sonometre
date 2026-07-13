@@ -453,7 +453,7 @@ if('serviceWorker' in navigator){
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
       <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="emgBtn">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="right:86px">VIB</button></div>
-      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn" style="right:auto;left:10px">3D</button><button class="sg3dbtn" id="lsnBtn" style="right:auto;left:10px;top:38px">🔊</button></div>
+      <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn" style="right:56px">3D</button><button class="sg3dbtn" id="lsnBtn" style="right:56px;top:38px">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
@@ -1747,7 +1747,17 @@ function refreshTheme(){
 function grid(g,w,h,sc,padL,step){
   g.strokeStyle=THEME.grid;g.fillStyle=THEME.axis;g.font='8px Arial';g.textAlign='right';g.lineWidth=1;
   const d0=Math.ceil(sc.lo/step)*step;
-  for(let d=d0;d<=sc.hi;d+=step){const y=y2(d,h,sc);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText(Math.round(d),padL-3,y+3);}
+  for(let d=d0;d<=sc.hi;d+=step){
+    const y=y2(d,h,sc);
+    g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();
+    if(y>=14)g.fillText(Math.round(d),padL-3,y+3);   // la 1re étiquette laisse la place à l'unité « dB »
+  }
+}
+/* unités d'axes — appelé en DERNIER (après courbes/remplissages) pour rester lisible */
+function axisUnits(g,w,h,padL,xUnit){
+  g.fillStyle=THEME.axis;g.font='bold 8px Arial';
+  g.textAlign='right';g.fillText('dB',padL-3,9);
+  if(xUnit)g.fillText(xUnit,w-2,h-4);
 }
 
 const nyq=()=>S.ctx?S.ctx.sampleRate/2:20000;
@@ -1808,9 +1818,6 @@ function drawSpectrum(){
     }
     autoRange(sc,dLo,dHi);
     grid(g,w,h,sc,padL,10);
-    g.fillStyle=THEME.axis;g.font='8px Arial';
-    g.textAlign='right';g.fillText('dB',padL-3,9);            // unité axe Y
-    g.textAlign='right';g.fillText('Hz',w-2,h-4);             // unité axe X
     const bw=(w-padL-4)/nb;
     g.textAlign='center';
     const labelSet=(S.mode==='oct'||nb<=12)?names:[31.5,125,500,2000,8000];
@@ -1856,6 +1863,7 @@ function drawSpectrum(){
       g.strokeRect(x+0.5,y2(Math.max(L,sc.lo),h,sc)-0.5,Math.max(1,bw-2)+1,Math.max(1,y2(sc.lo,h,sc)-y2(Math.max(L,sc.lo),h,sc))+1);
       cursorLabel(g,w,x+bw/2,fmtF(names[b])+'Hz · '+fmt(L)+' dB',36);
     }
+    axisUnits(g,w,h,padL,'Hz');
     $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB';
   }else{
     const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
@@ -1876,9 +1884,6 @@ function drawSpectrum(){
     }
     autoRange(sc,dLo,dHi);
     grid(g,w,h,sc,padL,10);
-    g.fillStyle=THEME.axis;g.font='8px Arial';
-    g.textAlign='right';g.fillText('dB',padL-3,9);
-    g.textAlign='right';g.fillText('Hz',w-2,h-4);
     g.strokeStyle=THEME.grid;g.fillStyle=THEME.axis;g.font='8px Arial';g.textAlign='center';
     for(const f of dynTicks(fmin,fmax,6)){
       const x=x2(f);g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();
@@ -1950,6 +1955,7 @@ function drawSpectrum(){
         labelBox(g,w,x,'max '+fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+S.weight,labY,'#0B2B14','#4FE08A','#CFF5DC');
       }
     }
+    axisUnits(g,w,h,padL,'Hz');
     $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz';
   }
 }
@@ -1985,9 +1991,6 @@ function drawHistory(){
   }
   autoRange(sc,dLo,dHi);
   grid(g,w,h,sc,padL,10);
-  g.fillStyle=THEME.axis;g.font='8px Arial';
-  g.textAlign='right';g.fillText('dB',padL-3,9);
-  g.textAlign='right';g.fillText('s',w-2,h-4);
   const x2=t=>padL+((t-t0)/span)*(w-padL-4);
   g.beginPath();g.strokeStyle=THEME.line;g.lineWidth=1.1;let st=false;
   for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const x=x2(pt.t),y=y2(pt.L,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
@@ -1998,6 +2001,7 @@ function drawHistory(){
   g.textAlign='left';g.font='9px Arial';
   g.fillStyle=THEME.line;g.fillText('L'+S.weight+S.time,padL+4,10);
   g.fillStyle=THEME.lineEq;g.fillText('L'+S.weight+'eq',padL+40,10);
+  axisUnits(g,w,h,padL,'s');
   /* curseur mobile : trouve le point le plus proche en temps */
   if(S.histCursor!=null){
     const tc=t0+S.histCursor*span;
