@@ -219,6 +219,8 @@ if('serviceWorker' in navigator){
   .sg3dbtn.on{background:rgba(79,195,255,.28);color:#EAF6FF}
   #emgBtn.on{background:rgba(255,180,84,.24);border-color:rgba(255,180,84,.65);color:#FFD9A0}
   #vibBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
+  #avgBtn.on{background:rgba(79,195,255,.24);border-color:rgba(79,195,255,.65);color:#CFEBFF}
+  #avgBtn.dis{opacity:.35}
   #lsnBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
   /* icônes du spectrogramme : côte à côte à gauche, dégagées de l'ordonnée (padL≈26) */
   #sg3dBtn{right:auto;left:30px;top:6px;opacity:.75}
@@ -459,7 +461,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.40</div>
+  <div class="splashver">V35.41</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -514,7 +516,7 @@ if('serviceWorker' in navigator){
     <div class="graphzone">
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
-      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="vibBtn">VIB</button><button class="sg3dbtn" id="emgBtn" style="right:60px">ÉMG</button></div>
+      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="vibBtn">VIB</button><button class="sg3dbtn" id="emgBtn" style="right:60px">ÉMG</button><button class="sg3dbtn" id="avgBtn" style="right:112px">MOY</button></div>
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
@@ -785,6 +787,7 @@ if('serviceWorker' in navigator){
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
         <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
         <li>Spectre (tous modes) : icône <b>VIB</b> = corrélation vibro-acoustique. Pose le téléphone sur la structure vibrante : chaque bande est corrélée (coefficient 0→1) avec l'accéléromètre ; les bandes étrangères à la vibration s'estompent (en bande fine, un voile couvre les zones non corrélées ; en octave, coefficient agrégé), le badge indique le coefficient max. Corrélation sur les enveloppes (fluctuations de niveau, ±250 ms de délai toléré) : une source parfaitement constante ne peut pas être corrélée.</li>
+        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>instantané</b> (lissé selon TEMPS : Fast/Slow/V‑Slow) et <b>moyenné (Leq)</b> sur toute la durée de mesure — libellé « L<i>x</i>·Moy ». Le calcul moyenné tourne en permanence en parallèle (aucun surcoût), et le <b>rapport PDF</b> utilise toujours le spectre moyenné. Disponible en tiers d'octave, octave et bande fine.</li>
       </ul>
 
       <h3>Indices</h3>
@@ -871,14 +874,14 @@ const S = {
   wA:null, wC:null, compGain:null,
   bands:[], bandBins:[],
   bandPowF:null, bandPowS:null, bandPowV:null, bandPeak:null, bandEnergy:null,
-  binPowF:null, binPowS:null, binPowV:null,
+  binPowF:null, binPowS:null, binPowV:null, binEnergy:null,
   pF:{A:0,C:0,Z:0}, pS:{A:0,C:0,Z:0}, pV:{A:0,C:0,Z:0},
   eq:{A:0,C:0,Z:0}, eqT:0,
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
-  win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10,
+  win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10, specAvg:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
   toctSrc:'iir', iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
@@ -1372,6 +1375,7 @@ function configureAnalyser(){
     S.binPowF=new Float32Array(n);
     S.binPowS=new Float32Array(n);
     S.binPowV=new Float32Array(n);
+    S.binEnergy=new Float64Array(n);
   }
   S.iirBank=null;                      // le banc IIR dépend de fs/binHz/compGain : reconstruit
   SG.init=false;                       // recartographie bins→lignes (les données sgram sont préservées par sgSetup)
@@ -1493,6 +1497,7 @@ function resetMeasure(){
   if(S.binPowF)S.binPowF.fill(0);
   if(S.binPowS)S.binPowS.fill(0);
   if(S.binPowV)S.binPowV.fill(0);
+  if(S.binEnergy)S.binEnergy.fill(0);
   if(S.bandPeak)S.bandPeak.fill(-99);
   /* spectrogramme : vider le tampon de données et les curseurs/zoom associés */
   if(SG.cols)SG.cols.fill(null);
@@ -1640,6 +1645,7 @@ function loop(ts){
     S.binPowF[i]=aF*S.binPowF[i]+(1-aF)*p;
     S.binPowS[i]=aS*S.binPowS[i]+(1-aS)*p;
     S.binPowV[i]=aV*S.binPowV[i]+(1-aV)*p;
+    if(!idle&&S.binEnergy)S.binEnergy[i]+=p*dt;   // énergie cumulée par bin → spectre Leq moyenné (rapport)
   }
 
   const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
@@ -1884,17 +1890,19 @@ function dynTicks(fmin,fmax,nmax){
   return inr.filter((_,i)=>i%step===0);
 }
 
-function drawSpectrum(){
+function drawSpectrum(avg){
   const c=CV.specCv; if(!c)return;
   const {g,w,h}=c;
   g.fillStyle=THEME.bg;g.fillRect(0,0,w,h);
   const padL=26, sc=S.scale.spec, K=S.K||1;
   if(!S.bands.length){grid(g,w,h,sc,padL,10);return;}
+  /* moyenne : forcée par le param (rapport) sinon suit le toggle écran INST⇄MOY (S.specAvg) */
+  const useAvg=(avg===undefined?S.specAvg:avg)&&S.eqT>0;
 
   if(S.mode==='toct'||S.mode==='oct'){
     /* octave : agrège les tiers par groupes centrés sur les fréquences normalisées (…31.5,63,125,250,500,1k…) */
     let names, pw, peak;
-    const pwT=S.time==='F'?S.bandPowF:S.time==='S'?S.bandPowS:S.bandPowV;
+    const pwT=useAvg?Array.from(S.bandEnergy,e=>e/S.eqT):(S.time==='F'?S.bandPowF:S.time==='S'?S.bandPowS:S.bandPowV);
     if(S.mode==='oct'){
       const OCT=[16,31.5,63,125,250,500,1000,2000,4000,8000,16000];
       names=[]; pw=[]; peak=[];
@@ -1922,7 +1930,7 @@ function drawSpectrum(){
     let dLo=Infinity,dHi=-Infinity;
     for(let b=0;b<nb;b++){
       const L=lvl(pw[b]); if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
-      if(peak[b]>dHi)dHi=peak[b];
+      if(!useAvg&&peak[b]>dHi)dHi=peak[b];
     }
     autoRange(sc,dLo,dHi);
     grid(g,w,h,sc,padL,10);
@@ -1951,7 +1959,7 @@ function drawSpectrum(){
       g.fillStyle=L>85?THEME.barHi:L>70?THEME.barMid:THEME.barLo;
       g.fillRect(x+1,y,Math.max(1,bw-2),Math.max(0,y0-y));
       const Lp=peak[b];
-      if(Lp>sc.lo){g.fillStyle=THEME.peak;g.fillRect(x+1,y2(Lp,h,sc)-1,Math.max(1,bw-2),2);}
+      if(!useAvg&&Lp>sc.lo){g.fillStyle=THEME.peak;g.fillRect(x+1,y2(Lp,h,sc)-1,Math.max(1,bw-2),2);}
       if(vibC)g.globalAlpha=1;
       if(labelSet.includes(names[b])){
         g.fillStyle=THEME.axis;
@@ -1984,7 +1992,7 @@ function drawSpectrum(){
     const i0=Math.max(1,Math.floor(fmin/S.binHz)), i1=Math.min(S.fftDb.length-1,Math.ceil(fmax/S.binHz));
     for(let i=i0;i<=i1;i++){
       const f=S.freqs[i];
-      let p=binPow?binPow[i]:0;          // déjà lissé, corrigé (corr) et calé (K)
+      let p=useAvg?(S.binEnergy?S.binEnergy[i]/S.eqT:0):(binPow?binPow[i]:0);   // moyenné (Leq) ou live lissé
       if(!isFinite(p))p=0;
       if(wSel)p*=wSel[i];                // pondération A/C appliquée à l'affichage
       const L=lvl(p); pts.push([x2(f),L]);
@@ -2112,7 +2120,7 @@ function drawHistory(){
   for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const x=x2(pt.t),y=y2(pt.Leq,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
   g.stroke();
   g.textAlign='left';g.font='9px Arial';
-  g.fillStyle=THEME.line;g.fillText('L'+S.weight+S.time,padL+4,10);
+  g.fillStyle=THEME.line;g.fillText('L'+S.weight+(useAvg?'·Moy':S.time),padL+4,10);
   g.fillStyle=THEME.lineEq;g.fillText('L'+S.weight+'eq',padL+40,10);
   axisUnits(g,w,h,padL,'s');
   /* curseur mobile : trouve le point le plus proche en temps */
@@ -2497,6 +2505,7 @@ function beginRun(){
   /* départ VIERGE : la mesure commence exactement ici, rien d'antérieur à l'écran */
   if(S.bandPeak)S.bandPeak.fill(-99);
   if(S.bandEnergy)S.bandEnergy.fill(0);
+  if(S.binEnergy)S.binEnergy.fill(0);
   S.histView=null; S.histCursor=null; S.tview=sgDefaultView();
   if(SG.cols){SG.cols.fill(null);SG.colSeq=0;SG.vScaleKey='';SG.vSeq=-1;S.sgCursor=null;}
   resetSg3d();
@@ -3215,6 +3224,9 @@ function ui(){
   $('vibBtn').style.display='block';   // dispo en 1/3 oct, octave et bande fine
   $('vibBtn').classList.toggle('on',VIB.on);
   $('vibBtn').classList.toggle('dis',!VIB.sup);
+  $('avgBtn').style.display='block';   // INST⇄MOY : tous modes de spectre
+  $('avgBtn').classList.toggle('on',S.specAvg);
+  $('avgBtn').classList.toggle('dis',!(S.eqT>0));   // pas de moyenne tant qu'aucune mesure
   $('lsnBtn').classList.toggle('on',LSN.on);
   $('lsnBtn').style.display=S.sg3d?'none':'flex';
   $('mEmgThr').querySelector('b').textContent=(S.emgThr||10)+' dB';
@@ -3337,6 +3349,7 @@ $('mSgSpeed').onclick=()=>{
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
 $('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();drawActive();};
 $('vibBtn').onclick=()=>{vibToggle();};
+$('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; savePrefs(); ui(); if(S.screen==='spec')drawSpectrum(); };
 $('lsnBtn').onclick=()=>{lsnToggle();};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
 const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['gameboy','Game Boy'],['matrix','Matrice']];
@@ -3344,7 +3357,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
                    'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','sg3dSmooth','lsnSlope','lsnGain','micId'];
+                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','specAvg','sg3dSmooth','lsnSlope','lsnGain','micId'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
@@ -4092,7 +4105,7 @@ function figureDataURL(kind){
     const id=kind==='sgram'?'sgramCv':kind==='hist'?'histCv':'specCv';
     const c=$(id); if(!c)return '';
     sizeCanvas(id); if(!c.width)return '';
-    if(kind==='spec') drawSpectrum();
+    if(kind==='spec') drawSpectrum(true);
     else if(kind==='hist') drawHistory();
     else drawSgram();
     return c.toDataURL('image/png');
