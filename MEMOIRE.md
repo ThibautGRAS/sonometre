@@ -53,6 +53,13 @@ Déploiement via l'API GitHub Contents (`api.github.com`), pas de build local (t
 - Icônes flottantes des graphes (`.sg3dbtn`) : taille uniforme 46×26, estompage automatique après 3,5 s d'inactivité.
 - Traduction : ne jamais écraser le contenu d'une touche qui contient un SVG (icônes ▶ ■ ⏸) — garde `if(el.children.length)return`. Valeurs composées traduites mot à mot (`Tstr`), pas par correspondance exacte.
 - Spectrogramme 3D : réduire une tranche de fréquence par **max**, pas par moyenne (une raie fine serait diluée) ; lisser en **préservant les maxima locaux** (sinon le 1-2-1 rabaisse les raies). Les valeurs 3D doivent correspondre à la 2D.
+- **Mouvement continu 3D (depuis V35.18)** : `drawSgram3D` n'échantillonne plus le tampon à âges fixes (ça faisait SAUTER les crêtes de tranche en tranche). Modèle **buffer de courbes-instantanés glissantes** dans `window.V3={frames,ema,acc,lastT,sig}` :
+  - capture d'une courbe (`capture3D`) à cadence régulière `capInt=winSec*1000/(maxFrames-1)` (min 16 ms), lissée par **EMA** (α=0.4) ; `frames` plafonné à `maxFrames` (96 fil de fer / 42 surface) ;
+  - profondeur **continue** : `dzArr[k]=1-((len-1-k)+phase)/(maxFrames-1)`, `phase=acc/capInt` (0→1) → glissement fluide entre captures ; la plus récente au front (`dz≈1`), sauter si `dz<0` ;
+  - `sig` = signature (mode, nF, fmin, fmax) → **reset des frames** si la vue change ;
+  - **cache** : `key` contient `S.running?'run':'stop'` et non plus `seq` → redraw **chaque frame en marche** (glissement), figé à l'arrêt ;
+  - **plafond de cadence ~43 FPS** (`SG._3dLast`, garde 23 ms) pour ne pas saturer le Canvas iPhone (~96 courbes × stroke par segment). La fluidité vient de l'interpolation de `phase`, pas du FPS brut.
+  - Rendu (silhouettes opaques de masquage, dunes ombrées, couleurs par segment, axes, colorbar, marqueur ▲ présent) **inchangé** — seul le positionnement est devenu continu.
 
 ## 5. Fonctions principales
 
@@ -80,6 +87,8 @@ Convention **enregistreur** (comme le Dictaphone iOS) : bouton principal **rouge
 ## 8. Journal des versions
 
 > Les versions antérieures à V27 sont documentées dans l'historique Git.
+
+- **V35.18** : fil de fer 3D à **glissement continu** — buffer de courbes-instantanés (`window.V3`) capturées à cadence régulière + EMA, profondeur continue interpolée par phase fractionnaire (fini le saut de tranche en tranche), redraw chaque frame en marche, plafond ~43 FPS. Look/masquage/couleurs inchangés.
 
 - **V27–V33** : vue 3D waterfall (rotation, cache de rendu, modes fil de fer/surface, anti-scintillement), colorbar 3D unifiée avec la 2D, logo CETIM vectorisé, thèmes Game Boy et Matrice, modules VIB (corrélation vibro-acoustique) et écoute filtrée (🔊), traduction FR/EN/ES.
 - **V33.1** : icônes ▶⏸ préservées lors de la traduction ; encadrés curseur/émergence sous les boutons ; traduction robuste (try/catch + re-passe).
