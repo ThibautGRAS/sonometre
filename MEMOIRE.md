@@ -89,6 +89,7 @@ Convention **enregistreur** (comme le Dictaphone iOS) : bouton principal **rouge
 
 > Les versions antérieures à V27 sont documentées dans l'historique Git.
 
+- **V35.29** : **front live continu** — la courbe de front (présent) suit maintenant le signal à **chaque image** (EMA à constante de temps ~55 ms, resynchronisée sur le dernier frame chaque redraw) au lieu d'un instantané figé rafraîchi seulement à la cadence de capture. Fin du léger « saut de haut en bas » du front (surtout visible en HF/à droite). Push d'un instantané figé à `capInt` (l'ancien front est committé, un nouveau front live repart).
 - **V35.28** : anti-scintillement du fil de fer 3D — cadence remontée à **~60 FPS** (le rendu par dégradé, 1 tracé/courbe, est désormais assez léger ; pas de glissement deux fois plus petits) et **fondu du bord arrière** (`edgeA` selon `dz`) : la courbe la plus ancienne s'estompe au lieu de disparaître d'un coup. Dégradé allégé (1 point sur 2).
 - **V35.27** : le **spectrogramme 2D** retrouve l'option **« Tout »** (défaut 2D) ; le **3D** garde 3/5/10 s (défaut 5 s, jamais « Tout »). Fenêtres de temps **mémorisées par vue** (`S._tv2d`/`S._tv3d`) basculées au toggle 2D↔3D. `sgDefaultView()` (2D→Tout, 3D→5 s) utilisé par tous les resets. **Appui long ÉCHELLES** applique le défaut selon la vue, libellé passe bien à **« Auto »** (`fullT` du libellé : 5 s en 3D, Tout en 2D).
 - **V35.24–26** : bouton LOG/LIN aligné puis élargi (hauteur 42 px = bouton OK, largeur 92 px) dans la ligne de saisie Hz.
