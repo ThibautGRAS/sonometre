@@ -1,0 +1,617 @@
+{
+ "date": "2026-07-14T16:42:01.935Z",
+ "total": 61,
+ "pass": 61,
+ "results": [
+  {
+   "group": "FFT",
+   "name": "sinus bin entier : puissance de la raie (après recalage K)",
+   "value": -3.0102999566398085,
+   "expected": -3.010299956639812,
+   "tol": 0.01,
+   "err": 3.552713678800501e-15,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "FFT",
+   "name": "Parseval (Σ bins = puissance signal)",
+   "value": -3.0102999566398085,
+   "expected": -3.0102999566398085,
+   "tol": 0.05,
+   "err": 0,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "FFT",
+   "name": "fuite hors raie (rect, bin entier)",
+   "value": -272.18657662144403,
+   "expected": -250,
+   "tol": 60,
+   "err": 22.186576621444033,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Fenêtres",
+   "name": "Parseval bruit blanc, Hann",
+   "value": -4.713618001911169,
+   "expected": -4.7136180019111595,
+   "tol": 0.4,
+   "err": 9.769962616701378e-15,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Fenêtres",
+   "name": "Parseval bruit blanc, Blackman",
+   "value": -4.71361800191117,
+   "expected": -4.7136180019111595,
+   "tol": 0.4,
+   "err": 1.0658141036401503e-14,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Fenêtres",
+   "name": "Parseval bruit blanc, Flat-top",
+   "value": -4.713618001911154,
+   "expected": -4.7136180019111595,
+   "tol": 0.4,
+   "err": 5.329070518200751e-15,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Fenêtres",
+   "name": "sinus inter-bin (Blackman) : puissance récupérée sur la raie",
+   "value": -9.030900158150242,
+   "expected": -9.030899869919436,
+   "tol": 0.15,
+   "err": 2.882308063334449e-7,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. A",
+   "name": "A(63 Hz)",
+   "value": -26.222825281137034,
+   "expected": -26.2,
+   "tol": 0.2,
+   "err": 0.022825281137034636,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. A",
+   "name": "A(125 Hz)",
+   "value": -16.189653372521796,
+   "expected": -16.1,
+   "tol": 0.2,
+   "err": 0.08965337252179495,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. A",
+   "name": "A(250 Hz)",
+   "value": -8.67482728928772,
+   "expected": -8.6,
+   "tol": 0.2,
+   "err": 0.07482728928771998,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. A",
+   "name": "A(500 Hz)",
+   "value": -3.2478075093781316,
+   "expected": -3.2,
+   "tol": 0.2,
+   "err": 0.047807509378131385,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. A",
+   "name": "A(1000 Hz)",
+   "value": 0.00014152769487951744,
+   "expected": 0,
+   "tol": 0.2,
+   "err": 0.00014152769487951744,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. A",
+   "name": "A(2000 Hz)",
+   "value": 1.201674176077685,
+   "expected": 1.2,
+   "tol": 0.2,
+   "err": 0.0016741760776850523,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. A",
+   "name": "A(4000 Hz)",
+   "value": 0.9635979052450729,
+   "expected": 1,
+   "tol": 0.2,
+   "err": 0.03640209475492706,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. A",
+   "name": "A(8000 Hz)",
+   "value": -1.1468793432843185,
+   "expected": -1.1,
+   "tol": 0.2,
+   "err": 0.04687934328431842,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. A",
+   "name": "A(16000 Hz)",
+   "value": -6.7061184127130495,
+   "expected": -6.6,
+   "tol": 0.2,
+   "err": 0.10611841271304989,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. A",
+   "name": "A(31.5 Hz)",
+   "value": -39.52886548324546,
+   "expected": -39.4,
+   "tol": 0.2,
+   "err": 0.12886548324546254,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. C",
+   "name": "C(63 Hz)",
+   "value": -0.822545698829872,
+   "expected": -0.8,
+   "tol": 0.2,
+   "err": 0.022545698829872007,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. C",
+   "name": "C(125 Hz)",
+   "value": -0.1736665356204975,
+   "expected": -0.2,
+   "tol": 0.2,
+   "err": 0.026333464379502514,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. C",
+   "name": "C(250 Hz)",
+   "value": -0.0024259440813022073,
+   "expected": 0,
+   "tol": 0.2,
+   "err": 0.0024259440813022073,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. C",
+   "name": "C(500 Hz)",
+   "value": 0.030677318153595715,
+   "expected": 0,
+   "tol": 0.2,
+   "err": 0.030677318153595715,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. C",
+   "name": "C(1000 Hz)",
+   "value": -0.0019042819923129686,
+   "expected": 0,
+   "tol": 0.2,
+   "err": 0.0019042819923129686,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. C",
+   "name": "C(2000 Hz)",
+   "value": -0.17149254591237384,
+   "expected": -0.2,
+   "tol": 0.2,
+   "err": 0.02850745408762617,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. C",
+   "name": "C(4000 Hz)",
+   "value": -0.8279190955739069,
+   "expected": -0.8,
+   "tol": 0.2,
+   "err": 0.027919095573906816,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. C",
+   "name": "C(8000 Hz)",
+   "value": -3.049299876945291,
+   "expected": -3,
+   "tol": 0.2,
+   "err": 0.04929987694529103,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. C",
+   "name": "C(16000 Hz)",
+   "value": -8.636694269928805,
+   "expected": -8.5,
+   "tol": 0.2,
+   "err": 0.13669426992880496,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. C",
+   "name": "C(31.5 Hz)",
+   "value": -3.032641874257191,
+   "expected": -3,
+   "tol": 0.2,
+   "err": 0.032641874257191006,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Filtre C (LCpeak)",
+   "name": "réponse à 31.5 Hz",
+   "value": -3.0532921003423863,
+   "expected": -3,
+   "tol": 0.3,
+   "err": 0.053292100342386295,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Filtre C (LCpeak)",
+   "name": "réponse à 125 Hz",
+   "value": -0.1942076382809023,
+   "expected": -0.2,
+   "tol": 0.3,
+   "err": 0.005792361719097722,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Filtre C (LCpeak)",
+   "name": "réponse à 1000 Hz",
+   "value": -1.0800467625396883e-13,
+   "expected": 0,
+   "tol": 0.3,
+   "err": 1.0800467625396883e-13,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Filtre C (LCpeak)",
+   "name": "réponse à 4000 Hz",
+   "value": -0.5345067161975432,
+   "expected": -0.8,
+   "tol": 0.5,
+   "err": 0.26549328380245685,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Filtre C (LCpeak)",
+   "name": "réponse à 8000 Hz",
+   "value": -2.3514213653516056,
+   "expected": -3,
+   "tol": 1,
+   "err": 0.6485786346483944,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Filtre C (LCpeak)",
+   "name": "crête sinus 1 kHz (max|y|/a)",
+   "value": -0.008563839210994694,
+   "expected": 0,
+   "tol": 0.1,
+   "err": 0.008563839210994694,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "100 Hz : gain à fc",
+   "value": -9.643274665532871e-16,
+   "expected": 0,
+   "tol": 0.05,
+   "err": 9.643274665532871e-16,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "100 Hz : gain à fc·2^(1/6) (borne)",
+   "value": -3.0102999565497894,
+   "expected": -3.01,
+   "tol": 0.35,
+   "err": 0.00029995654978964836,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "100 Hz : gain à fc/2^(1/6) (borne)",
+   "value": -3.010299956498364,
+   "expected": -3.01,
+   "tol": 0.35,
+   "err": 0.00029995649836411786,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "100 Hz : réjection au tiers adjacent (conforme si ≤ −17 dB)",
+   "value": -17,
+   "expected": -17,
+   "tol": 1e-9,
+   "err": 0,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "1000 Hz : gain à fc",
+   "value": -9.643274665532871e-16,
+   "expected": 0,
+   "tol": 0.05,
+   "err": 9.643274665532871e-16,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "1000 Hz : gain à fc·2^(1/6) (borne)",
+   "value": -3.010299956640084,
+   "expected": -3.01,
+   "tol": 0.35,
+   "err": 0.00029995664008408696,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "1000 Hz : gain à fc/2^(1/6) (borne)",
+   "value": -3.010299956641966,
+   "expected": -3.01,
+   "tol": 0.35,
+   "err": 0.00029995664196613703,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "1000 Hz : réjection au tiers adjacent (conforme si ≤ −17 dB)",
+   "value": -17,
+   "expected": -17,
+   "tol": 1e-9,
+   "err": 0,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "4000 Hz : gain à fc",
+   "value": 1.928654933106574e-15,
+   "expected": 0,
+   "tol": 0.05,
+   "err": 1.928654933106574e-15,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "4000 Hz : gain à fc·2^(1/6) (borne)",
+   "value": -3.010299956639634,
+   "expected": -3.01,
+   "tol": 0.35,
+   "err": 0.0002999566396342246,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "4000 Hz : gain à fc/2^(1/6) (borne)",
+   "value": -3.0102999566396447,
+   "expected": -3.01,
+   "tol": 0.35,
+   "err": 0.00029995663964488273,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "4000 Hz : réjection au tiers adjacent (conforme si ≤ −17 dB)",
+   "value": -17,
+   "expected": -17,
+   "tol": 1e-9,
+   "err": 0,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "sinus 1 kHz : niveau dans la bande 1000",
+   "value": -17.003652116159756,
+   "expected": -16.989700043360187,
+   "tol": 0.05,
+   "err": 0.013952072799568782,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "IEC 61260",
+   "name": "sinus 1 kHz : réjection bande 1250 (conforme si ≤ −17 dB)",
+   "value": -17,
+   "expected": -17,
+   "tol": 1e-9,
+   "err": 0,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Tiers FFT",
+   "name": "sinus 1 kHz : niveau de la bande 1000 (synthèse FFT)",
+   "value": -10.969635484310933,
+   "expected": -10.969100130080562,
+   "tol": 0.1,
+   "err": 0.0005353542303705439,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Raie+bruit",
+   "name": "bande 1000 sur signal raie+bruit blanc",
+   "value": -16.988812334573417,
+   "expected": -16.989700043360187,
+   "tol": 0.2,
+   "err": 0.0008877087867702471,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Leq",
+   "name": "signal 2 segments (60/40 dB)",
+   "value": -42.96708621881312,
+   "expected": -42.96708621881338,
+   "tol": 1e-9,
+   "err": 2.5579538487363607e-13,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Leq",
+   "name": "LAE (SEL) = LAeq + 10·log10(T)",
+   "value": -32.96708621881312,
+   "expected": -32.96708621881312,
+   "tol": 1e-9,
+   "err": 0,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Leq",
+   "name": "octave = Σ énergie des tiers (3 tiers égaux → +4,77 dB)",
+   "value": 4.771212547196626,
+   "expected": 4.771,
+   "tol": 0.001,
+   "err": 0.00021254719662611166,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Pond. temp.",
+   "name": "constante τ(F) du code",
+   "value": 0.125,
+   "expected": 0.125,
+   "tol": 1e-12,
+   "err": 0,
+   "unit": "s",
+   "pass": true
+  },
+  {
+   "group": "Pond. temp.",
+   "name": "réponse indicielle à t=τ (F) = 63,2 %",
+   "value": 0.6321205588285581,
+   "expected": 0.6321205588285577,
+   "tol": 0.005,
+   "err": 4.440892098500626e-16,
+   "unit": "·",
+   "pass": true
+  },
+  {
+   "group": "Pond. temp.",
+   "name": "constante τ(S) du code",
+   "value": 1,
+   "expected": 1,
+   "tol": 1e-12,
+   "err": 0,
+   "unit": "s",
+   "pass": true
+  },
+  {
+   "group": "Pond. temp.",
+   "name": "réponse indicielle à t=τ (S) = 63,2 %",
+   "value": 0.6321205588285572,
+   "expected": 0.6321205588285577,
+   "tol": 0.005,
+   "err": 4.440892098500626e-16,
+   "unit": "·",
+   "pass": true
+  },
+  {
+   "group": "Pond. temp.",
+   "name": "constante τ(V) du code",
+   "value": 10,
+   "expected": 10,
+   "tol": 1e-12,
+   "err": 0,
+   "unit": "s",
+   "pass": true
+  },
+  {
+   "group": "Pond. temp.",
+   "name": "réponse indicielle à t=τ (V) = 63,2 %",
+   "value": 0.6321205588285433,
+   "expected": 0.6321205588285577,
+   "tol": 0.005,
+   "err": 1.432187701766452e-14,
+   "unit": "·",
+   "pass": true
+  },
+  {
+   "group": "Interp. pic",
+   "name": "fréquence estimée (sinus à bin 100,30)",
+   "value": 100.30662192622172,
+   "expected": 100.3,
+   "tol": 0.02,
+   "err": 0.006621926221725971,
+   "unit": "bin",
+   "pass": true
+  },
+  {
+   "group": "Interp. pic",
+   "name": "niveau sommet = a²/2 − 10·log10(ENBW) (scalloping corrigé)",
+   "value": -5.343243033325916,
+   "expected": -5.383143315673382,
+   "tol": 0.1,
+   "err": 0.039900282347465676,
+   "unit": "dB",
+   "pass": true
+  },
+  {
+   "group": "Émergence",
+   "name": "raie 10 dB au-dessus du plancher",
+   "value": 10,
+   "expected": 10,
+   "tol": 1e-9,
+   "err": 0,
+   "unit": "dB",
+   "pass": true
+  }
+ ]
+}
