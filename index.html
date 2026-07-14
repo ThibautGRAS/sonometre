@@ -254,6 +254,12 @@ if('serviceWorker' in navigator){
   .ep-in{width:100%;box-sizing:border-box;background:rgba(0,0,0,.30);border:1px solid var(--line);color:#fff;border-radius:9px;padding:9px 11px;font-family:var(--font);font-size:13px;font-weight:600}
   .ep-btn{flex:1;height:40px;border-radius:10px;border:1px solid rgba(79,195,255,.45);background:rgba(79,195,255,.14);color:#CFEBFF;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font)}
   .ep-btn:disabled{opacity:.35}
+  .rec-item{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:9px;padding:7px 9px;margin-bottom:6px}
+  .rec-item .ri-t{flex:1;min-width:0}
+  .rec-item .ri-t b{display:block;font-size:12px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rec-item .ri-t span{display:block;font-size:10px;color:var(--lcd-dim);margin-top:1px}
+  .rec-item .ri-a{display:flex;gap:5px;flex:0 0 auto}
+  .rec-item .ri-a button{height:30px;min-width:34px;border-radius:8px;border:1px solid rgba(79,195,255,.4);background:rgba(79,195,255,.12);color:#CFEBFF;font-size:11px;font-weight:700;font-family:var(--font);padding:0 7px}
   .ep-in::placeholder{color:#6f83a6}
   .ep-figs{display:flex;gap:16px;flex-wrap:wrap;padding:2px}
   .ep-figs label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#cfe3ff;cursor:pointer}
@@ -465,7 +471,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.1-beta</div>
+  <div class="splashver" id="splashVer">2.0.2-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -870,7 +876,10 @@ if('serviceWorker' in navigator){
       <div style="display:flex;gap:8px">
         <button class="ep-btn" id="arecWavShare" disabled>Partager WAV</button>
         <button class="ep-btn" id="arecWavDl" disabled>Télécharger WAV</button>
+        <button class="ep-btn" id="arecSave" disabled>Sauvegarder</button>
       </div>
+      <div class="msub">ENREGISTREMENTS LOCAUX</div>
+      <div id="recList"></div>
       <div class="msub">RAPPORT COMPLET</div>
       <button class="exp-item" id="epReport"><b>Générer le rapport (PDF)</b><span>document A4 · impression iOS → « Enregistrer en PDF »</span></button>
       <div class="msub">DONNÉES &amp; IMAGE</div>
@@ -1441,13 +1450,100 @@ function arecWavBlob(){
   return new Blob([b],{type:'audio/wav'});
 }
 function arecUi(){
-  const st=$('arecState'), bs=$('arecWavShare'), bd=$('arecWavDl'); if(!st) return;
+  const st=$('arecState'), bs=$('arecWavShare'), bd=$('arecWavDl'), bv=$('arecSave'); if(!st) return;
   const dur=AREC.fs?AREC.len/AREC.fs:0, mb=(AREC.len*2/1048576);
   st.textContent=!S.recAudio?'désactivé':
     AREC.len?((AREC.full?'plein (20 min) · ':'')+dur.toFixed(1)+' s · '+mb.toFixed(1)+' Mo · '+Math.round(AREC.fs)+' Hz'):
     'prêt (capte pendant la mesure)';
-  const has=AREC.len>0; if(bs)bs.disabled=!has; if(bd)bd.disabled=!has;
+  const has=AREC.len>0; if(bs)bs.disabled=!has; if(bd)bd.disabled=!has; if(bv)bv.disabled=!has;
 }
+/* ===== V2 · BIBLIOTHÈQUE LOCALE (chantier 2) ================================
+   Enregistrements persistés dans IndexedDB : store 'recs' (métadonnées : fs,
+   date, durée, offset et profil de calibration — nécessaires au replay) et
+   store 'chunks' (PCM int16 par blocs ~1 Mo, clé [id,seq]) pour ne jamais
+   charger toute la bibliothèque en RAM. navigator.storage.persist() demandé à
+   la première sauvegarde (sinon Safari peut purger silencieusement). */
+const RDB={db:null, CH:524288};
+function rdbOpen(){ return new Promise((res,rej)=>{ if(RDB.db)return res(RDB.db);
+  const rq=indexedDB.open('sono_rec',1);
+  rq.onupgradeneeded=e=>{ const db=e.target.result;
+    db.createObjectStore('recs',{keyPath:'id'});
+    db.createObjectStore('chunks',{keyPath:['id','seq']});
+  };
+  rq.onsuccess=()=>{RDB.db=rq.result;res(RDB.db);};
+  rq.onerror=()=>rej(rq.error);
+});}
+function rdbTx(stores,mode,fn){ return rdbOpen().then(db=>new Promise((res,rej)=>{
+  const tx=db.transaction(stores,mode); const out=fn(tx);
+  tx.oncomplete=()=>res(out); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error);
+}));}
+async function recSave(){
+  if(!AREC.len) return;
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(_){}
+  /* consolide les blocs de capture (4096) en segments ~1 Mo */
+  const segs=[]; let cur=new Int16Array(RDB.CH), fill=0;
+  for(const c of AREC.chunks){ let o=0;
+    while(o<c.length){ const n=Math.min(c.length-o,RDB.CH-fill); cur.set(c.subarray(o,o+n),fill); fill+=n; o+=n;
+      if(fill===RDB.CH){ segs.push(cur); cur=new Int16Array(RDB.CH); fill=0; } } }
+  if(fill)segs.push(cur.subarray(0,fill).slice());
+  const t0=AREC.t0||new Date();
+  const meta={ id:Date.now().toString(36), name:'Mesure du '+t0.toLocaleString('fr-FR'),
+    date:t0.toISOString(), fs:AREC.fs, len:AREC.len, dur:AREC.len/(AREC.fs||1),
+    offset:S.offset, corr:S.corr, corrName:S.corrName||'', nseg:segs.length, app:APP_VERSION };
+  await rdbTx(['recs','chunks'],'readwrite',tx=>{
+    tx.objectStore('recs').put(meta);
+    segs.forEach((s,i)=>tx.objectStore('chunks').put({id:meta.id,seq:i,pcm:s}));
+  });
+  toast('Enregistrement sauvegardé ('+meta.dur.toFixed(1)+' s)');
+  renderRecList();
+}
+function recList(){ return rdbTx(['recs'],'readonly',tx=>{
+  const out=[]; tx.objectStore('recs').openCursor().onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value);c.continue();}};
+  return out;
+});}
+function recDelete(id){ return rdbTx(['recs','chunks'],'readwrite',tx=>{
+  tx.objectStore('recs').delete(id);
+  tx.objectStore('chunks').delete(IDBKeyRange.bound([id,0],[id,1e9]));
+});}
+function recRename(id,name){ return rdbTx(['recs'],'readwrite',tx=>{
+  const st=tx.objectStore('recs'); st.get(id).onsuccess=e=>{const m=e.target.result;if(m){m.name=name;st.put(m);}};
+});}
+function recSegs(id){ return rdbTx(['chunks'],'readonly',tx=>{
+  const out=[]; tx.objectStore('chunks').openCursor(IDBKeyRange.bound([id,0],[id,1e9])).onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value.pcm);c.continue();}};
+  return out;
+});}
+async function recWavBlob(id,meta){
+  const segs=await recSegs(id);
+  const n=segs.reduce((a,s)=>a+s.length,0), fs=meta.fs||44100;
+  const b=new ArrayBuffer(44+n*2), v=new DataView(b);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF'); v.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,fs,true); v.setUint32(28,fs*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  ws(36,'data'); v.setUint32(40,n*2,true);
+  let o=44; for(const s of segs){ new Int16Array(b,o,s.length).set(s); o+=s.length*2; }
+  return new Blob([b],{type:'audio/wav'});
+}
+async function renderRecList(){
+  const box=$('recList'); if(!box)return;
+  let recs=[]; try{ recs=await recList(); }catch(_){ box.innerHTML='<div class="mnote">bibliothèque indisponible</div>'; return; }
+  recs.sort((a,b)=>b.date<a.date?-1:1);
+  if(!recs.length){ box.innerHTML='<div class="mnote" style="margin:0">aucun enregistrement sauvegardé</div>'; return; }
+  box.innerHTML='';
+  let usage=''; try{ const e=await navigator.storage.estimate(); if(e&&e.usage)usage=(e.usage/1048576).toFixed(0)+' Mo utilisés'; }catch(_){}
+  for(const m of recs){
+    const d=document.createElement('div'); d.className='rec-item';
+    d.innerHTML='<div class="ri-t"><b></b><span>'+new Date(m.date).toLocaleString('fr-FR')+' · '+m.dur.toFixed(1)+' s · '+(m.len*2/1048576).toFixed(1)+' Mo · '+Math.round(m.fs)+' Hz</span></div>'+
+      '<div class="ri-a"><button data-a="wav">WAV</button><button data-a="ren">✎</button><button data-a="del">🗑</button></div>';
+    d.querySelector('b').textContent=m.name;
+    d.querySelector('[data-a="wav"]').onclick=async()=>{ toast('Préparation du WAV…'); shareOrDownload(await recWavBlob(m.id,m),(m.name.replace(/[^\w\- ]+/g,'_')||'enregistrement')+'.wav','Audio sonomètre CETIM'); };
+    d.querySelector('[data-a="ren"]').onclick=async()=>{ const n=prompt('Nom de l\'enregistrement :',m.name); if(n){ await recRename(m.id,n); renderRecList(); } };
+    d.querySelector('[data-a="del"]').onclick=async()=>{ if(confirm('Supprimer « '+m.name+' » ?')){ await recDelete(m.id); renderRecList(); } };
+    box.appendChild(d);
+  }
+  if(usage){ const u=document.createElement('div'); u.className='mnote'; u.style.margin='2px 0 0'; u.textContent=usage; box.appendChild(u); }
+}
+function toast(msg){ const el=$('err'); if(!el)return; el.style.display='block'; el.textContent=msg; clearTimeout(toast._t); toast._t=setTimeout(()=>el.style.display='none',3000); }
 async function acquireMic(){
   lsnOff();
   if(S.srcNode){try{S.srcNode.disconnect();}catch(e){}}
@@ -4315,7 +4411,7 @@ async function shareOrDownload(blob,name,title){
 }
 function csvBlob(){ return new Blob(["\ufeff"+buildCsv()],{type:'text/csv;charset=utf-8'}); }
 
-$('kCsv').onclick=()=>{ renderExpNote(); document.querySelectorAll('input[name="expBand"]').forEach(r=>r.checked=(r.value===(S.expBand||'toct'))); if($('arecTgl'))$('arecTgl').checked=!!S.recAudio; arecUi(); $('expPop').classList.add('on'); };
+$('kCsv').onclick=()=>{ renderExpNote(); document.querySelectorAll('input[name="expBand"]').forEach(r=>r.checked=(r.value===(S.expBand||'toct'))); if($('arecTgl'))$('arecTgl').checked=!!S.recAudio; arecUi(); renderRecList(); $('expPop').classList.add('on'); };
 $('epClose').onclick=()=>$('expPop').classList.remove('on');
 $('expPop').addEventListener('click',e=>{if(e.target.id==='expPop')$('expPop').classList.remove('on');});
 function renderExpNote(){
@@ -4334,6 +4430,7 @@ $('arecTgl').onchange=e=>{
 };
 $('arecWavShare').onclick=()=>{ if(AREC.len)shareOrDownload(arecWavBlob(),'sonometre_audio_'+stamp()+'.wav','Audio sonomètre CETIM'); };
 $('arecWavDl').onclick   =()=>{ if(AREC.len)dl(arecWavBlob(),'sonometre_audio_'+stamp()+'.wav'); };
+$('arecSave').onclick    =()=>{ recSave().catch(()=>toast('Sauvegarde impossible (stockage local indisponible)')); };
 $('epCsvDl').onclick   =()=>dl(csvBlob(),'sonometre_'+stamp()+'.csv');
 $('epPngShare').onclick=()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>shareOrDownload(b,'sonometre_'+stamp()+'.png','Graphe sonomètre CETIM'),'image/png'); };
 $('epPngDl').onclick   =()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>dl(b,'sonometre_'+stamp()+'.png'),'image/png'); };
