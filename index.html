@@ -452,7 +452,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.19</div>
+  <div class="splashver">V35.20</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -806,7 +806,7 @@ if('serviceWorker' in navigator){
       <p>Dans l'écran <b>Valeurs</b> (page 2), la cellule « Émergence tonale » indique la raie tonale dominante : <b>+X dB @ Y Hz</b>, ou « aucune » s'il n'y a pas de vraie composante tonale. Calcul par la méthode <b>ISO 1996-2</b> (bande critique de Bark), avec confirmation sur plusieurs mesures pour ne retenir que les raies stables dans le temps (une raie tonale persiste, un pic de bruit saute). L'émergence est <b>toujours évaluée</b> dans le tableau de valeurs. Le <b>Seuil d'alerte</b> (menu expert, 6 à 15 dB) fixe le niveau à partir duquel une raie est retenue pour le tableau et pour la détection auto (icône <b>ÉMG</b>, encadré orange sur la bande fine). Au <b>curseur unique</b> sur la FFT, l'émergence de la raie visée est affichée en permanence. Indicateur de diagnostic, non certifié.</p>
 
       <h3>Vue 3D du spectrogramme</h3>
-      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène. La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : « Tout » affiche tout le tampon, un preset 3/5/10 s affiche cette durée. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>rendu</b> se choisit dans le mode expert : <b>Fil de fer</b> (crêtes) ou <b>Surface</b> (maillage plein coloré).</p>
+      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène, <b>verticalement</b> pour l'incliner (plongée, rotation autour de l'axe des fréquences). La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : un preset 3/5/10 s affiche cette durée (défaut 5 s), avec un glissement continu de l'affichage. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>rendu</b> se choisit dans le mode expert : <b>Fil de fer</b> (crêtes) ou <b>Surface</b> (maillage plein coloré).</p>
 
       <h3>Optimiser le spectrogramme</h3>
       <p>Menu expert ▸ <b>Optimiser le spectrogramme</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse et échelle. <b>Tonal</b> (résolution fréquence max, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, pour chocs/parole), <b>Équilibré</b> (polyvalent). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
@@ -856,7 +856,7 @@ const S = {
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
-  fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:true, sgMin:0, sgMax:60,
+  fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
   toctSrc:'iir', iirBank:null, theme:'oled', sg3dMode:'wire', lsnSlope:24, lsnGain:12, micId:'',            // LCpeak (crête pondérée C, domaine temporel)
@@ -1477,7 +1477,7 @@ function resetMeasure(){
   if(SG.cols)SG.cols.fill(null);
   SG.colSeq=0; SG.vScaleKey=''; SG.vViewKey=''; SG.vSeq=-1;
   S.sgCursor=null; S.histCursor=null;
-  S.tview={x0:0,x1:1}; S.histView=null;
+  S.tview=sgWin(5); S.histView=null;
   updateNumbers(-99); drawActive();
 }
 /* effacements ciblés (mode expert) */
@@ -2468,7 +2468,7 @@ function beginRun(){
   /* départ VIERGE : la mesure commence exactement ici, rien d'antérieur à l'écran */
   if(S.bandPeak)S.bandPeak.fill(-99);
   if(S.bandEnergy)S.bandEnergy.fill(0);
-  S.histView=null; S.histCursor=null; S.tview={x0:0,x1:1};
+  S.histView=null; S.histCursor=null; S.tview=sgWin(5);
   if(SG.cols){SG.cols.fill(null);SG.colSeq=0;SG.vScaleKey='';SG.vSeq=-1;S.sgCursor=null;}
   ui();
 }
@@ -2481,6 +2481,8 @@ function sgInterval(){
   return Math.max(16,S.colMs);
 }
 function sgBufDur(){ return (SG.Wp||1)*sgInterval()/1000; }
+/* fenêtre spectrogramme roulante de `sec` secondes finissant à maintenant (fraction du tampon) */
+function sgWin(sec){ const T=sgBufDur(); if(!isFinite(T)||T<0.5) return {x0:0,x1:1}; return {x0:Math.max(0,Math.min(0.97,1-sec/T)),x1:1}; }
 function sgTick(){
   if(!S.binHz)return;
   if(!CV.sgramCv)sizeCanvas('sgramCv');               // dimensionne même si l'écran n'est pas affiché
@@ -2506,7 +2508,7 @@ function drawSgram3D(){
      continu ne sert que pour les fenêtres bornées 3/5/10 s. */
   const isTout = S.tview.x0<=1e-3 && S.tview.x1>=0.999;
   /* plafond de cadence (~43 FPS) uniquement pour le glissement borné (pas en « Tout ») */
-  if(S.running && !isTout){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<23)return; SG._3dLast=_tn; }
+  if(S.running && !S.paused && !isTout){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<23)return; SG._3dLast=_tn; }
   /* fenêtre de temps (réglage TEMPS du popover ÉCHELLES), en colonnes */
   const winCols=Math.min(seq, Wp, Math.max(8, Math.round((S.tview.x1-S.tview.x0)*Wp)));
   const winSec = Math.max(0.3,(S.tview.x1-S.tview.x0)*sgBufDur());
@@ -2536,20 +2538,20 @@ function drawSgram3D(){
   const lo=sc.lo, hi=sc.hi, span=Math.max(1,hi-lo);
   /* rotation */
   const rot=(S.sg3dRot===undefined?0:S.sg3dRot);
-  /* CACHE : ne redessiner que si quelque chose a changé (données, vue, échelle, thème) */
+  const pitch=Math.max(0,Math.min(1,S.sg3dPitch||0));
   /* cache : en « Tout » redraw sur nouvelle colonne (léger, comme avant) ; en fenêtre
      bornée redraw chaque frame en marche (glissement), figé à l'arrêt. */
-  const key=[isTout?('seq'+seq):(S.running?'run':'stop'),rot.toFixed(3),S.sg3dMode,lo,hi,fmin|0,fmax|0,S.tview.x0.toFixed(4),S.tview.x1.toFixed(4),S.theme,W,H].join('|');
-  if((isTout||!S.running) && SG._3dKey===key)return;
+  const key=[isTout?('seq'+seq):(S.running&&!S.paused?'run':'stop'),rot.toFixed(3),pitch.toFixed(3),S.sg3dMode,lo,hi,fmin|0,fmax|0,S.tview.x0.toFixed(4),S.tview.x1.toFixed(4),S.theme,W,H].join('|');
+  if((isTout||!S.running||S.paused) && SG._3dKey===key)return;
   SG._3dKey=key;
   g.fillStyle=THEME.bg; g.fillRect(0,0,W,H);
   /* géométrie */
   const marginL=14, marginR=34, marginT=16, marginB=26;
   const plotW=W-marginL-marginR, plotH=H-marginT-marginB;
-  const depth=plotH*0.46;
+  const depth=plotH*(0.46+0.34*pitch);                       // plongée : le fond se relève (rotation autour de l'axe des fréquences)
   const skewTot=plotW*(0.15+0.45*rot);
   const absSkew=Math.abs(skewTot);
-  const colW=(plotW-absSkew)/nF, ampH=plotH*(surf?0.42:0.46);
+  const colW=(plotW-absSkew)/nF, ampH=plotH*(surf?0.42:0.46)*(1-0.22*pitch);   // relief légèrement raccourci en plongée
   const baseXof=dz=> marginL + (skewTot>=0 ? skewTot*(1-dz) : absSkew*dz);
   const baseYof=dz=> marginT + (plotH-depth) + depth*dz;
   const lineRow=fi=>Math.round(rBot - fi/(nF-1)*(rBot-rTop));
@@ -2635,7 +2637,7 @@ function drawSgram3D(){
       V.frames.push(V.ema.slice());
       while(V.frames.length>maxFrames)V.frames.shift();
     };
-    if(S.running){
+    if(S.running && !S.paused){
       if(V.frames.length===0)capture3D();
       V.acc+=_dt; let guard=0;
       while(V.acc>=capInt && guard++<6){ capture3D(); V.acc-=capInt; }
@@ -2807,7 +2809,7 @@ function clampView(Vmin,span){
 function resetView(){
   S.fview.min=S.fscale==='lin'?0:20;
   S.fview.max=Math.min(20000,nyq());
-  S.tview.x0=0; S.tview.x1=1;
+  S.tview=sgWin(5);
   S.cursor=null; drawActive();
 }
 function attachZoomPan(id,axis,opts){
@@ -3235,20 +3237,22 @@ $('sg3dBtn').onclick=()=>{
   $('lsnBtn').style.display=S.sg3d?'none':'flex';   // l'écoute n'a pas d'icône en 3D
   drawSgram();
 };
-/* rotation légère autour de l'axe vertical : glissement horizontal à un doigt en vue 3D */
+/* rotation légère : glissement HORIZONTAL = azimut (autour vertical) ; glissement VERTICAL
+   = tangage léger autour de l'axe des fréquences (vers le bas = vue plus en plongée) */
 (function(){
-  const cv=$('sgramCv'); let sx=null, rot0=0;
+  const cv=$('sgramCv'); let sx=null, sy=null, rot0=0, pit0=0;
   cv.addEventListener('touchstart',e=>{
     if(!S.sg3d||e.touches.length!==1)return;
-    sx=e.touches[0].clientX; rot0=S.sg3dRot||0;
+    sx=e.touches[0].clientX; sy=e.touches[0].clientY; rot0=S.sg3dRot||0; pit0=S.sg3dPitch||0;
   },{passive:true});
   cv.addEventListener('touchmove',e=>{
     if(!S.sg3d||sx===null||e.touches.length!==1)return;
-    const dx=e.touches[0].clientX-sx;
-    S.sg3dRot=Math.max(-1,Math.min(1,rot0-dx/150));   // sens naturel : on 'pousse' la scène
+    const dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy;
+    S.sg3dRot=Math.max(-1,Math.min(1,rot0-dx/150));       // azimut
+    S.sg3dPitch=Math.max(0,Math.min(1,pit0+dy/260));      // tangage léger (glisser vers le bas = plus en plongée)
     if(!S.running||S.paused)drawSgram();     // en mesure, la boucle redessine déjà
   },{passive:true});
-  cv.addEventListener('touchend',()=>{sx=null;});
+  cv.addEventListener('touchend',()=>{sx=null;sy=null;});
 })();
 $('mFscale').onclick=()=>{S.fscale=S.fscale==='log'?'lin':'log';SG.init=false;resetView();ui();};
 $('mWin').onclick=()=>{
@@ -3384,7 +3388,7 @@ function renderDynPop(){
   /* ---- presets dB COULEURS : spectrogramme ---- */
   if(isSgram){
     const gc=$('dpCPresets');gc.innerHTML='';
-    const CPRE=[['Auto',null],['0–60',[0,60]],['20–80',[20,80]],['40–100',[40,100]]];
+    const CPRE=[['Auto',null],['0–90',[0,90]],['20–80',[20,80]],['40–100',[40,100]]];
     for(const [lbl,rng] of CPRE){
       const b=document.createElement('button');b.textContent=lbl;
       const on=rng?(!S.sgAuto&&S.sgMin===rng[0]&&S.sgMax===rng[1]):S.sgAuto;
@@ -3399,7 +3403,7 @@ function renderDynPop(){
   /* ---- presets TEMPS (X) : spectrogramme / évolution ---- */
   if(isSgram||isHist){
     const gt=$('dpTPresets');gt.innerHTML='';
-    const TPRE=[['Tout',null],['3 s',3],['5 s',5],['10 s',10]];
+    const TPRE = isSgram ? [['3 s',3],['5 s',5],['10 s',10]] : [['Tout',null],['3 s',3],['5 s',5],['10 s',10]];
     for(const [lbl,sec] of TPRE){
       const b=document.createElement('button');b.textContent=lbl;
       let on=false;
@@ -3454,7 +3458,7 @@ $('kDyn').addEventListener('pointerdown',()=>{
     S.dbAuto=true;                       // dB auto
     S.sgAuto=true;                        // couleurs spectrogramme auto
     S.fview={min:S.fscale==='lin'?0:20,max:Math.min(20000,nyq())};  // fréquence pleine bande
-    S.tview={x0:0,x1:1}; S.histView=null; // temps plein (spectrogramme + évolution)
+    S.tview=sgWin(5); S.histView=null; // spectrogramme : fenêtre 5 s par défaut ; évolution : plein
     S.cursor=null; SG.vSeq=-1;
     ui();drawActive();
     if($('dynPop').classList.contains('on'))renderDynPop();
