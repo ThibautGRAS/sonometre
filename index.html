@@ -115,7 +115,7 @@ if('serviceWorker' in navigator){
   .logo{height:15px;width:auto;display:block}
   .wordmark{font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:.16em;color:var(--ink);text-transform:uppercase;padding-left:11px;border-left:2px solid var(--red);line-height:1}
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
-  .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}
+  .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
   .hdricons{display:flex;align-items:center;gap:12px;flex:0 0 auto}
   .helpbtn{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);opacity:.55;font-family:var(--font);font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
   .helpbtn:active{opacity:.95}
@@ -461,7 +461,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.43</div>
+  <div class="splashver" id="splashVer">1.35.44</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -644,6 +644,9 @@ if('serviceWorker' in navigator){
   <!-- popover CALIBRATION -->
   <div id="calPop" class="calpop"><div class="calpop-in">
     <div class="cp-head">CALIBRATION <button id="cpClose">✕</button></div>
+    <div class="cp-lbl">MICRO</div>
+    <div class="cp-row"><span id="cpMicName" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62%">—</span><b id="cpMicRate">—</b></div>
+    <div class="cp-row"><span>Choisir</span><select id="micSelPop" class="micsel" style="max-width:62%"><option value="">Automatique</option></select></div>
     <div class="cp-row"><span>Correction amplitude</span><button id="cpCorr">Off</button></div>
     <div class="cp-lbl">OFFSET dBFS → dB SPL</div>
     <div class="cp-presets" id="cpPresets"></div>
@@ -754,7 +757,7 @@ if('serviceWorker' in navigator){
   </div></div>
 
   <div id="helpPop" class="calpop"><div class="calpop-in helppop">
-    <div class="cp-head">AIDE &amp; GUIDE <button id="hpClose">✕</button></div>
+    <div class="cp-head">AIDE &amp; GUIDE <span id="hpVer" style="margin-left:auto;margin-right:10px;font-size:10px;letter-spacing:.08em;color:var(--lcd-dim);font-weight:700"></span><button id="hpClose">✕</button></div>
     <div class="langbar"><button class="langbtn" data-lang="fr">🇫🇷 Français</button><button class="langbtn" data-lang="en">🇬🇧 English</button><button class="langbtn" data-lang="es">🇪🇸 Español</button></div>
     <div class="helpbody">
       <h3>Démarrer</h3>
@@ -3419,6 +3422,9 @@ function applyTheme(){
   if(typeof refreshTheme==='function'){refreshTheme(); if(typeof drawActive==='function')drawActive(true);}
 }
 $('hHelp').onclick=()=>{ $('helpPop').classList.add('on'); };
+/* version de l'app : source unique = splash (bumpée à chaque déploiement) */
+const APP_VERSION=($('splashVer')&&$('splashVer').textContent.trim())||'';
+if($('hpVer'))$('hpVer').textContent=APP_VERSION?('v'+APP_VERSION):'';
 $('hpClose').onclick=()=>$('helpPop').classList.remove('on');
 $('helpPop').addEventListener('click',e=>{if(e.target.id==='helpPop')$('helpPop').classList.remove('on');});
 $('mTheme').onclick=()=>{
@@ -3429,12 +3435,12 @@ $('mTheme').onclick=()=>{
 $('mSg3dSmooth').onclick=()=>{ S.sg3dSmooth=((S.sg3dSmooth|0)+1)%3; SG._3dKey=''; if(window.V3)window.V3.sig=''; savePrefs(); ui(); if(S.sg3d)drawSgram(); };
 $('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); savePrefs(); };
 $('lsnGainSel').onchange=(e)=>{ S.lsnGain=+e.target.value||0; lsnSetGain(); savePrefs(); };
-$('micSel').onchange=async(e)=>{
-  S.micId=e.target.value||''; savePrefs();
-  const want=e.target.selectedOptions[0]?e.target.selectedOptions[0].textContent:'';
+async function applyMicChoice(sel){
+  S.micId=sel.value||''; savePrefs();
+  const want=sel.selectedOptions[0]?sel.selectedOptions[0].textContent:'';
   if(S.ctx){                                   // micro déjà initialisé → appliquer tout de suite
     try{
-      await acquireMic(); showMicInfo(); populateMicList();
+      await acquireMic(); showMicInfo(); populateMicList(); cpShowMic();
       const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
       const got=tr?tr.label:'';
       if(want && got && S.micId && got.toLowerCase().indexOf(want.toLowerCase().slice(0,6))<0){
@@ -3444,7 +3450,9 @@ $('micSel').onchange=async(e)=>{
       }
     }catch(err){ const el=$('err'); if(el){el.style.display='block'; el.textContent='Ce micro n a pas pu être sélectionné (iOS choisit souvent l entrée automatiquement).'; setTimeout(()=>el.style.display='none',5000);} }
   }
-};
+}
+$('micSel').onchange=e=>applyMicChoice(e.target);
+$('micSelPop').onchange=e=>applyMicChoice(e.target);
 loadPrefs(); applyTheme(); _prefsReady=true;
 $('mToctSrc').onclick=()=>{
   S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
@@ -3640,12 +3648,14 @@ function applyProfile(p){
 
 /* ===== Rendu de l'écran calibration ===== */
 async function populateMicList(){
-  const sel=$('micSel'); if(!sel)return;
   try{
     const devs=await navigator.mediaDevices.enumerateDevices();
     const ins=devs.filter(d=>d.kind==='audioinput');
-    sel.innerHTML='<option value="">Automatique (défaut système)</option>';
-    ins.forEach((d,i)=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||('Entrée '+(i+1)); if(d.deviceId&&d.deviceId===S.micId)o.selected=true; sel.appendChild(o); });
+    for(const id of ['micSel','micSelPop']){
+      const sel=$(id); if(!sel)continue;
+      sel.innerHTML='<option value="">Automatique (défaut système)</option>';
+      ins.forEach((d,i)=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||('Entrée '+(i+1)); if(d.deviceId&&d.deviceId===S.micId)o.selected=true; sel.appendChild(o); });
+    }
   }catch(e){}
 }
 function showMicInfo(){
@@ -3859,7 +3869,16 @@ $('kDur').onclick=()=>{S.duration=DURS[(DURS.indexOf(S.duration)+1)%DURS.length]
 
 /* ===== Popover CALIBRATION global (Auto + presets + fin ±0.5 + avancé) ===== */
 const OFFSET_PRESETS=[94,100,110,120,130];
+/* affiche le micro actif + fs dans le petit popover calibration */
+function cpShowMic(){
+  const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
+  const st=tr&&tr.getSettings?tr.getSettings():{};
+  const rate=(st&&st.sampleRate)||(S.ctx&&S.ctx.sampleRate)||0;
+  if($('cpMicName'))$('cpMicName').textContent=tr?(tr.label||'Micro (nom masqué)'):'micro non démarré';
+  if($('cpMicRate'))$('cpMicRate').textContent=rate?(Math.round(rate)+' Hz'):'—';
+}
 function renderCalPop(){
+  cpShowMic(); populateMicList();
   $('cpCorr').textContent=S.corr==='off'?'Off':S.corr==='generic'?'Auto':'Profil';
   $('cpOff').textContent=S.offset.toFixed(1)+' dB';
   const g=$('cpPresets');g.innerHTML='';
@@ -3871,6 +3890,8 @@ function renderCalPop(){
   }
 }
 $('kCal').onclick=()=>{ if($('kCal').classList.contains('locked'))return; renderCalPop(); $('calPop').classList.add('on'); };
+/* icône micro d'en-tête : tap → petit menu calibration (micro actif, fs, sélection) */
+$('micStat').onclick=()=>{ renderCalPop(); $('calPop').classList.add('on'); };
 $('cpClose').onclick=()=>$('calPop').classList.remove('on');
 $('calPop').addEventListener('click',e=>{if(e.target.id==='calPop')$('calPop').classList.remove('on');});
 $('cpCorr').onclick=()=>{
