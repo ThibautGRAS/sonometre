@@ -459,7 +459,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.35</div>
+  <div class="splashver">V35.36</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2021,20 +2021,25 @@ function drawSpectrum(){
     const n=S.fftDb?S.fftDb.length:0;
     const getDb=k=>{let p=binPow?binPow[Math.max(1,Math.min(n-1,k))]:0;if(!isFinite(p)||p<=0)return -180;if(wSel)p*=wSel[Math.max(1,Math.min(n-1,k))];return 10*Math.log10(p);};
     let labY=36;                                  // empilement vertical : démarre SOUS les boutons VIB/ÉMG (y 6..32)
-    /* curseur : cherche le pic local près du point visé, puis interpolation parabolique */
+    /* curseur : accroche un pic local si posé AU-DESSUS de la courbe, sinon fréquence libre */
     if(S.cursor&&S.cursor.f>=fmin&&S.cursor.f<=fmax&&S.binHz){
       let ic=Math.max(1,Math.min(n-1,Math.round(S.cursor.f/S.binHz)));
-      // accroche le maximum local dans une petite fenêtre (±0,5 % ou ≥2 bins) autour du tap
-      const half=Math.max(2,Math.round(ic*0.02));
-      let bi=ic,bv=-Infinity;
-      for(let k=Math.max(1,ic-half);k<=Math.min(n-1,ic+half);k++){const v=getDb(k);if(v>bv){bv=v;bi=k;}}
-      const pk=parabolicPeak(getDb,bi,S.binHz);
+      let bi=ic, pk;
+      if(S.cursor.snap!==false){
+        // accroche le maximum local dans une petite fenêtre (±0,5 % ou ≥2 bins) autour du tap
+        const half=Math.max(2,Math.round(ic*0.02));
+        let bv=-Infinity;
+        for(let k=Math.max(1,ic-half);k<=Math.min(n-1,ic+half);k++){const v=getDb(k);if(v>bv){bv=v;bi=k;}}
+        pk=parabolicPeak(getDb,bi,S.binHz);
+      }else{
+        bi=ic; pk={f:S.cursor.f, L:getDb(ic)};      // placement libre (pas d'accroche)
+      }
       const L=pk.L+S.offset, x=x2(pk.f);
       g.strokeStyle=THEME.cursor;g.lineWidth=1;g.setLineDash([3,3]);
       g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
       g.fillStyle=THEME.cursor;g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
       const emg=tonalEmergence(binPow,bi,wSel);
-      let clbl=fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+S.weight+(S.peakInterp?' ⟂':'');
+      let clbl=fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+S.weight+((S.cursor.snap!==false&&S.peakInterp)?' ⟂':'');
       if(emg) clbl+=' · émg +'+emg.dL.toFixed(1)+'dB';   // toujours affichée au curseur unique
       cursorLabel(g,w,x,clbl,labY); labY+=19;
     }
@@ -2881,11 +2886,13 @@ function attachZoomPan(id,axis,opts){
       anchV=Vof(Math.max(0,Math.min(1,uOf(t,r))));
       anchB=bx(Math.max(0,Math.min(1,uxOf(t,r))));
       mode='pan';
-      /* si le doigt se pose SUR le curseur → on le glisse (comme le curseur d'évolution) */
-      const cu=opts.getCursorU?opts.getCursorU():null;
-      if(cu!=null){ const u0=Math.max(0,Math.min(1,uxOf(t,r))); if(Math.abs(u0-cu)<0.05){ mode='cursor'; return; } }
       const now=Date.now();
-      if(now-lastTap<300){resetView();mode=null;lastTap=0;return;}
+      const cu=opts.getCursorU?opts.getCursorU():null;
+      const u0=Math.max(0,Math.min(1,uxOf(t,r)));
+      const onCursor = cu!=null && Math.abs(u0-cu)<0.05;
+      if(onCursor && now-lastTap<300){ if(opts.onCursorRemove)opts.onCursorRemove(); mode=null; lastTap=0; return; } // double-tap SUR le curseur → l'enlever
+      if(onCursor){ mode='cursor'; lastTap=now; return; }                     // contact sur le curseur → glissé
+      if(now-lastTap<300){resetView();mode=null;lastTap=0;return;}            // double-tap ailleurs → reset vue
       lastTap=now;
     }
   },{passive:false});
@@ -2992,7 +2999,8 @@ function attachZoomPan(id,axis,opts){
       const inPlot = rawUx>=0 && rawUx<=1 && ry>=14 && ry<=r.height-13;
       if(inPlot){
         const u=(anchV-TF(Math.max(F_LOW(),S.fview.min)))/spanCur();
-        opts.onTap(TFi(anchV),axis==='x'?u:1-u,rawUx);   // fréquence + position temps du tap
+        const sc=S.scale.spec, tapDb=sc?(sc.hi-Math.max(0,Math.min(1,(ry-2)/Math.max(1,r.height-16)))*(sc.hi-sc.lo)):null; // dB sous le doigt (mapping y2 inverse)
+        opts.onTap(TFi(anchV),axis==='x'?u:1-u,rawUx,tapDb);   // fréquence + position temps + niveau dB du tap
       }
     }
     if(e.touches.length===0){mode=null;anchors=null;}
@@ -3023,12 +3031,30 @@ function attachZoomPan(id,axis,opts){
 /* neutraliser les gestes natifs iOS (zoom page) sur toute l'app */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 
+/* niveau affiché de la courbe FFT à la fréquence f (avec pondération + réf.) */
+function specCurveDb(f){
+  const binPow=S.time==='F'?S.binPowF:S.time==='S'?S.binPowS:S.binPowV;
+  if(!binPow||!S.binHz)return -180;
+  const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null, n=binPow.length;
+  const k=Math.max(1,Math.min(n-1,Math.round(f/S.binHz)));
+  let p=binPow[k]; if(!isFinite(p)||p<=0)return -180; if(wSel)p*=wSel[k];
+  return 10*Math.log10(p)+S.offset;
+}
 attachZoomPan('specCv','x',{
   yZoom:true,
   freezeMain:()=>S.mode!=='fft',      // tiers/octave : barres figées (pas de pan/zoom fréquence)
   onChange:()=>{if(!S.running)drawSpectrum();},
-  onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();},
+  onTap:(f,u,rawUx,tapDb)=>{
+    /* accroche un pic proche seulement si le tap est AU-DESSUS de la courbe ;
+       sous la courbe → placement libre à la fréquence visée. Le glissé conserve le mode. */
+    let snap;
+    if(tapDb==null) snap = S.cursor?S.cursor.snap!==false:true;
+    else snap = tapDb > specCurveDb(f)+1;
+    S.cursor={f,u,snap};
+    if(!S.running)drawSpectrum();
+  },
   onTap2:()=>{ S.maxCur=!S.maxCur; if(!S.running||S.paused)drawSpectrum(); },
+  onCursorRemove:()=>{ S.cursor=null; if(!S.running||S.paused)drawSpectrum(); },
   getCursorU:()=>S.cursor?S.cursor.u:null
 });
 /* ===== gestes de la courbe d'évolution (temps × dB) ===== */
@@ -3990,8 +4016,8 @@ function buildGraphCanvas(){
   const W=out.width/sc;
   // en-tête : logo CETIM + sous-titre à gauche, date en haut à droite
   if(LOGO_IMG_LIGHT.complete && LOGO_IMG_LIGHT.naturalWidth){
-    const lh=16, lw=lh*(374.5/59);
-    g.drawImage(LOGO_IMG_LIGHT, pad, 11, lw, lh);
+    const lh=18, lw=lh*(374.5/59);
+    g.drawImage(LOGO_IMG_LIGHT, pad, 10, lw, lh);
   }else{
     g.fillStyle='#EF3346'; g.fillRect(pad,16,3,18);
     g.fillStyle='#EAF4FF'; g.textAlign='left'; g.font='700 15px Arial'; g.fillText('CETIM · SONOMÈTRE',pad+9,29);
@@ -4019,8 +4045,8 @@ const REPORT_CSS=
   '#report{max-width:820px;margin:12px auto;background:#fff;padding:20px 22px;box-shadow:0 1px 8px rgba(0,0,0,.18)}'+
   '.noprint{position:sticky;top:0;z-index:5;display:flex;gap:8px;justify-content:flex-end;padding:10px 12px;background:#eef1f6}'+
   '.noprint button{background:#001E50;color:#fff;border:0;border-radius:9px;padding:11px 18px;font:700 14px Arial;letter-spacing:.02em}'+
-  '.rep-h{display:flex;align-items:flex-start;gap:12px;border-bottom:2px solid #001E50;padding-bottom:8px}'+
-  '.rep-logo{flex:0 0 auto}.rep-logo svg{height:34px;width:auto;display:block}'+
+  '.rep-h{display:flex;align-items:center;gap:12px;border-bottom:2px solid #001E50;padding-bottom:8px}'+
+  '.rep-logo{flex:0 0 auto}.rep-logo svg{height:32px;width:auto;display:block}.rep-htxt{align-self:center}'+
   '.rep-bar{width:5px;height:38px;background:#EF3346;flex:0 0 auto}'+
   '.rep-t1{font-size:16px;font-weight:800;letter-spacing:.1em;color:#001E50}'+
   '.rep-t2{font-size:11px;color:#555;margin-top:2px}'+
@@ -4089,8 +4115,7 @@ function buildReportHTML(figs){
   const scr=S.screen==='sgram'?('Spectrogramme'+(S.sg3d?' 3D':'')):S.screen==='hist'?'Évolution temporelle':(S.mode==='fft'?'Spectre FFT':S.mode==='oct'?'Octave':'Tiers d\'octave');
   return ''+
   '<div class="rep-h"><div class="rep-logo">'+cetimLogoSVG('#001E50')+'</div>'+
-    '<div><div class="rep-t1" style="font-size:13px;letter-spacing:.14em">SONOMÈTRE</div>'+
-    '<div class="rep-t2">Rapport de mesure acoustique</div></div>'+
+    '<div class="rep-htxt"><div class="rep-t2">Rapport de mesure acoustique · Sonomètre</div></div>'+
     '<div class="rep-meta">'+now+(ref?'<br>Réf. '+ref:'')+(site?'<br>'+site:'')+(oper?'<br>'+oper:'')+'</div></div>'+
   '<div class="rep-sec">Indices globaux (pondération '+S.weight+')</div>'+
   '<div class="rep-idx rep-avoid">'+
