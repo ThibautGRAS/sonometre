@@ -22,7 +22,7 @@
   #status{position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom) + 10px);z-index:3;
           font-size:11px;letter-spacing:.04em;color:#7fb0e6;line-height:1.5;white-space:pre}
   #hint{position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 10px);z-index:3;
-        font-size:11px;color:#4d6a92}
+        font-size:11px;color:#4d6a92;text-align:right}
   #err{position:fixed;left:12px;right:12px;top:50%;transform:translateY(-50%);z-index:5;
        background:rgba(239,51,70,.12);border:1px solid rgba(239,51,70,.5);color:#ffb0b8;
        padding:14px 16px;border-radius:12px;font-size:13px;line-height:1.4;display:none}
@@ -40,11 +40,12 @@
     <button class="btn on" data-sec="5">5 s</button>
     <button class="btn" data-sec="10">10 s</button>
   </span>
+  <button class="btn on" id="awBtn">Pond. A</button>
   <span class="spacer"></span>
   <button class="btn rec" id="startBtn">Démarrer</button>
 </div>
 <div id="status"></div>
-<div id="hint">glisser : pivoter</div>
+<div id="hint">glisser : pivoter · pincer : zoom</div>
 <div id="err"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -52,127 +53,104 @@
 (function(){
 'use strict';
 const errBox=document.getElementById('err');
-function fail(msg){ errBox.style.display='block'; errBox.textContent=msg; }
+function fail(m){ errBox.style.display='block'; errBox.textContent=m; }
 if(!window.THREE){ fail("Three.js n'a pas pu être chargé (connexion requise au premier lancement)."); return; }
 
 /* ===================== PARAMÈTRES ===================== */
-const N        = 160;      // points de fréquence par courbe
-const FFT      = 4096;     // taille FFT
-const FRAME_HZ = 20;       // cadence de capture des trames (indépendante des 60 FPS de rendu)
-const FMIN     = 40;       // Hz
-let   FMAX      = 20000;    // Hz (ajusté à Nyquist)
-const DBMIN    = -95, DBMAX = -25;   // plage de normalisation (dBFS approx)
-const EMA_A    = 0.45;     // moyennage exponentiel (0 = figé, 1 = brut)
-/* géométrie de la scène */
-const WIDTH=10, HEIGHT=3.0, DEPTH=13;
+const N=150, FFT=4096, FRAME_HZ=20;
+const FMIN=40; let FMAX=20000;
+const DBMIN=-95, DBMAX=-25;
+const EMA_A=0.45;
+let aweight=true;
+/* scène (centrée sur l'origine) */
+const WIDTH=10, HEIGHT=3.2, DEPTH=12, YBASE=-HEIGHT*0.45;
+const BG=new THREE.Color(0x00030a);
 
-let durSec = 5;
-let maxFrames = Math.round(durSec*FRAME_HZ);
-let spacing   = DEPTH/maxFrames;
+let durSec=5, maxFrames=Math.round(durSec*FRAME_HZ), spacing=DEPTH/maxFrames;
 
-/* ===================== THREE : scène ===================== */
+/* ===================== THREE ===================== */
 const canvas=document.getElementById('gl');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setClearColor(BG,1);
 const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(48,1,0.1,200);
-camera.position.set(0,5.6,9.2);
-camera.lookAt(0,1.1,-DEPTH*0.42);
+let viewSize=9, zoom=1;
+const camera=new THREE.OrthographicCamera(-1,1,1,-1,1,200);
+camera.position.set(0,0,60); camera.lookAt(0,0,0);
 
-const pivot=new THREE.Group();     // rotation utilisateur
+const pivot=new THREE.Group();        // rotation utilisateur (tilt + azimut vertical)
 scene.add(pivot);
-const scroller=new THREE.Group();  // glissement continu (profondeur)
+const scroller=new THREE.Group();     // glissement continu (profondeur)
 pivot.add(scroller);
+let rot={x:0.62,y:-0.34};             // vue par défaut : centrée, léger isométrique
+function applyRot(){ pivot.rotation.x=rot.x; pivot.rotation.y=rot.y; }
 
-/* repères d'orientation : quelques lignes de fond aux décades */
+/* ===================== axes de repère ===================== */
 function addGrid(){
-  const g=new THREE.BufferGeometry();
-  const pts=[];
-  const decs=[100,1000,10000];
-  for(const f of decs){
-    if(f<FMIN||f>FMAX)continue;
-    const x=freqToX(f);
-    pts.push(x,0,0, x,0,-DEPTH);
-  }
-  // cadre avant + fond
-  pts.push(-WIDTH/2,0,0, WIDTH/2,0,0);
-  pts.push(-WIDTH/2,0,-DEPTH, WIDTH/2,0,-DEPTH);
-  g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
-  const m=new THREE.LineBasicMaterial({color:0x14375f,transparent:true,opacity:0.6});
-  pivot.add(new THREE.LineSegments(g,m));
+  const pts=[]; const decs=[100,1000,10000];
+  for(const f of decs){ if(f<FMIN||f>FMAX)continue; const x=freqToX(f); pts.push(x,YBASE,DEPTH/2, x,YBASE,-DEPTH/2); }
+  pts.push(-WIDTH/2,YBASE,DEPTH/2, WIDTH/2,YBASE,DEPTH/2);
+  pts.push(-WIDTH/2,YBASE,-DEPTH/2, WIDTH/2,YBASE,-DEPTH/2);
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+  pivot.add(new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x14375f,transparent:true,opacity:0.55})));
 }
 
-/* ===================== géométrie du waterfall ===================== */
-const SEGV = (N-1)*2;                 // sommets par trame (segments)
-const posArr = new Float32Array(0);   // (ré)alloués dans allocBuffers()
-let position, color, geom, lines;
+/* ===================== géométrie : rideaux (masquage) + fils (couleur) ===================== */
+let curtGeom,curtMesh,lineGeom,lineSeg, cPos,cCol,lPos,lCol;
 function allocBuffers(){
-  if(lines){ scroller.remove(lines); geom.dispose(); lines.material.dispose(); }
-  const total = maxFrames*SEGV;
-  position = new Float32Array(total*3);
-  color    = new Float32Array(total*3);
-  geom = new THREE.BufferGeometry();
-  geom.setAttribute('position', new THREE.BufferAttribute(position,3));
-  geom.setAttribute('color',    new THREE.BufferAttribute(color,3));
-  geom.setDrawRange(0,0);
-  const mat=new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:1});
-  lines=new THREE.LineSegments(geom,mat);
-  lines.frustumCulled=false;
-  scroller.add(lines);
+  if(curtMesh){ scroller.remove(curtMesh); curtGeom.dispose(); curtMesh.material.dispose(); }
+  if(lineSeg){ scroller.remove(lineSeg); lineGeom.dispose(); lineSeg.material.dispose(); }
+  const seg=N-1;
+  cPos=new Float32Array(maxFrames*seg*6*3); cCol=new Float32Array(maxFrames*seg*6*3);
+  lPos=new Float32Array(maxFrames*seg*2*3); lCol=new Float32Array(maxFrames*seg*2*3);
+  curtGeom=new THREE.BufferGeometry();
+  curtGeom.setAttribute('position',new THREE.BufferAttribute(cPos,3));
+  curtGeom.setAttribute('color',new THREE.BufferAttribute(cCol,3));
+  curtGeom.setDrawRange(0,0);
+  curtMesh=new THREE.Mesh(curtGeom,new THREE.MeshBasicMaterial({vertexColors:true,
+     polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1,side:THREE.DoubleSide}));
+  curtMesh.frustumCulled=false; curtMesh.renderOrder=0; scroller.add(curtMesh);
+  lineGeom=new THREE.BufferGeometry();
+  lineGeom.setAttribute('position',new THREE.BufferAttribute(lPos,3));
+  lineGeom.setAttribute('color',new THREE.BufferAttribute(lCol,3));
+  lineGeom.setDrawRange(0,0);
+  lineSeg=new THREE.LineSegments(lineGeom,new THREE.LineBasicMaterial({vertexColors:true}));
+  lineSeg.frustumCulled=false; lineSeg.renderOrder=1; scroller.add(lineSeg);
 }
 
-/* fréquence log -> position X */
-function freqToX(f){
-  const t=(Math.log(f)-Math.log(FMIN))/(Math.log(FMAX)-Math.log(FMIN));
-  return (t-0.5)*WIDTH;
-}
-/* X précalculé par point */
-let XS=new Float32Array(N);
-function buildXS(){
-  for(let n=0;n<N;n++){
-    const f=FMIN*Math.pow(FMAX/FMIN, n/(N-1));
-    XS[n]=freqToX(f);
-  }
-}
+function freqToX(f){ const t=(Math.log(f)-Math.log(FMIN))/(Math.log(FMAX)-Math.log(FMIN)); return (t-0.5)*WIDTH; }
+let XS=new Float32Array(N), AW=new Float32Array(N);
+function aWeight(f){ const f2=f*f;
+  const ra=(12194*12194*f2*f2)/((f2+20.6*20.6)*Math.sqrt((f2+107.7*107.7)*(f2+737.9*737.9))*(f2+12194*12194));
+  return 20*Math.log10(ra)+2.0; }
+function buildXS(){ for(let n=0;n<N;n++){ const f=FMIN*Math.pow(FMAX/FMIN,n/(N-1)); XS[n]=freqToX(f); AW[n]=aWeight(f); } }
 
-/* colormap type jet (bleu -> cyan -> vert -> jaune -> rouge) */
 const STOPS=[[0.05,0.10,0.55],[0.0,0.55,1.0],[0.0,0.90,0.45],[1.0,0.95,0.15],[0.95,0.20,0.15]];
-function jet(t,out){
-  t=t<0?0:t>1?1:t;
-  const x=t*(STOPS.length-1), i=Math.floor(x), f=x-i;
-  const a=STOPS[Math.min(i,STOPS.length-1)], b=STOPS[Math.min(i+1,STOPS.length-1)];
-  out[0]=a[0]+(b[0]-a[0])*f; out[1]=a[1]+(b[1]-a[1])*f; out[2]=a[2]+(b[2]-a[2])*f;
-}
+function jet(t,o){ t=t<0?0:t>1?1:t; const x=t*(STOPS.length-1),i=Math.floor(x),f=x-i;
+  const a=STOPS[Math.min(i,STOPS.length-1)],b=STOPS[Math.min(i+1,STOPS.length-1)];
+  o[0]=a[0]+(b[0]-a[0])*f; o[1]=a[1]+(b[1]-a[1])*f; o[2]=a[2]+(b[2]-a[2])*f; }
 
-/* ===================== buffer circulaire de trames ===================== */
-let frames=[];               // frames[0]=plus ancienne ... [len-1]=plus récente ; chaque = Float32Array(N) niveaux 0..1
-let ema=null;                // état EMA
-const _c=[0,0,0];
-
+/* ===================== buffer circulaire ===================== */
+let frames=[], ema=null; const _c=[0,0,0];
 function rebuild(){
-  const len=frames.length;
-  let v=0;
+  const len=frames.length, seg=N-1; let ci=0, li=0;
   for(let k=0;k<len;k++){
-    const lv=frames[k];
-    const age=(len-1-k);                 // 0 = récente
-    const z=-age*spacing;
-    const fade=Math.pow(1-age/maxFrames, 0.7);   // transparence croissante avec l'ancienneté (via luminosité)
-    for(let n=0;n<N-1;n++){
-      const x0=XS[n],   y0=lv[n]  *HEIGHT;
-      const x1=XS[n+1], y1=lv[n+1]*HEIGHT;
-      // sommet A
-      position[v*3]=x0; position[v*3+1]=y0; position[v*3+2]=z;
-      jet((lv[n]),_c);
-      color[v*3]=_c[0]*fade; color[v*3+1]=_c[1]*fade; color[v*3+2]=_c[2]*fade; v++;
-      // sommet B
-      position[v*3]=x1; position[v*3+1]=y1; position[v*3+2]=z;
-      jet((lv[n+1]),_c);
-      color[v*3]=_c[0]*fade; color[v*3+1]=_c[1]*fade; color[v*3+2]=_c[2]*fade; v++;
+    const lv=frames[k], age=(len-1-k), z=DEPTH/2-age*spacing;
+    const fade=Math.pow(1-age/maxFrames,0.75);       // ancienneté → fondu vers le fond (luminosité)
+    for(let n=0;n<seg;n++){
+      const x0=XS[n],x1=XS[n+1], y0=YBASE+lv[n]*HEIGHT, y1=YBASE+lv[n+1]*HEIGHT;
+      /* rideau opaque (couleur fond) : cache les fils derrière */
+      const tri=[[x0,YBASE,z],[x0,y0,z],[x1,y1,z],[x0,YBASE,z],[x1,y1,z],[x1,YBASE,z]];
+      for(let v=0;v<6;v++){ cPos[ci*3]=tri[v][0];cPos[ci*3+1]=tri[v][1];cPos[ci*3+2]=tri[v][2];
+        cCol[ci*3]=BG.r;cCol[ci*3+1]=BG.g;cCol[ci*3+2]=BG.b; ci++; }
+      /* fil coloré par niveau, assombri avec l'âge */
+      jet(lv[n],_c);   lPos[li*3]=x0;lPos[li*3+1]=y0;lPos[li*3+2]=z; lCol[li*3]=_c[0]*fade;lCol[li*3+1]=_c[1]*fade;lCol[li*3+2]=_c[2]*fade; li++;
+      jet(lv[n+1],_c); lPos[li*3]=x1;lPos[li*3+1]=y1;lPos[li*3+2]=z; lCol[li*3]=_c[0]*fade;lCol[li*3+1]=_c[1]*fade;lCol[li*3+2]=_c[2]*fade; li++;
     }
   }
-  geom.setDrawRange(0,v);
-  geom.attributes.position.needsUpdate=true;
-  geom.attributes.color.needsUpdate=true;
+  curtGeom.setDrawRange(0,ci); lineGeom.setDrawRange(0,li);
+  curtGeom.attributes.position.needsUpdate=curtGeom.attributes.color.needsUpdate=true;
+  lineGeom.attributes.position.needsUpdate=lineGeom.attributes.color.needsUpdate=true;
 }
 
 /* ===================== audio ===================== */
@@ -181,105 +159,72 @@ async function startAudio(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
   srcNode=ctx.createMediaStreamSource(stream);
-  analyser=ctx.createAnalyser();
-  analyser.fftSize=FFT; analyser.smoothingTimeConstant=0;   // notre propre EMA
-  srcNode.connect(analyser);
-  freqDb=new Float32Array(analyser.frequencyBinCount);
-  FMAX=Math.min(20000, ctx.sampleRate/2);
-  buildXS(); addGrid();
+  analyser=ctx.createAnalyser(); analyser.fftSize=FFT; analyser.smoothingTimeConstant=0;
+  srcNode.connect(analyser); freqDb=new Float32Array(analyser.frequencyBinCount);
+  FMAX=Math.min(20000,ctx.sampleRate/2); buildXS(); addGrid();
   if(ctx.state==='suspended') await ctx.resume();
 }
-
-/* extrait une trame : bins FFT -> N points log, MAX par bande, EMA, lissage 1-2-1 */
 function capture(){
   analyser.getFloatFrequencyData(freqDb);
-  const nb=freqDb.length, binHz=ctx.sampleRate/FFT;
-  const raw=new Float32Array(N);
+  const nb=freqDb.length, binHz=ctx.sampleRate/FFT, raw=new Float32Array(N);
   for(let n=0;n<N;n++){
-    const fLo = FMIN*Math.pow(FMAX/FMIN, Math.max(0,n-0.5)/(N-1));
-    const fHi = FMIN*Math.pow(FMAX/FMIN, Math.min(N-1,n+0.5)/(N-1));
-    let b0=Math.max(0,Math.floor(fLo/binHz)), b1=Math.min(nb-1,Math.ceil(fHi/binHz));
-    if(b1<b0)b1=b0;
-    let mx=-Infinity;
-    for(let b=b0;b<=b1;b++){ const d=freqDb[b]; if(d>mx)mx=d; }
-    let norm=(mx-DBMIN)/(DBMAX-DBMIN);
-    raw[n]=norm<0?0:norm>1?1:norm;
+    const fLo=FMIN*Math.pow(FMAX/FMIN,Math.max(0,n-0.5)/(N-1)), fHi=FMIN*Math.pow(FMAX/FMIN,Math.min(N-1,n+0.5)/(N-1));
+    let b0=Math.max(0,Math.floor(fLo/binHz)), b1=Math.min(nb-1,Math.ceil(fHi/binHz)); if(b1<b0)b1=b0;
+    let mx=-Infinity; for(let b=b0;b<=b1;b++){ const d=freqDb[b]; if(d>mx)mx=d; }
+    if(aweight) mx+=AW[n];
+    let norm=(mx-DBMIN)/(DBMAX-DBMIN); raw[n]=norm<0?0:norm>1?1:norm;
   }
-  // EMA modéré
-  if(!ema){ ema=raw.slice(); } else { for(let n=0;n<N;n++) ema[n]+=EMA_A*(raw[n]-ema[n]); }
-  // lissage fréquentiel léger (1-2-1) préservant les pics
+  if(!ema)ema=raw.slice(); else for(let n=0;n<N;n++) ema[n]+=EMA_A*(raw[n]-ema[n]);
   const sm=new Float32Array(N); sm[0]=ema[0]; sm[N-1]=ema[N-1];
   for(let n=1;n<N-1;n++) sm[n]=(ema[n]>=ema[n-1]&&ema[n]>=ema[n+1])?ema[n]:(ema[n-1]+2*ema[n]+ema[n+1])*0.25;
-  frames.push(sm);
-  while(frames.length>maxFrames) frames.shift();
-  rebuild();
+  frames.push(sm); while(frames.length>maxFrames) frames.shift(); rebuild();
 }
 
-/* ===================== boucle de rendu 60 FPS ===================== */
-let acc=0,last=0,fps=0,fpsT=0,fpsN=0;
-const frameInt=1000/FRAME_HZ;
+/* ===================== rendu 60 FPS ===================== */
+let acc=0,last=0,fps=0,fpsT=0,fpsN=0; const frameInt=1000/FRAME_HZ;
 function loop(t){
   requestAnimationFrame(loop);
   if(!last)last=t; const dt=t-last; last=t;
-  if(running){
-    acc+=dt;
-    if(acc>=frameInt){ capture(); acc-=frameInt; if(acc>frameInt)acc=frameInt; }
-    // glissement continu : tout recule de frac*spacing entre deux trames
-    const frac=acc/frameInt;
-    scroller.position.z = -frac*spacing;
-  }
+  if(running){ acc+=dt; if(acc>=frameInt){ capture(); acc-=frameInt; if(acc>frameInt)acc=frameInt; }
+    scroller.position.z=-(acc/frameInt)*spacing; }        // glissement continu
   renderer.render(scene,camera);
-  // fps
   fpsN++; fpsT+=dt; if(fpsT>=500){ fps=Math.round(1000*fpsN/fpsT); fpsN=0; fpsT=0; updateStatus(); }
 }
 
-/* ===================== redimensionnement ===================== */
-function resize(){
-  const w=window.innerWidth,h=window.innerHeight;
-  renderer.setSize(w,h,false);
-  camera.aspect=w/h; camera.updateProjectionMatrix();
-}
+/* ===================== caméra / resize ===================== */
+function updateCam(){ const w=innerWidth,h=innerHeight,a=w/h,vs=viewSize/zoom;
+  camera.left=-vs*a/2; camera.right=vs*a/2; camera.top=vs/2; camera.bottom=-vs/2; camera.updateProjectionMatrix(); }
+function resize(){ renderer.setSize(innerWidth,innerHeight,false); updateCam(); }
 window.addEventListener('resize',resize);
 
-/* ===================== rotation tactile ===================== */
-let rot={x:0.0,y:0.0},drag=null;
-function setRot(){ pivot.rotation.x=rot.x; pivot.rotation.y=rot.y; }
-canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,rx:rot.x,ry:rot.y};});
-canvas.addEventListener('pointermove',e=>{ if(!drag)return;
-  rot.y=drag.ry+(e.clientX-drag.x)*0.006;
-  rot.x=Math.max(-0.2,Math.min(0.9,drag.rx+(e.clientY-drag.y)*0.005));
-  setRot();
-});
-window.addEventListener('pointerup',()=>drag=null);
+/* ===================== interactions : rotation + pincer ===================== */
+const ptrs=new Map(); let drag=null,pinch=null;
+canvas.addEventListener('pointerdown',e=>{ ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===1) drag={x:e.clientX,y:e.clientY,rx:rot.x,ry:rot.y};
+  else if(ptrs.size===2){ drag=null; const p=[...ptrs.values()]; pinch={d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),z:zoom}; } });
+canvas.addEventListener('pointermove',e=>{ if(!ptrs.has(e.pointerId))return; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&ptrs.size>=2){ const p=[...ptrs.values()]; const d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
+      zoom=Math.max(0.4,Math.min(3,pinch.z*d/pinch.d)); updateCam(); }
+  else if(drag){ rot.y=drag.ry+(e.clientX-drag.x)*0.006; rot.x=Math.max(-0.1,Math.min(1.2,drag.rx+(e.clientY-drag.y)*0.005)); applyRot(); } });
+function up(e){ ptrs.delete(e.pointerId); if(ptrs.size<2)pinch=null; if(ptrs.size===0)drag=null; }
+window.addEventListener('pointerup',up); window.addEventListener('pointercancel',up);
 
 /* ===================== UI ===================== */
-function updateStatus(){
-  document.getElementById('status').textContent =
-    (running?'● capture':'‖ arrêt')+'   '+fps+' FPS\n'+
-    durSec+' s · '+FRAME_HZ+' trames/s · '+maxFrames+' courbes\n'+
-    'FFT '+FFT+' · '+FMIN+'–'+(FMAX>=1000?(FMAX/1000).toFixed(0)+'k':FMAX)+' Hz';
-}
-document.getElementById('durSeg').addEventListener('click',e=>{
-  const b=e.target.closest('button'); if(!b)return;
-  durSec=+b.dataset.sec;
-  [...e.currentTarget.children].forEach(c=>c.classList.toggle('on',c===b));
-  maxFrames=Math.round(durSec*FRAME_HZ); spacing=DEPTH/maxFrames;
-  while(frames.length>maxFrames) frames.shift();
-  allocBuffers(); rebuild(); updateStatus();
-});
+function updateStatus(){ document.getElementById('status').textContent=
+  (running?'● capture':'‖ arrêt')+'   '+fps+' FPS\n'+durSec+' s · '+FRAME_HZ+' trames/s · '+maxFrames+' courbes\n'+
+  'FFT '+FFT+(aweight?' · pond. A':' · lin')+' · '+FMIN+'–'+(FMAX>=1000?(FMAX/1000).toFixed(0)+'k':FMAX)+' Hz'; }
+document.getElementById('durSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
+  durSec=+b.dataset.sec; [...e.currentTarget.children].forEach(c=>c.classList.toggle('on',c===b));
+  maxFrames=Math.round(durSec*FRAME_HZ); spacing=DEPTH/maxFrames; while(frames.length>maxFrames)frames.shift();
+  allocBuffers(); rebuild(); updateStatus(); });
+document.getElementById('awBtn').addEventListener('click',e=>{ aweight=!aweight; e.target.classList.toggle('on',aweight); ema=null; updateStatus(); });
 const startBtn=document.getElementById('startBtn');
-startBtn.addEventListener('click',async()=>{
-  if(running){ running=false; startBtn.textContent='Reprendre'; startBtn.classList.remove('rec'); updateStatus(); return; }
-  try{
-    if(!ctx) await startAudio();
-    else if(ctx.state==='suspended') await ctx.resume();
-    running=true; startBtn.textContent='Pause'; startBtn.classList.add('rec'); updateStatus();
-  }catch(err){ fail("Micro indisponible : "+(err&&err.message||err)); }
-});
+startBtn.addEventListener('click',async()=>{ if(running){ running=false; startBtn.textContent='Reprendre'; startBtn.classList.remove('rec'); updateStatus(); return; }
+  try{ if(!ctx)await startAudio(); else if(ctx.state==='suspended')await ctx.resume();
+    running=true; startBtn.textContent='Pause'; startBtn.classList.add('rec'); updateStatus(); }
+  catch(err){ fail("Micro indisponible : "+(err&&err.message||err)); } });
 
-/* init */
-buildXS(); allocBuffers(); setRot(); resize(); updateStatus();
-requestAnimationFrame(loop);
+buildXS(); allocBuffers(); applyRot(); resize(); updateStatus(); requestAnimationFrame(loop);
 })();
 </script>
 </body>
