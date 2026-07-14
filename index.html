@@ -454,7 +454,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.22</div>
+  <div class="splashver">V35.23</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -692,15 +692,13 @@ if('serviceWorker' in navigator){
 
     <!-- FRÉQUENCE : spectre (X) + spectrogramme (Y) -->
     <div id="dpSecFreq">
-      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
-        <span class="cp-lbl" id="dpFLbl" style="margin:0">FRÉQUENCE (X)</span>
-        <button id="dpFscale" class="cp-tog">LOG</button>
-      </div>
+      <div class="cp-lbl" id="dpFLbl" style="margin-top:10px">FRÉQUENCE (X)</div>
       <div class="cp-presets" id="dpFPresets"></div>
       <div class="cp-fine">
-        <input class="cin" id="dpFMin" type="number" inputmode="numeric" min="1" step="10" value="20" style="width:74px">
+        <button id="dpFscale" class="cp-tog">LOG</button>
+        <input class="cin" id="dpFMin" type="number" inputmode="numeric" min="1" step="10" value="20" style="width:70px">
         <span class="cp-mini" style="flex:1;text-align:center">→ Hz →</span>
-        <input class="cin" id="dpFMax" type="number" inputmode="numeric" min="10" step="100" value="20000" style="width:74px">
+        <input class="cin" id="dpFMax" type="number" inputmode="numeric" min="10" step="100" value="20000" style="width:70px">
         <button id="dpFApply" class="cp-ok">OK</button>
       </div>
     </div>
@@ -810,7 +808,7 @@ if('serviceWorker' in navigator){
       <p>Dans l'écran <b>Valeurs</b> (page 2), la cellule « Émergence tonale » indique la raie tonale dominante : <b>+X dB @ Y Hz</b>, ou « aucune » s'il n'y a pas de vraie composante tonale. Calcul par la méthode <b>ISO 1996-2</b> (bande critique de Bark), avec confirmation sur plusieurs mesures pour ne retenir que les raies stables dans le temps (une raie tonale persiste, un pic de bruit saute). L'émergence est <b>toujours évaluée</b> dans le tableau de valeurs. Le <b>Seuil d'alerte</b> (menu expert, 6 à 15 dB) fixe le niveau à partir duquel une raie est retenue pour le tableau et pour la détection auto (icône <b>ÉMG</b>, encadré orange sur la bande fine). Au <b>curseur unique</b> sur la FFT, l'émergence de la raie visée est affichée en permanence. Indicateur de diagnostic, non certifié.</p>
 
       <h3>Vue 3D du spectrogramme</h3>
-      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène, <b>verticalement</b> pour l'incliner (plongée, rotation autour de l'axe des fréquences). La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : un preset 3/5/10 s affiche cette durée (défaut 5 s), avec un glissement continu de l'affichage. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>lissage / performance</b> du rendu se règle dans le mode expert (<i>Fluide</i> pour un smartphone à la peine, jusqu'à <i>Surface</i> pour un maillage plein).</p>
+      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène, <b>verticalement</b> pour l'incliner (plongée, rotation autour de l'axe des fréquences). La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : un preset 3/5/10 s affiche cette durée (défaut 5 s), avec un glissement continu de l'affichage. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>lissage / performance</b> du rendu se règle dans le mode expert (<i>Fluide</i> pour un smartphone à la peine, jusqu'à <i>Très lisse</i>).</p>
 
       <h3>Optimiser le spectrogramme</h3>
       <p>Menu expert ▸ <b>Optimiser le spectrogramme</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse et échelle. <b>Tonal</b> (résolution fréquence max, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, pour chocs/parole), <b>Équilibré</b> (polyvalent). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
@@ -2505,8 +2503,7 @@ function drawSgram3D(){
   if(!SG.cols){ g.fillStyle=THEME.bg; g.fillRect(0,0,W,H); return; }
   const Wp=SG.Wp, bufH=SG.bufH, seq=SG.colSeq||0;
   if(seq<2){ g.fillStyle=THEME.bg; g.fillRect(0,0,W,H); g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
-  const smoothLvl=Math.max(0,Math.min(3,S.sg3dSmooth|0));
-  const surf=(smoothLvl>=3);                 // niveau max = rendu surface (le mode surface n'est plus une option séparée)
+  const smoothLvl=Math.max(0,Math.min(3,S.sg3dSmooth|0));   // 0 Fluide · 1 Standard · 2 Lisse · 3 Très lisse (fil de fer uniquement)
   /* « Tout » (fenêtre = tout le tampon) : trop long pour le glissement (captures trop
      espacées → saccadé) ET un buffer d'instantanés ne peut pas montrer le passé déjà là.
      → en « Tout » on garde l'ANCIEN rendu décimé (cadence colonne, léger). Le glissement
@@ -2517,7 +2514,7 @@ function drawSgram3D(){
   /* fenêtre de temps (réglage TEMPS du popover ÉCHELLES), en colonnes */
   const winCols=Math.min(seq, Wp, Math.max(8, Math.round((S.tview.x1-S.tview.x0)*Wp)));
   const winSec = Math.max(0.3,(S.tview.x1-S.tview.x0)*sgBufDur());
-  const nF=surf?80:96;
+  const nF=96;
   /* fenêtre de fréquence visible */
   const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
   const Vlo=TF(fmin), Vhi=TF(fmax);
@@ -2556,7 +2553,7 @@ function drawSgram3D(){
   const depth=plotH*(0.46+0.34*pitch);                       // plongée : le fond se relève (rotation autour de l'axe des fréquences)
   const skewTot=plotW*(0.15+0.45*rot);
   const absSkew=Math.abs(skewTot);
-  const colW=(plotW-absSkew)/nF, ampH=plotH*(surf?0.42:0.46)*(1-0.22*pitch);   // relief légèrement raccourci en plongée
+  const colW=(plotW-absSkew)/nF, ampH=plotH*0.46*(1-0.22*pitch);   // relief légèrement raccourci en plongée
   const baseXof=dz=> marginL + (skewTot>=0 ? skewTot*(1-dz) : absSkew*dz);
   const baseYof=dz=> marginT + (plotH-depth) + depth*dz;
   const lineRow=fi=>Math.round(rBot - fi/(nF-1)*(rBot-rTop));
@@ -2571,19 +2568,11 @@ function drawSgram3D(){
   }
   /* lissage d'un profil normalisé selon le mode (partagé par les deux chemins).
      wirePass : passes 1-2-1 supplémentaires en fil de fer selon le niveau (0 net, 1 lisse). */
-  const wirePass = surf?0:(smoothLvl>=2?1:0);
+  const wirePass = Math.max(0, smoothLvl-1);   // passes 1-2-1 supplémentaires : 0 (Fluide/Standard) · 1 (Lisse) · 2 (Très lisse)
   const smoothProf=prof=>{
-    let sm;
-    if(surf){
-      const dil=new Float32Array(nF);
-      for(let i=0;i<nF;i++){ let m=prof[i]; if(i>0&&prof[i-1]>m)m=prof[i-1]; if(i<nF-1&&prof[i+1]>m)m=prof[i+1]; dil[i]=m; }
-      sm=new Float32Array(nF); sm[0]=dil[0]; sm[nF-1]=dil[nF-1];
-      for(let i=1;i<nF-1;i++) sm[i]=(dil[i-1]+2*dil[i]+dil[i+1])*0.25;   // dorsale continue
-    }else{
-      sm=new Float32Array(nF); sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
-      for(let i=1;i<nF-1;i++) sm[i]=(prof[i]>=prof[i-1]&&prof[i]>=prof[i+1])?prof[i]:(prof[i-1]+2*prof[i]+prof[i+1])*0.25; // pics préservés
-      for(let p=0;p<wirePass;p++){ const o=sm.slice(); for(let i=1;i<nF-1;i++) sm[i]=(o[i-1]+2*o[i]+o[i+1])*0.25; }  // adoucissement optionnel
-    }
+    const sm=new Float32Array(nF); sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
+    for(let i=1;i<nF-1;i++) sm[i]=(prof[i]>=prof[i-1]&&prof[i]>=prof[i+1])?prof[i]:(prof[i-1]+2*prof[i]+prof[i+1])*0.25; // pics préservés
+    for(let p=0;p<wirePass;p++){ const o=sm.slice(); for(let i=1;i<nF-1;i++) sm[i]=(o[i-1]+2*o[i]+o[i+1])*0.25; }  // adoucissement optionnel
     return sm;
   };
   let P=[], dzArr, nT;
@@ -2591,7 +2580,7 @@ function drawSgram3D(){
     /* ===== « TOUT » : ancien rendu DÉCIMÉ (tout le tampon en ~90 tranches à âges fixes),
        redessiné à la cadence colonne. Léger et montre l'intégralité du passé (un buffer
        d'instantanés glissant ne pourrait pas afficher le passé déjà enregistré). ===== */
-    const maxSlices=surf?32:(smoothLvl<=0?52:90);
+    const maxSlices=(smoothLvl<=0?52:90);
     const avail=Math.min(seq,Wp);
     const stepT=Math.max(3,Math.ceil(avail/maxSlices));
     nT=Math.floor((avail-1)/stepT)+1;
@@ -2613,7 +2602,7 @@ function drawSgram3D(){
       dzArr[j]=j/(nT-1||1);
     }
     /* lissage temporel bords répliqués (aucune tranche privilégiée) */
-    for(let pass=0,tP=(surf?2:1); pass<tP; pass++){
+    for(let pass=0,tP=1; pass<tP; pass++){
       if(nT>3){
         const Q=[];
         for(let j=0;j<nT;j++){
@@ -2628,9 +2617,9 @@ function drawSgram3D(){
     /* ===== FENÊTRE BORNÉE (3/5/10 s) : buffer de COURBES-INSTANTANÉS QUI GLISSENT =====
        Capture régulière + EMA, profondeur continue interpolée par phase fractionnaire →
        mouvement fluide indépendant de la cadence FFT. Le rendu reste identique. */
-    const maxFrames = surf?42:(smoothLvl<=0?52:96);
+    const maxFrames = (smoothLvl<=0?52:96);
     const capInt = Math.max(16, winSec*1000/(maxFrames-1));       // ms entre deux instantanés
-    const sig=[surf?'s':'w',nF,fmin|0,fmax|0,maxFrames].join('|');
+    const sig=['w',nF,fmin|0,fmax|0,maxFrames].join('|');
     if(!window.V3) window.V3={frames:[],ema:null,acc:0,lastT:0,sig:''};
     const V=window.V3;
     if(V.sig!==sig){ V.frames=[]; V.ema=null; V.acc=0; V.sig=sig; }   // vue/mode changé → reconstruire
@@ -2662,70 +2651,29 @@ function drawSgram3D(){
   }
   const px=(j,i)=>baseXof(dzArr[j])+i*colW;
   const py=(j,i)=>baseYof(dzArr[j])-P[j][i]*ampH;
-  if(surf){
-    /* ===== MODE SURFACE : dunes pleines OMBRÉES, masquage arrière (algorithme du peintre) =====
-       Chaque tranche remplie jusqu'à la base cache celles derrière (pas de peigne). Remplissage =
-       dégradé coloré par la hauteur + OMBRAGE vertical (base assombrie) : ça donne le relief et
-       sépare les couches SANS traits de contour. Crête live colorée par-dessus. */
-    const ridgePath=j=>{
-      g.moveTo(px(j,0),py(j,0));
-      for(let i=1;i<nF-1;i++) g.quadraticCurveTo(px(j,i),py(j,i),(px(j,i)+px(j,i+1))/2,(py(j,i)+py(j,i+1))/2);
-      g.lineTo(px(j,nF-1),py(j,nF-1));
-    };
-    for(let j=0;j<nT;j++){
-      const dz=dzArr[j]; if(dz<0)continue; const baseY=baseYof(dz), fade=0.72+0.28*dz;
-      const gr=g.createLinearGradient(px(j,0),0,px(j,nF-1),0);
-      for(let i=0;i<nF;i+=2){
-        const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
-        gr.addColorStop(i/(nF-1),'rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')');
-      }
-      g.save();
-      g.beginPath();
-      g.moveTo(px(j,0),baseY);
-      g.lineTo(px(j,0),py(j,0));
-      ridgePath(j);
-      g.lineTo(px(j,nF-1),baseY);
-      g.closePath();
-      g.fillStyle=gr; g.fill();
-      g.clip();                                   // ombrage confiné à la silhouette
-      const sh=g.createLinearGradient(0,baseY-ampH,0,baseY);
-      sh.addColorStop(0,'rgba(0,0,0,0)'); sh.addColorStop(1,'rgba(0,0,0,.45)');
-      g.fillStyle=sh; g.fillRect(px(j,0),baseY-ampH,(nF-1)*colW+2,ampH+1);
-      g.restore();
+  /* ===== FIL DE FER : silhouettes opaques (masquage) + crêtes colorées en dégradé ===== */
+  for(let j=0;j<nT;j++){
+    const dz=dzArr[j]; if(dz<0)continue;
+    const baseY=baseYof(dz);
+    g.beginPath();
+    g.moveTo(px(j,0), baseY);
+    for(let i=0;i<nF;i++) g.lineTo(px(j,i), py(j,i));
+    g.lineTo(px(j,nF-1), baseY);
+    g.closePath();
+    g.fillStyle=THEME.bg; g.fill();
+    const fade=0.45+0.55*dz;
+    /* couleur en DÉGRADÉ le long de la courbe (interpolation RGB entre points) au lieu
+       d'une couleur figée par segment → plus de sauts de couleur marqués aux pics. */
+    const gr=g.createLinearGradient(px(j,0),0,px(j,nF-1),0);
+    for(let i=0;i<nF;i++){
+      const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
+      gr.addColorStop(i/(nF-1),'rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')');
     }
-    /* crête vive de la tranche live, colorée segment par segment */
-    { const j=nT-1; g.lineWidth=1.6;
-      for(let i=0;i<nF-1;i++){
-        const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
-        g.strokeStyle='rgb('+LUT[idx]+','+LUT[idx+1]+','+LUT[idx+2]+')';
-        g.beginPath(); g.moveTo(px(j,i),py(j,i)); g.lineTo(px(j,i+1),py(j,i+1)); g.stroke();
-      }
-    }
-  }else{
-    /* ===== MODE FIL DE FER : silhouettes opaques + crêtes colorées ===== */
-    for(let j=0;j<nT;j++){
-      const dz=dzArr[j]; if(dz<0)continue;
-      const baseY=baseYof(dz);
-      g.beginPath();
-      g.moveTo(px(j,0), baseY);
-      for(let i=0;i<nF;i++) g.lineTo(px(j,i), py(j,i));
-      g.lineTo(px(j,nF-1), baseY);
-      g.closePath();
-      g.fillStyle=THEME.bg; g.fill();
-      const fade=0.45+0.55*dz;
-      /* couleur en DÉGRADÉ le long de la courbe (interpolation RGB entre points) au lieu
-         d'une couleur figée par segment → plus de sauts de couleur marqués aux pics. */
-      const gr=g.createLinearGradient(px(j,0),0,px(j,nF-1),0);
-      for(let i=0;i<nF;i++){
-        const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
-        gr.addColorStop(i/(nF-1),'rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')');
-      }
-      g.strokeStyle=gr; g.lineWidth = j===nT-1 ? 1.6 : 1; g.lineJoin='round';
-      g.beginPath();
-      g.moveTo(px(j,0), py(j,0));
-      for(let i=1;i<nF;i++) g.lineTo(px(j,i), py(j,i));
-      g.stroke();
-    }
+    g.strokeStyle=gr; g.lineWidth = j===nT-1 ? 1.6 : 1; g.lineJoin='round';
+    g.beginPath();
+    g.moveTo(px(j,0), py(j,0));
+    for(let i=1;i<nF;i++) g.lineTo(px(j,i), py(j,i));
+    g.stroke();
   }
   /* ===== graduations de fréquence ===== */
   const frontY=marginT+plotH;
@@ -3161,7 +3109,7 @@ function ui(){
   $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='menu'?'Expert':'Valeurs';
   $('kMode').classList.toggle('locked',S.screen!=='spec');   // ANALYSE n'a de sens que sur le spectre
   /* lignes du mode expert */
-  $('mSg3dSmooth').querySelector('b').textContent=['Fluide','Standard','Lisse','Surface'][Math.max(0,Math.min(3,S.sg3dSmooth|0))];
+  $('mSg3dSmooth').querySelector('b').textContent=['Fluide','Standard','Lisse','Très lisse'][Math.max(0,Math.min(3,S.sg3dSmooth|0))];
   const fs=S.ctx?S.ctx.sampleRate:48000;
   $('mWin').querySelector('b').textContent=WINS[S.win].name;
   $('mFft').querySelector('b').textContent=S.fftN.toString();
@@ -4084,6 +4032,8 @@ const TR={
  'Spectre':{en:'Spectrum',es:'Espectro'},'Spectrog.':{en:'Spectrog.',es:'Espectrog.'},'Évolution':{en:'History',es:'Evolución'},'Valeurs':{en:'Values',es:'Valores'},
  'Réinit':{en:'Reset',es:'Reinic.'},'Partager':{en:'Share',es:'Compartir'},'Expert':{en:'Expert',es:'Experto'},'Fermer':{en:'Close',es:'Cerrar'},
  'Auto':{en:'Auto',es:'Auto'},'Manuel':{en:'Manual',es:'Manual'},
+ 'Lissage / perf. 3D':{en:'3D smoothing / perf.',es:'Suavizado / rend. 3D'},
+ 'Fluide':{en:'Fluid',es:'Fluido'},'Standard':{en:'Standard',es:'Estándar'},'Lisse':{en:'Smooth',es:'Suave'},'Très lisse':{en:'Very smooth',es:'Muy suave'},
  'PRÊT':{en:'READY',es:'LISTO'},'MESURE':{en:'MEASURE',es:'MEDIDA'},'PAUSE':{en:'PAUSED',es:'PAUSA'},'ARRÊTÉ':{en:'STOPPED',es:'PARADO'},'INIT MICRO…':{en:'MIC INIT…',es:'INIC. MIC…'},
  /* lignes du menu expert */
  'Optimiser le spectrogramme':{en:'Optimize spectrogram',es:'Optimizar espectrograma'},
@@ -4166,15 +4116,22 @@ function trTokens(el){
   }
   el.textContent=s;
 }
+/* valeur DYNAMIQUE (réécrite en français par ui()) : on traduit toujours depuis le
+   français, et on ne re-traduit jamais un texte qu'on a déjà traduit soi-même (garde
+   dataset.tr) → plus de recompoundage type « expertoooooo », et le changement de langue
+   (même ES→EN) repart bien du français d'origine. */
+function trDyn(el){
+  if(!el||el.children.length)return;             // garde les SVG (⏸ / ▶)
+  if(el.textContent!==el.dataset.tr) el.dataset.fr=el.textContent;   // ui() a posé un nouveau texte FR
+  const out=Tstr(el.dataset.fr==null?el.textContent:el.dataset.fr);
+  el.dataset.tr=out; el.textContent=out;
+}
 function translatePass(){
   const safe=f=>{try{f();}catch(e){}};
   safe(()=>document.querySelectorAll('.key .kf').forEach(trEl));
-  safe(()=>document.querySelectorAll('.key .kv').forEach(el=>{
-    if(el.children.length)return;               // ⏸ / ▶ : le contenu est un SVG, ne pas l'écraser
-    el.textContent=Tstr(el.textContent);        // ui() vient de poser le texte français
-  }));
+  safe(()=>document.querySelectorAll('.key .kv').forEach(trDyn));
   safe(()=>document.querySelectorAll('.mrow span').forEach(trEl));
-  safe(()=>document.querySelectorAll('.mrow b').forEach(el=>{ el.textContent=Tstr(el.textContent); }));
+  safe(()=>document.querySelectorAll('.mrow b').forEach(trDyn));
   safe(()=>document.querySelectorAll('.exp-item b,.exp-item span').forEach(trEl));
   safe(()=>trTokens($('gTitle')));
   const safe2=f=>{try{f();}catch(e){}};
@@ -4238,7 +4195,7 @@ const HELP_EN=`
 <h3>1/3-octave: FFT or IEC filters</h3><p><b>FFT synthesis</b>: fast, energy sum of bins. <b>IEC 61260 filters</b>: per-band Butterworth filter bank, closer to the normative template (especially at low frequencies).</p>
 <h3>Export</h3><p><b>Share</b> key: iOS share sheet or download, as <b>CSV</b> (metadata + mic + indices + spectrum + history) or titled <b>PNG</b> of the current graph.</p>
 <h3>Tonal audibility</h3><p>Values screen (page 2): dominant tonal line as <b>+X dB @ Y Hz</b>, or “none”. ISO 1996-2 method (Bark critical band) with temporal confirmation. Expert menu: enable/disable and alert threshold (6–15 dB). Diagnostic indicator, not certified.</p>
-<h3>3D spectrogram view</h3><p>On the spectrogram, <b>3D</b> switches to an isometric waterfall: amplitude gives relief and colour, the vivid front slice is “now”. <b>Drag horizontally</b> to rotate. The <b>time window</b> follows the TIME setting of SCALES (“All” = auto ≈ 3 s; presets show that duration). Frequency zoom and colourbar follow the displayed area. Render smoothing / performance is set in the expert menu (<i>Fluid</i> for a struggling phone, up to <i>Surface</i> for a filled mesh).</p>
+<h3>3D spectrogram view</h3><p>On the spectrogram, <b>3D</b> switches to an isometric waterfall: amplitude gives relief and colour, the vivid front slice is “now”. <b>Drag horizontally</b> to rotate. The <b>time window</b> follows the TIME setting of SCALES (“All” = auto ≈ 3 s; presets show that duration). Frequency zoom and colourbar follow the displayed area. Render smoothing / performance is set in the expert menu (<i>Fluid</i> for a struggling phone, up to <i>Very smooth</i>).</p>
 <h3>Optimising the spectrogram</h3><p>Expert menu ▸ three presets set FFT, window, overlap, speed and scale at once: <b>Tonal</b>, <b>Transient</b>, <b>Balanced</b>. Gabor trade-off: you cannot be sharp in frequency AND time at once.</p>
 <h3>Themes</h3><p>Expert menu ▸ faceplate theme: Marine, Steel, Light lab, OLED black, <b>Game Boy</b> and <b>Matrix</b>. Everything follows the theme; the CETIM logo stays brand-compliant.</p>
 <h3>Preferences</h3><p>All settings are <b>saved automatically</b> and restored. Expert menu ▸ Reset settings (↺) restores defaults.</p>
