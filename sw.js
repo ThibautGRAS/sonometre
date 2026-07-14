@@ -2,7 +2,7 @@
    Rend l'application ouvrable 100 % hors ligne.
    La version est estampillée à chaque déploiement (voir CACHE) : au changement,
    l'ancien cache est purgé et les fichiers re-téléchargés dès qu'un réseau est disponible. */
-const CACHE = 'sono-d65000ad';
+const CACHE = 'sono-360b3f1b';
 const ASSETS = [
   './',
   './index.html',
