@@ -452,7 +452,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.18</div>
+  <div class="splashver">V35.19</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2500,15 +2500,16 @@ function drawSgram3D(){
   const Wp=SG.Wp, bufH=SG.bufH, seq=SG.colSeq||0;
   if(seq<2){ g.fillStyle=THEME.bg; g.fillRect(0,0,W,H); g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
   const surf=(S.sg3dMode==='surf');
-  /* plafond de cadence de rendu : le glissement reste fluide (phase fractionnaire interpole
-     entre captures) mais on évite de saturer le Canvas de l'iPhone à 60 FPS × ~96 courbes. */
-  if(S.running){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<23)return; SG._3dLast=_tn; }
-  /* FENÊTRE DE TEMPS (réglage TEMPS du popover ÉCHELLES) — échantillonnage ANCRÉ SUR
-     L'AVANT : tranches à pas fixe depuis la colonne live (Wp-1). Fini le re-phasage qui
-     faisait scintiller les longues fenêtres (l'ancien ancrage arrière + live forcé
-     faisait sauter l'espacement des tranches de tête à chaque nouvelle colonne). */
+  /* « Tout » (fenêtre = tout le tampon) : trop long pour le glissement (captures trop
+     espacées → saccadé) ET un buffer d'instantanés ne peut pas montrer le passé déjà là.
+     → en « Tout » on garde l'ANCIEN rendu décimé (cadence colonne, léger). Le glissement
+     continu ne sert que pour les fenêtres bornées 3/5/10 s. */
+  const isTout = S.tview.x0<=1e-3 && S.tview.x1>=0.999;
+  /* plafond de cadence (~43 FPS) uniquement pour le glissement borné (pas en « Tout ») */
+  if(S.running && !isTout){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<23)return; SG._3dLast=_tn; }
   /* fenêtre de temps (réglage TEMPS du popover ÉCHELLES), en colonnes */
   const winCols=Math.min(seq, Wp, Math.max(8, Math.round((S.tview.x1-S.tview.x0)*Wp)));
+  const winSec = Math.max(0.3,(S.tview.x1-S.tview.x0)*sgBufDur());
   const nF=surf?80:96;
   /* fenêtre de fréquence visible */
   const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
@@ -2536,8 +2537,10 @@ function drawSgram3D(){
   /* rotation */
   const rot=(S.sg3dRot===undefined?0:S.sg3dRot);
   /* CACHE : ne redessiner que si quelque chose a changé (données, vue, échelle, thème) */
-  const key=[S.running?'run':'stop',rot.toFixed(3),S.sg3dMode,lo,hi,fmin|0,fmax|0,S.tview.x0.toFixed(4),S.tview.x1.toFixed(4),S.theme,W,H].join('|');
-  if(!S.running && SG._3dKey===key)return;      // à l'arrêt : pas de redraw inutile ; en marche : chaque frame (60 FPS)
+  /* cache : en « Tout » redraw sur nouvelle colonne (léger, comme avant) ; en fenêtre
+     bornée redraw chaque frame en marche (glissement), figé à l'arrêt. */
+  const key=[isTout?('seq'+seq):(S.running?'run':'stop'),rot.toFixed(3),S.sg3dMode,lo,hi,fmin|0,fmax|0,S.tview.x0.toFixed(4),S.tview.x1.toFixed(4),S.theme,W,H].join('|');
+  if((isTout||!S.running) && SG._3dKey===key)return;
   SG._3dKey=key;
   g.fillStyle=THEME.bg; g.fillRect(0,0,W,H);
   /* géométrie */
@@ -2559,56 +2562,93 @@ function drawSgram3D(){
     rowA[i]=Math.max(0,Math.min(bufH-1,Math.min(rA,rB)));
     rowB[i]=Math.max(0,Math.min(bufH-1,Math.max(rA,rB)));
   }
-  /* ===== BUFFER DE COURBES-INSTANTANÉS QUI GLISSENT (mouvement continu 60 FPS) =====
-     Fini le ré-échantillonnage à âges fixes (crêtes qui SAUTENT de tranche en tranche) :
-     on capture une courbe à cadence régulière et on la fait reculer en continu. Entre deux
-     captures, une phase fractionnaire décale toute la profondeur → glissement fluide,
-     indépendant de la cadence FFT. Le rendu (rideaux, dunes, couleurs) reste inchangé. */
-  const maxFrames = surf?42:96;
-  const winSec = Math.max(0.3,(S.tview.x1-S.tview.x0)*sgBufDur());
-  const capInt = Math.max(16, winSec*1000/(maxFrames-1));       // ms entre deux instantanés
-  const sig=[surf?'s':'w',nF,fmin|0,fmax|0,maxFrames].join('|');
-  if(!window.V3) window.V3={frames:[],ema:null,acc:0,lastT:0,sig:''};
-  const V=window.V3;
-  if(V.sig!==sig){ V.frames=[]; V.ema=null; V.acc=0; V.sig=sig; }   // vue/mode changé → reconstruire
-  const _now=performance.now();
-  if(!V.lastT)V.lastT=_now;
-  let _dt=_now-V.lastT; V.lastT=_now; if(_dt<0)_dt=0; if(_dt>200)_dt=200;
-  const capture3D=()=>{
-    const col=SG.cols[Wp-1]; if(!col)return;
-    const raw=new Float32Array(nF);
-    for(let i=0;i<nF;i++){ let mx=-Infinity; for(let r=rowA[i];r<=rowB[i];r++){const L=col[r]; if(isFinite(L)&&L>mx)mx=L;} raw[i]=(mx>-Infinity)?mx:lo; }
-    if(!V.ema)V.ema=raw.slice(); else { for(let i=0;i<nF;i++)V.ema[i]+=0.4*(raw[i]-V.ema[i]); }   // moyennage exponentiel modéré
-    V.frames.push(V.ema.slice());
-    while(V.frames.length>maxFrames)V.frames.shift();
-  };
-  if(S.running){
-    if(V.frames.length===0)capture3D();
-    V.acc+=_dt; let guard=0;
-    while(V.acc>=capInt && guard++<6){ capture3D(); V.acc-=capInt; }
-  }
-  const phase=Math.min(1,V.acc/capInt), len=V.frames.length, nT=len;
-  /* profils normalisés + lissés (MAX en fréquence : raies fines préservées) et profondeur
-     CONTINUE : la capture la plus récente (k=len-1) au front (dz≈1), recule en vieillissant. */
-  const P=[], dzArr=new Float32Array(nT);
-  for(let k=0;k<len;k++){
-    const fr=V.frames[k], prof=new Float32Array(nF);
-    for(let i=0;i<nF;i++){ let L=fr[i]; if(L<lo)L=lo; if(L>hi)L=hi; prof[i]=(L-lo)/span; }
+  /* lissage d'un profil normalisé selon le mode (partagé par les deux chemins) */
+  const smoothProf=prof=>{
     let sm;
     if(surf){
-      /* surface : dilatation + lissage doux → dorsale continue (pas de peigne d'aiguilles) */
       const dil=new Float32Array(nF);
       for(let i=0;i<nF;i++){ let m=prof[i]; if(i>0&&prof[i-1]>m)m=prof[i-1]; if(i<nF-1&&prof[i+1]>m)m=prof[i+1]; dil[i]=m; }
       sm=new Float32Array(nF); sm[0]=dil[0]; sm[nF-1]=dil[nF-1];
-      for(let i=1;i<nF-1;i++) sm[i]=(dil[i-1]+2*dil[i]+dil[i+1])*0.25;
+      for(let i=1;i<nF-1;i++) sm[i]=(dil[i-1]+2*dil[i]+dil[i+1])*0.25;   // dorsale continue
     }else{
-      /* fil de fer : préservation stricte des pics → raies nettes */
       sm=new Float32Array(nF); sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
-      for(let i=1;i<nF-1;i++) sm[i]=(prof[i]>=prof[i-1]&&prof[i]>=prof[i+1])?prof[i]:(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
+      for(let i=1;i<nF-1;i++) sm[i]=(prof[i]>=prof[i-1]&&prof[i]>=prof[i+1])?prof[i]:(prof[i-1]+2*prof[i]+prof[i+1])*0.25; // pics préservés
     }
-    P.push(sm);
-    const age=(len-1-k)+phase;                    // k=len-1 (récent) → age≈phase (front)
-    dzArr[k]=1 - age/(maxFrames-1);
+    return sm;
+  };
+  let P=[], dzArr, nT;
+  if(isTout){
+    /* ===== « TOUT » : ancien rendu DÉCIMÉ (tout le tampon en ~90 tranches à âges fixes),
+       redessiné à la cadence colonne. Léger et montre l'intégralité du passé (un buffer
+       d'instantanés glissant ne pourrait pas afficher le passé déjà enregistré). ===== */
+    const maxSlices=surf?32:90;
+    const avail=Math.min(seq,Wp);
+    const stepT=Math.max(3,Math.ceil(avail/maxSlices));
+    nT=Math.floor((avail-1)/stepT)+1;
+    const idxs=[]; for(let k=nT-1;k>=0;k--)idxs.push(Wp-1-k*stepT);
+    dzArr=new Float32Array(nT);
+    const prof=new Float32Array(nF);
+    for(let j=0;j<nT;j++){
+      const xEnd=idxs[j], xStart=Math.max(0,xEnd-stepT+1);
+      for(let i=0;i<nF;i++){
+        let sum=0,n=0;
+        for(let x=xStart;x<=xEnd;x++){
+          const a=SG.cols[x]; if(!a)continue;
+          let mx=-Infinity; for(let r=rowA[i];r<=rowB[i];r++){const L=a[r]; if(isFinite(L)&&L>mx)mx=L;}
+          if(mx>-Infinity){ sum+=mx; n++; }
+        }
+        let L=n?sum/n:lo; if(L<lo)L=lo; if(L>hi)L=hi; prof[i]=(L-lo)/span;
+      }
+      P.push(smoothProf(prof));
+      dzArr[j]=j/(nT-1||1);
+    }
+    /* lissage temporel bords répliqués (aucune tranche privilégiée) */
+    for(let pass=0,tP=(surf?2:1); pass<tP; pass++){
+      if(nT>3){
+        const Q=[];
+        for(let j=0;j<nT;j++){
+          const a=P[Math.max(0,j-1)], b=P[j], c=P[Math.min(nT-1,j+1)], q=new Float32Array(nF);
+          for(let i=0;i<nF;i++) q[i]=0.25*a[i]+0.5*b[i]+0.25*c[i];
+          Q.push(q);
+        }
+        P=Q;
+      }
+    }
+  }else{
+    /* ===== FENÊTRE BORNÉE (3/5/10 s) : buffer de COURBES-INSTANTANÉS QUI GLISSENT =====
+       Capture régulière + EMA, profondeur continue interpolée par phase fractionnaire →
+       mouvement fluide indépendant de la cadence FFT. Le rendu reste identique. */
+    const maxFrames = surf?42:96;
+    const capInt = Math.max(16, winSec*1000/(maxFrames-1));       // ms entre deux instantanés
+    const sig=[surf?'s':'w',nF,fmin|0,fmax|0,maxFrames].join('|');
+    if(!window.V3) window.V3={frames:[],ema:null,acc:0,lastT:0,sig:''};
+    const V=window.V3;
+    if(V.sig!==sig){ V.frames=[]; V.ema=null; V.acc=0; V.sig=sig; }   // vue/mode changé → reconstruire
+    const _now=performance.now();
+    if(!V.lastT)V.lastT=_now;
+    let _dt=_now-V.lastT; V.lastT=_now; if(_dt<0)_dt=0; if(_dt>200)_dt=200;
+    const capture3D=()=>{
+      const col=SG.cols[Wp-1]; if(!col)return;
+      const raw=new Float32Array(nF);
+      for(let i=0;i<nF;i++){ let mx=-Infinity; for(let r=rowA[i];r<=rowB[i];r++){const L=col[r]; if(isFinite(L)&&L>mx)mx=L;} raw[i]=(mx>-Infinity)?mx:lo; }
+      if(!V.ema)V.ema=raw.slice(); else { for(let i=0;i<nF;i++)V.ema[i]+=0.4*(raw[i]-V.ema[i]); }   // moyennage exponentiel modéré
+      V.frames.push(V.ema.slice());
+      while(V.frames.length>maxFrames)V.frames.shift();
+    };
+    if(S.running){
+      if(V.frames.length===0)capture3D();
+      V.acc+=_dt; let guard=0;
+      while(V.acc>=capInt && guard++<6){ capture3D(); V.acc-=capInt; }
+    }
+    const phase=Math.min(1,V.acc/capInt), len=V.frames.length; nT=len;
+    dzArr=new Float32Array(nT);
+    for(let k=0;k<len;k++){
+      const fr=V.frames[k], prof=new Float32Array(nF);
+      for(let i=0;i<nF;i++){ let L=fr[i]; if(L<lo)L=lo; if(L>hi)L=hi; prof[i]=(L-lo)/span; }
+      P.push(smoothProf(prof));
+      const age=(len-1-k)+phase;                    // k=len-1 (récent) → age≈phase (front)
+      dzArr[k]=1 - age/(maxFrames-1);
+    }
   }
   const px=(j,i)=>baseXof(dzArr[j])+i*colW;
   const py=(j,i)=>baseYof(dzArr[j])-P[j][i]*ampH;
