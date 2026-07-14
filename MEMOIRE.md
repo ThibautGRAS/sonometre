@@ -53,14 +53,18 @@ Déploiement via l'API GitHub Contents (`api.github.com`), pas de build local (t
 - Icônes flottantes des graphes (`.sg3dbtn`) : taille uniforme 46×26, estompage automatique après 3,5 s d'inactivité.
 - Traduction : ne jamais écraser le contenu d'une touche qui contient un SVG (icônes ▶ ■ ⏸) — garde `if(el.children.length)return`. Valeurs composées traduites mot à mot (`Tstr`), pas par correspondance exacte. **Valeurs dynamiques** (touches `.kv`, valeurs `.mrow b`) : traduites via `trDyn()` qui traduit TOUJOURS depuis le français mémorisé (`dataset.fr`) avec garde `dataset.tr` (ne retraduit jamais un texte déjà traduit par nous). Sans ça, le remplacement mot-à-mot recompoundait (« Expert »→« Experto »→« Expertoo »… car « Expert » est un sous-mot de « Experto ») et la bascule ES→EN restait bloquée (on traduisait depuis l'espagnol au lieu du français).
 - Spectrogramme 3D : réduire une tranche de fréquence par **max**, pas par moyenne (une raie fine serait diluée) ; lisser en **préservant les maxima locaux** (sinon le 1-2-1 rabaisse les raies). Les valeurs 3D doivent correspondre à la 2D.
-- **Mouvement continu 3D (depuis V35.18)** : `drawSgram3D` n'échantillonne plus le tampon à âges fixes (ça faisait SAUTER les crêtes de tranche en tranche). Modèle **buffer de courbes-instantanés glissantes** dans `window.V3={frames,ema,acc,lastT,sig}` :
-  - capture d'une courbe (`capture3D`) à cadence régulière `capInt=winSec*1000/(maxFrames-1)` (min 16 ms), lissée par **EMA** (α=0.4) ; `frames` plafonné à `maxFrames` (96 fil de fer / 42 surface) ;
-  - profondeur **continue** : `dzArr[k]=1-((len-1-k)+phase)/(maxFrames-1)`, `phase=acc/capInt` (0→1) → glissement fluide entre captures ; la plus récente au front (`dz≈1`), sauter si `dz<0` ;
-  - `sig` = signature (mode, nF, fmin, fmax) → **reset des frames** si la vue change ;
-  - **cache** : `key` contient `S.running?'run':'stop'` et non plus `seq` → redraw **chaque frame en marche** (glissement), figé à l'arrêt ;
-  - **plafond de cadence ~43 FPS** (`SG._3dLast`, garde 23 ms) pour ne pas saturer le Canvas iPhone (~96 courbes × stroke par segment). La fluidité vient de l'interpolation de `phase`, pas du FPS brut.
-  - Rendu (silhouettes opaques de masquage, dunes ombrées, couleurs par segment, axes, colorbar, marqueur ▲ présent) **inchangé** — seul le positionnement est devenu continu.
-- **Deux chemins de rendu 3D (depuis V35.19)** : le glissement continu ne s'applique QU'AUX fenêtres **bornées 3/5/10 s** (`!isTout`). En mode **« Tout »** (`isTout`, fenêtre = tout le tampon) on garde l'**ancien rendu décimé** (tranches à âges fixes, `dzArr[j]=j/(nT-1)`, cache par `seq`, pas de throttle) — un buffer d'instantanés ne peut pas afficher le passé déjà enregistré, et une fenêtre trop longue rendait le glissement saccadé/lourd. Le lissage d'un profil (`smoothProf`) est partagé par les deux chemins.
+- **Mouvement continu 3D (état actuel, V35.18→36)** : `drawSgram3D` n'échantillonne plus le tampon à âges fixes (ça faisait SAUTER les crêtes). Modèle **buffer de courbes-instantanés glissantes** dans `window.V3={frames,ema,acc,lastT,sig}` :
+  - **EMA continue (V35.29)** : la colonne live est lissée à CHAQUE image (constante de temps ~55 ms, `a=1-exp(-dt/55)`) ; le **front** (dernier frame) est resynchronisé sur l'EMA chaque redraw (`frames[last].set(V.ema)`) → sa forme morphe en continu (fini le saut vertical du présent). Un instantané figé est poussé à `capInt=winSec*1000/(maxFrames-1)` (min 16 ms) ; `frames` plafonné à `maxFrames` (**96**, plus de mode Fluide/surface).
+  - profondeur **continue** : `dzArr[k]=1-((len-1-k)+phase)/(maxFrames-1)`, `phase=acc/capInt` (0→1) ; front `dz≈1`.
+  - `sig` = signature (mode, nF, fmin, fmax, maxFrames) → **reset des frames** si la vue change ; `resetSg3d()` vide `V3` sur clearAll/clearSgram/reset mesure (sinon on revoit l'ancienne trace).
+  - **cache** : `key` (chaîne) contient `run/stop` et non `seq` → redraw **chaque frame en marche**, figé à l'arrêt.
+  - **cadence ~60 FPS** (`SG._3dLast`, garde 10 ms) — le rendu est allégé (1 tracé dégradé par courbe, 1 point sur 2). **Anti-scintillement (V35.28)** : fondu du bord arrière (`edgeA` selon `dz`, la plus ancienne s'estompe au lieu de « poper »).
+  - **Perf mesure longue (V35.30)** : pool de tampons persistant `SG._sc={pool,slice,norm,raw,dz}` réutilisé chaque frame → plus d'allocation dans la boucle chaude (fin des à-coups GC). `smoothProf(prof,out)` écrit dans un tampon fourni.
+  - **3 niveaux de lissage (V35.30)** : `S.sg3dSmooth` 0-2 = Standard/Lisse/Très lisse (défaut Lisse) → `wirePass=smoothLvl` (passes 1-2-1 fil de fer, pics préservés).
+  - **Axe temps (V35.31)** : plus de marqueur « ▲ présent » — un axe temps sur la profondeur (étiquettes `0 s`/`-winSec/2`/`-winSec`, titre « temps », `marginL=38`).
+  - **Rotation** : azimut `S.sg3dRot` (`skewTot=plotW*(0.12+0.50*rot)`, symétrique), tangage `S.sg3dPitch` (`depth=plotH*(0.40+0.48*pitch)`, geste vertical `dy/220`).
+- **Curseur FFT (V35.35-36)** : posé au tap ; **accroche un pic local** (fenêtre ±2 % + interp. parabolique) SEULEMENT si le tap est **au-dessus** de la courbe (`S.cursor.snap`, décidé via `tapDb > specCurveDb(f)+1`), sinon placement libre. **Déplaçable au glissé** (prise à 5 % de largeur, `mode='cursor'` dans `attachZoomPan`, conserve `snap`). **Double-tap dessus** = l'enlève. Zoom vertical dB **ancré sous les doigts** (`anchors.yc`) → plus de dérive.
+- **Deux chemins de rendu (état actuel)** : le glissement continu ne s'applique qu'aux fenêtres **bornées 3/5/10 s** (`!isTout`, seules proposées en 3D). Le mode **« Tout »** (`isTout`, réservé à la **2D** depuis V35.27) garde l'**ancien rendu décimé** (`maxSlices=90`, tranches à âges fixes, `dzArr[j]=j/(nT-1)`, cache par `seq`). `smoothProf` est partagé. Le **mode surface a été entièrement retiré** (fil de fer uniquement).
 
 ## 5. Fonctions principales
 
@@ -69,8 +73,8 @@ Déploiement via l'API GitHub Contents (`api.github.com`), pas de build local (t
 - **Émergence tonale** (ISO 1996-2) : toujours évaluée ; affichée dans le tableau de valeurs et au curseur FFT ; seuil réglable au menu expert ; bouton ÉMG = encadré orange de détection auto sur la bande fine.
 - **VIB** — corrélation vibro-acoustique : coefficient de Pearson (0→1) entre l'enveloppe de chaque bande et le niveau accéléromètre (téléphone posé sur la structure). Corrèle les enveloppes (±250 ms de délai toléré), pas les formes d'onde ; une source constante n'est pas corrélable. Outil de tri « ce bruit vient-il de cette machine ? ». Adaptation « domaine enveloppe » de la méthode de cohérence (coherent output power, Bendat & Piersol).
 - **Écoute filtrée (🔊)** : réinjection du micro vers la sortie à travers un passe-bande calé sur la bande de fréquence zoomée du spectrogramme, pente 24/48/96 dB/oct réglable. Écouteurs indispensables (larsen). Latence mesurée affichée.
-- **Calibration** : offset au calibreur (94/114 dB) + correction fréquentielle par tiers d'octave face à un sonomètre étalon, enregistrable en profil.
-- **Export** : CSV complet ou image PNG titrée, via la feuille de partage iOS.
+- **Calibration / réf. pleine échelle (0 dBFS)** : `S.offset` = niveau correspondant à 0 dBFS (≈120 dB ; **pas** une « correction d'amplitude », terme corrigé partout en V35.36). Réglage au calibreur (94/114 dB) + correction fréquentielle par tiers d'octave face à un sonomètre étalon, enregistrable en profil.
+- **Export / Rapport** (menu EXPORT) : trois blocs. (1) **Infos du rapport** facultatives mémorisées (`localStorage` `rep_repSite/Oper/Ref/Note` + cases figures `rep_figSpec/Sgram/Hist`). (2) **Rapport (PDF)** : `generateReport()` ouvre un **onglet autonome** (`window.open`+`document.write(buildReportDoc)`, styles `REPORT_CSS`, impression auto au `load` → « Enregistrer en PDF » iOS ; repli partage `.html` si popup bloqué). Contenu : **logo CETIM** (`cetimLogoSVG`, reconstruit depuis le SVG du DOM), indices, conditions d'acquisition (dont **Réf. pleine échelle 0 dBFS** = `S.offset`), **figures cochées** rendues à la demande même hors écran (`figureDataURL` → `drawSpectrum`/`drawSgram`/`drawHistory` puis `toDataURL`), spectre 1/3 oct, commentaire, pied non-métrologique. (3) **CSV** complet et **PNG** titré (en-tête avec logo `LOGO_IMG_LIGHT` pré-rasterisé), via la feuille de partage iOS.
 
 ## 6. Transport (boutons)
 
@@ -78,7 +82,9 @@ Convention **enregistreur** (comme le Dictaphone iOS) : bouton principal **rouge
 
 ## 7. Points en attente / à faire
 
-- **CRITIQUE** : révoquer le jeton GitHub (PAT) utilisé pour les déploiements — il a été exposé en clair. GitHub ▸ Settings ▸ Developer settings ▸ Personal access tokens.
+- **CRITIQUE** : révoquer le jeton GitHub (PAT) utilisé pour les déploiements — il a été exposé en clair. GitHub ▸ Settings ▸ Developer settings ▸ Personal access tokens (révoquer + recréer un fine-grained limité au repo `sonometre`, permission Contents R/W).
+- Rapport PDF : `window.open` peut être bloqué en mode « app écran d'accueil » (standalone) → repli sur partage `.html`. À valider si Thibaut installe l'app.
+- « Ajuste le logo » : réglage taille/position fait par supposition (rapport 32 px, PNG 18 px) — à confirmer/affiner selon le rendu voulu.
 - Passe 2 de traduction : toasts éphémères et étiquettes dessinées dans les graphes (encore en français).
 - VIB : à valider sur cas réel (garder ou retirer selon l'usage terrain).
 - Écoute filtrée : à tester sur un cas d'identification de raie réel.
