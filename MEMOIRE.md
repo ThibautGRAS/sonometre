@@ -98,7 +98,19 @@ Convention **enregistreur** (comme le Dictaphone iOS) : bouton principal **rouge
 Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP** :
 `node extract_dsp.js` (extrait les fonctions depuis `index.html` → on teste le code déployé) puis `node run_tests.js` (61 tests vs références analytiques/normatives IEC 61672-1, IEC 61260-1, Parseval ; sortie console + `results.json`, code retour 0 = OK). Rapport détaillé : `make_report.js` → docx format CETIM (réf. SONO-VAL-001). Écarts documentés : pondération C **+0,65 dB à 8 kHz** (bilinéaire, fs=48k, sans effet sur LCpeak) ; **sommet de raie fine −10·log10(ENBW)** (normalisation Parseval : bandes et globaux exacts, sommet ponctuel étalé). Hors périmètre : chaîne micro iOS, calibration absolue, émergence ISO 1996-2 complète (validation sur appareil).
 
-## 8. Journal des versions
+## 3bis. Branche V2 (chantier enregistrement/replay)
+
+- **Branches** : `main` = V1 stable (1.35.x), PWA du quotidien, intouchée. **`V2`** = développement enregistrement audio + replay, versions **2.0.x-beta**. Fusion V2→main seulement si le replay fait ses preuves ; critère objectif = banc `tests/` + WAV de référence bout en bout (chantier 5).
+- **Canal de test iPhone** : GitHub Pages ne sert que `main` → le build de V2 est copié dans `main:/beta/index.html`, testable sur `…/sonometre/beta/`. Le beta n'enregistre **pas** de service worker (`location.pathname.includes('/beta/')`), et le SW de main **exclut** les chemins `/beta/` de son scope (sinon il écraserait le cache V1 avec la page beta et servirait la V1 hors-ligne sur /beta/).
+- **Plan V2** : ① capture PCM + WAV (fait, 2.0.1) → ② bibliothèque IndexedDB → ③ moteur de replay (horloge virtuelle dans updateNumbers) → ④ UI timeline/vitesse → ⑤ WAV de référence dans le banc.
+
+## 8. Journal des versions (V2)
+
+- **2.0.1-beta** : **chantier 1 — capture audio + export WAV**. Captage **continu** par `ScriptProcessorNode(4096)` dédié (`AREC`, l'AnalyserNode d'affichage perd des échantillons entre frames), raccordé à un gain muet vers destination (obligatoire iOS), recâblé à chaque `acquireMic()`. Blocs **Int16** empilés uniquement pendant la mesure effective — mêmes règles que le Leq : rien si `!running`, `paused` ou `S._idle` (miroir du drapeau d'armement posé dans updateNumbers). Reset à chaque `beginRun` si actif. **Garde-fou 20 min** (~115 Mo, arrêt propre + état « plein »). UI : popover export, section **AUDIO · V2 BÊTA** (toggle persisté `recAudio`, état durée/taille/fs, boutons Partager/Télécharger WAV). Encodeur **WAV PCM16 mono** (en-tête RIFF 44 o, fs réelle du contexte). Splash `2.0.1-beta` ; pas de SW sur /beta/.
+
+## 8ter. Journal des versions (V1 / main)
+
+- **1.35.45** : **infra canal beta V2**. Le service worker de main **exclut les chemins `/beta/`** de son interception (sinon il écrasait le cache `./index.html` de la V1 avec la page beta en ligne, et servait la V1 sur /beta/ hors-ligne). Aucun changement fonctionnel de l'app V1 (bump de version pour la traçabilité et la diffusion du SW).
 
 > Les versions antérieures à V27 sont documentées dans l'historique Git.
 
