@@ -452,7 +452,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.20</div>
+  <div class="splashver">V35.21</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2705,15 +2705,18 @@ function drawSgram3D(){
       g.closePath();
       g.fillStyle=THEME.bg; g.fill();
       const fade=0.45+0.55*dz;
-      g.lineWidth = j===nT-1 ? 1.6 : 1;
-      for(let i=0;i<nF-1;i++){
+      /* couleur en DÉGRADÉ le long de la courbe (interpolation RGB entre points) au lieu
+         d'une couleur figée par segment → plus de sauts de couleur marqués aux pics. */
+      const gr=g.createLinearGradient(px(j,0),0,px(j,nF-1),0);
+      for(let i=0;i<nF;i++){
         const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
-        g.strokeStyle='rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')';
-        g.beginPath();
-        g.moveTo(px(j,i), py(j,i));
-        g.lineTo(px(j,i+1), py(j,i+1));
-        g.stroke();
+        gr.addColorStop(i/(nF-1),'rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')');
       }
+      g.strokeStyle=gr; g.lineWidth = j===nT-1 ? 1.6 : 1; g.lineJoin='round';
+      g.beginPath();
+      g.moveTo(px(j,0), py(j,0));
+      for(let i=1;i<nF;i++) g.lineTo(px(j,i), py(j,i));
+      g.stroke();
     }
   }
   /* ===== graduations de fréquence ===== */
@@ -3437,12 +3440,13 @@ function renderDynPop(){
   /* ---- fréquence : spectre (X) / spectrogramme (Y) ---- */
   if(isSpec||isSgram){
     const gf=$('dpFPresets');gf.innerHTML='';
-    const full=S.fview.min<=F_LOW()+0.01&&S.fview.max>=nyq()-1;
+    const fTop=Math.min(20000,nyq());
+    const full=S.fview.min<=F_LOW()+0.01&&S.fview.max>=fTop-1;
     for(const [lbl,rng] of F_PRESETS){
       const b=document.createElement('button');b.textContent=lbl;
       const on=rng?(Math.abs(S.fview.min-rng[0])<1&&Math.abs(S.fview.max-rng[1])<1):full;
       if(on)b.className='on';
-      b.onclick=()=>{ if(rng)S.fview={min:rng[0],max:Math.min(rng[1],nyq())};else resetView(); drawActive();renderDynPop(); };
+      b.onclick=()=>{ if(rng)S.fview={min:rng[0],max:Math.min(rng[1],nyq())};else S.fview={min:F_LOW(),max:fTop}; drawActive();renderDynPop(); };
       gf.appendChild(b);
     }
     $('dpFMin').value=Math.round(S.fview.min);
@@ -3489,9 +3493,9 @@ $('dpCMinP').onclick=()=>cStep('min',5);
 $('dpCMaxM').onclick=()=>cStep('max',-5);
 $('dpCMaxP').onclick=()=>cStep('max',5);
 /* application de la fenêtre TEMPS saisie */
-$('dpTApply').onclick=()=>{
+function applyTimeInput(){
   let a=parseFloat($('dpTMin').value), b=parseFloat($('dpTMax').value);
-  if(!isFinite(a)||!isFinite(b)||b-a<0.5){alert('Fenêtre temps invalide (min 0,5 s).');return;}
+  if(!isFinite(a)||!isFinite(b)||b-a<0.5)return;
   if(S.screen==='sgram'){
     /* secondes depuis le début → fraction du tampon (droite = maintenant) */
     const Tb=Math.max(0.5,sgBufDur()), tR=S.elapsed;
@@ -3505,15 +3509,22 @@ $('dpTApply').onclick=()=>{
     S.histView={t0:a,t1:b};
   }
   drawActive(); renderDynPop();
-};
-$('dpFApply').onclick=()=>{
+}
+$('dpTApply').onclick=applyTimeInput;
+$('dpTMin').addEventListener('change',applyTimeInput);
+$('dpTMax').addEventListener('change',applyTimeInput);
+function applyFreqInput(){
   let a=parseFloat($('dpFMin').value),b=parseFloat($('dpFMax').value);
-  if(!isFinite(a)||!isFinite(b)){alert('Bornes invalides.');return;}
-  a=Math.max(1,a); b=Math.min(nyq(),b);
-  if(b-a<5){alert('Plage trop étroite (min 5 Hz).');return;}
+  const top=Math.min(20000,nyq());
+  if(!isFinite(a)||!isFinite(b))return;
+  a=Math.max(F_LOW(),Math.min(top-5,a));
+  b=Math.min(top,Math.max(a+5,b));
   S.fview={min:a,max:b};
   drawActive(); renderDynPop();
-};
+}
+$('dpFApply').onclick=applyFreqInput;
+$('dpFMin').addEventListener('change',applyFreqInput);
+$('dpFMax').addEventListener('change',applyFreqInput);
 $('dpInterp').onclick=()=>{S.sgInterp=!S.sgInterp;SG.vSeq=-1;SG.vViewKey='';drawActive();renderDynPop();};
 $('mCalib').onclick=()=>{S.screen='cal';ui();requestAnimationFrame(renderCal);};
 $('calClose').onclick=()=>{S.screen='menu';ui();};
