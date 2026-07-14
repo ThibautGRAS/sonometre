@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>CETIM · Waterfall 3D (prototype)</title>
+<style>
+  :root{--navy:#001E50;--red:#EF3346;--ink:#dfe9ff;--font:-apple-system,'Arial Nova',Arial,sans-serif}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#00030a;color:var(--ink);font-family:var(--font);overflow:hidden}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  #ui{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;
+      display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+      background:linear-gradient(#00030acc,#00030a00);z-index:3}
+  .brand{font-weight:700;letter-spacing:.14em;font-size:13px}
+  .brand b{color:var(--red)}
+  .spacer{flex:1}
+  .btn{background:rgba(127,196,255,.10);border:1px solid rgba(127,196,255,.35);color:var(--ink);
+       font-family:var(--font);font-size:13px;font-weight:600;border-radius:9px;padding:8px 12px}
+  .btn.on{background:var(--red);border-color:var(--red);color:#fff}
+  .btn.rec{background:var(--red);border-color:var(--red);color:#fff}
+  #status{position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom) + 10px);z-index:3;
+          font-size:11px;letter-spacing:.04em;color:#7fb0e6;line-height:1.5;white-space:pre}
+  #hint{position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 10px);z-index:3;
+        font-size:11px;color:#4d6a92}
+  #err{position:fixed;left:12px;right:12px;top:50%;transform:translateY(-50%);z-index:5;
+       background:rgba(239,51,70,.12);border:1px solid rgba(239,51,70,.5);color:#ffb0b8;
+       padding:14px 16px;border-radius:12px;font-size:13px;line-height:1.4;display:none}
+  .seg{display:inline-flex;border:1px solid rgba(127,196,255,.35);border-radius:9px;overflow:hidden}
+  .seg .btn{border:0;border-radius:0;padding:8px 11px}
+  .seg .btn+.btn{border-left:1px solid rgba(127,196,255,.25)}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="ui">
+  <span class="brand">CETIM<b>|</b>WATERFALL</span>
+  <span class="seg" id="durSeg">
+    <button class="btn" data-sec="3">3 s</button>
+    <button class="btn on" data-sec="5">5 s</button>
+    <button class="btn" data-sec="10">10 s</button>
+  </span>
+  <span class="spacer"></span>
+  <button class="btn rec" id="startBtn">Démarrer</button>
+</div>
+<div id="status"></div>
+<div id="hint">glisser : pivoter</div>
+<div id="err"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const errBox=document.getElementById('err');
+function fail(msg){ errBox.style.display='block'; errBox.textContent=msg; }
+if(!window.THREE){ fail("Three.js n'a pas pu être chargé (connexion requise au premier lancement)."); return; }
+
+/* ===================== PARAMÈTRES ===================== */
+const N        = 160;      // points de fréquence par courbe
+const FFT      = 4096;     // taille FFT
+const FRAME_HZ = 20;       // cadence de capture des trames (indépendante des 60 FPS de rendu)
+const FMIN     = 40;       // Hz
+let   FMAX      = 20000;    // Hz (ajusté à Nyquist)
+const DBMIN    = -95, DBMAX = -25;   // plage de normalisation (dBFS approx)
+const EMA_A    = 0.45;     // moyennage exponentiel (0 = figé, 1 = brut)
+/* géométrie de la scène */
+const WIDTH=10, HEIGHT=3.0, DEPTH=13;
+
+let durSec = 5;
+let maxFrames = Math.round(durSec*FRAME_HZ);
+let spacing   = DEPTH/maxFrames;
+
+/* ===================== THREE : scène ===================== */
+const canvas=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(48,1,0.1,200);
+camera.position.set(0,5.6,9.2);
+camera.lookAt(0,1.1,-DEPTH*0.42);
+
+const pivot=new THREE.Group();     // rotation utilisateur
+scene.add(pivot);
+const scroller=new THREE.Group();  // glissement continu (profondeur)
+pivot.add(scroller);
+
+/* repères d'orientation : quelques lignes de fond aux décades */
+function addGrid(){
+  const g=new THREE.BufferGeometry();
+  const pts=[];
+  const decs=[100,1000,10000];
+  for(const f of decs){
+    if(f<FMIN||f>FMAX)continue;
+    const x=freqToX(f);
+    pts.push(x,0,0, x,0,-DEPTH);
+  }
+  // cadre avant + fond
+  pts.push(-WIDTH/2,0,0, WIDTH/2,0,0);
+  pts.push(-WIDTH/2,0,-DEPTH, WIDTH/2,0,-DEPTH);
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+  const m=new THREE.LineBasicMaterial({color:0x14375f,transparent:true,opacity:0.6});
+  pivot.add(new THREE.LineSegments(g,m));
+}
+
+/* ===================== géométrie du waterfall ===================== */
+const SEGV = (N-1)*2;                 // sommets par trame (segments)
+const posArr = new Float32Array(0);   // (ré)alloués dans allocBuffers()
+let position, color, geom, lines;
+function allocBuffers(){
+  if(lines){ scroller.remove(lines); geom.dispose(); lines.material.dispose(); }
+  const total = maxFrames*SEGV;
+  position = new Float32Array(total*3);
+  color    = new Float32Array(total*3);
+  geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(position,3));
+  geom.setAttribute('color',    new THREE.BufferAttribute(color,3));
+  geom.setDrawRange(0,0);
+  const mat=new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:1});
+  lines=new THREE.LineSegments(geom,mat);
+  lines.frustumCulled=false;
+  scroller.add(lines);
+}
+
+/* fréquence log -> position X */
+function freqToX(f){
+  const t=(Math.log(f)-Math.log(FMIN))/(Math.log(FMAX)-Math.log(FMIN));
+  return (t-0.5)*WIDTH;
+}
+/* X précalculé par point */
+let XS=new Float32Array(N);
+function buildXS(){
+  for(let n=0;n<N;n++){
+    const f=FMIN*Math.pow(FMAX/FMIN, n/(N-1));
+    XS[n]=freqToX(f);
+  }
+}
+
+/* colormap type jet (bleu -> cyan -> vert -> jaune -> rouge) */
+const STOPS=[[0.05,0.10,0.55],[0.0,0.55,1.0],[0.0,0.90,0.45],[1.0,0.95,0.15],[0.95,0.20,0.15]];
+function jet(t,out){
+  t=t<0?0:t>1?1:t;
+  const x=t*(STOPS.length-1), i=Math.floor(x), f=x-i;
+  const a=STOPS[Math.min(i,STOPS.length-1)], b=STOPS[Math.min(i+1,STOPS.length-1)];
+  out[0]=a[0]+(b[0]-a[0])*f; out[1]=a[1]+(b[1]-a[1])*f; out[2]=a[2]+(b[2]-a[2])*f;
+}
+
+/* ===================== buffer circulaire de trames ===================== */
+let frames=[];               // frames[0]=plus ancienne ... [len-1]=plus récente ; chaque = Float32Array(N) niveaux 0..1
+let ema=null;                // état EMA
+const _c=[0,0,0];
+
+function rebuild(){
+  const len=frames.length;
+  let v=0;
+  for(let k=0;k<len;k++){
+    const lv=frames[k];
+    const age=(len-1-k);                 // 0 = récente
+    const z=-age*spacing;
+    const fade=Math.pow(1-age/maxFrames, 0.7);   // transparence croissante avec l'ancienneté (via luminosité)
+    for(let n=0;n<N-1;n++){
+      const x0=XS[n],   y0=lv[n]  *HEIGHT;
+      const x1=XS[n+1], y1=lv[n+1]*HEIGHT;
+      // sommet A
+      position[v*3]=x0; position[v*3+1]=y0; position[v*3+2]=z;
+      jet((lv[n]),_c);
+      color[v*3]=_c[0]*fade; color[v*3+1]=_c[1]*fade; color[v*3+2]=_c[2]*fade; v++;
+      // sommet B
+      position[v*3]=x1; position[v*3+1]=y1; position[v*3+2]=z;
+      jet((lv[n+1]),_c);
+      color[v*3]=_c[0]*fade; color[v*3+1]=_c[1]*fade; color[v*3+2]=_c[2]*fade; v++;
+    }
+  }
+  geom.setDrawRange(0,v);
+  geom.attributes.position.needsUpdate=true;
+  geom.attributes.color.needsUpdate=true;
+}
+
+/* ===================== audio ===================== */
+let ctx,analyser,srcNode,stream,freqDb,running=false;
+async function startAudio(){
+  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  srcNode=ctx.createMediaStreamSource(stream);
+  analyser=ctx.createAnalyser();
+  analyser.fftSize=FFT; analyser.smoothingTimeConstant=0;   // notre propre EMA
+  srcNode.connect(analyser);
+  freqDb=new Float32Array(analyser.frequencyBinCount);
+  FMAX=Math.min(20000, ctx.sampleRate/2);
+  buildXS(); addGrid();
+  if(ctx.state==='suspended') await ctx.resume();
+}
+
+/* extrait une trame : bins FFT -> N points log, MAX par bande, EMA, lissage 1-2-1 */
+function capture(){
+  analyser.getFloatFrequencyData(freqDb);
+  const nb=freqDb.length, binHz=ctx.sampleRate/FFT;
+  const raw=new Float32Array(N);
+  for(let n=0;n<N;n++){
+    const fLo = FMIN*Math.pow(FMAX/FMIN, Math.max(0,n-0.5)/(N-1));
+    const fHi = FMIN*Math.pow(FMAX/FMIN, Math.min(N-1,n+0.5)/(N-1));
+    let b0=Math.max(0,Math.floor(fLo/binHz)), b1=Math.min(nb-1,Math.ceil(fHi/binHz));
+    if(b1<b0)b1=b0;
+    let mx=-Infinity;
+    for(let b=b0;b<=b1;b++){ const d=freqDb[b]; if(d>mx)mx=d; }
+    let norm=(mx-DBMIN)/(DBMAX-DBMIN);
+    raw[n]=norm<0?0:norm>1?1:norm;
+  }
+  // EMA modéré
+  if(!ema){ ema=raw.slice(); } else { for(let n=0;n<N;n++) ema[n]+=EMA_A*(raw[n]-ema[n]); }
+  // lissage fréquentiel léger (1-2-1) préservant les pics
+  const sm=new Float32Array(N); sm[0]=ema[0]; sm[N-1]=ema[N-1];
+  for(let n=1;n<N-1;n++) sm[n]=(ema[n]>=ema[n-1]&&ema[n]>=ema[n+1])?ema[n]:(ema[n-1]+2*ema[n]+ema[n+1])*0.25;
+  frames.push(sm);
+  while(frames.length>maxFrames) frames.shift();
+  rebuild();
+}
+
+/* ===================== boucle de rendu 60 FPS ===================== */
+let acc=0,last=0,fps=0,fpsT=0,fpsN=0;
+const frameInt=1000/FRAME_HZ;
+function loop(t){
+  requestAnimationFrame(loop);
+  if(!last)last=t; const dt=t-last; last=t;
+  if(running){
+    acc+=dt;
+    if(acc>=frameInt){ capture(); acc-=frameInt; if(acc>frameInt)acc=frameInt; }
+    // glissement continu : tout recule de frac*spacing entre deux trames
+    const frac=acc/frameInt;
+    scroller.position.z = -frac*spacing;
+  }
+  renderer.render(scene,camera);
+  // fps
+  fpsN++; fpsT+=dt; if(fpsT>=500){ fps=Math.round(1000*fpsN/fpsT); fpsN=0; fpsT=0; updateStatus(); }
+}
+
+/* ===================== redimensionnement ===================== */
+function resize(){
+  const w=window.innerWidth,h=window.innerHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize);
+
+/* ===================== rotation tactile ===================== */
+let rot={x:0.0,y:0.0},drag=null;
+function setRot(){ pivot.rotation.x=rot.x; pivot.rotation.y=rot.y; }
+canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,rx:rot.x,ry:rot.y};});
+canvas.addEventListener('pointermove',e=>{ if(!drag)return;
+  rot.y=drag.ry+(e.clientX-drag.x)*0.006;
+  rot.x=Math.max(-0.2,Math.min(0.9,drag.rx+(e.clientY-drag.y)*0.005));
+  setRot();
+});
+window.addEventListener('pointerup',()=>drag=null);
+
+/* ===================== UI ===================== */
+function updateStatus(){
+  document.getElementById('status').textContent =
+    (running?'● capture':'‖ arrêt')+'   '+fps+' FPS\n'+
+    durSec+' s · '+FRAME_HZ+' trames/s · '+maxFrames+' courbes\n'+
+    'FFT '+FFT+' · '+FMIN+'–'+(FMAX>=1000?(FMAX/1000).toFixed(0)+'k':FMAX)+' Hz';
+}
+document.getElementById('durSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  durSec=+b.dataset.sec;
+  [...e.currentTarget.children].forEach(c=>c.classList.toggle('on',c===b));
+  maxFrames=Math.round(durSec*FRAME_HZ); spacing=DEPTH/maxFrames;
+  while(frames.length>maxFrames) frames.shift();
+  allocBuffers(); rebuild(); updateStatus();
+});
+const startBtn=document.getElementById('startBtn');
+startBtn.addEventListener('click',async()=>{
+  if(running){ running=false; startBtn.textContent='Reprendre'; startBtn.classList.remove('rec'); updateStatus(); return; }
+  try{
+    if(!ctx) await startAudio();
+    else if(ctx.state==='suspended') await ctx.resume();
+    running=true; startBtn.textContent='Pause'; startBtn.classList.add('rec'); updateStatus();
+  }catch(err){ fail("Micro indisponible : "+(err&&err.message||err)); }
+});
+
+/* init */
+buildXS(); allocBuffers(); setRot(); resize(); updateStatus();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
