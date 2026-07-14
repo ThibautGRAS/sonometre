@@ -459,7 +459,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.34</div>
+  <div class="splashver">V35.35</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -551,7 +551,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
           <div class="mrow" id="mLsnGain"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
           <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
-          <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / correction amplitude</span><b style="color:#2FBF83">▸</b></div>
+          <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / réf. pleine échelle (0 dBFS)</span><b style="color:#2FBF83">▸</b></div>
           <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
           <div class="mrow act" id="mClrHist"><span>Effacer l'évolution temporelle</span><b>⌫</b></div>
           <div class="mrow act" id="mClrPeak"><span>Effacer max / min / peak-hold</span><b>⌫</b></div>
@@ -2881,6 +2881,9 @@ function attachZoomPan(id,axis,opts){
       anchV=Vof(Math.max(0,Math.min(1,uOf(t,r))));
       anchB=bx(Math.max(0,Math.min(1,uxOf(t,r))));
       mode='pan';
+      /* si le doigt se pose SUR le curseur → on le glisse (comme le curseur d'évolution) */
+      const cu=opts.getCursorU?opts.getCursorU():null;
+      if(cu!=null){ const u0=Math.max(0,Math.min(1,uxOf(t,r))); if(Math.abs(u0-cu)<0.05){ mode='cursor'; return; } }
       const now=Date.now();
       if(now-lastTap<300){resetView();mode=null;lastTap=0;return;}
       lastTap=now;
@@ -2908,7 +2911,8 @@ function attachZoomPan(id,axis,opts){
           const u1=uxOf(t[0],r),u2=uxOf(t[1],r);
           anchors={u1,u2,B1:bx(u1),B2:bx(u2)};
         }else if(pinchAx==='db'){
-          anchors={sprY0:sprY,dbLo:S.dbMin,dbHi:S.dbMax};
+          const midY=(t[0].clientY+t[1].clientY)/2, yc=1-(midY-r.top)/Math.max(1,r.height-axH);
+          anchors={sprY0:sprY,dbLo:S.dbMin,dbHi:S.dbMax,yc:Math.max(0,Math.min(1,yc))};
         }else{
           const u1=uOf(t[0],r),u2=uOf(t[1],r);
           anchors={u1,u2,V1:Vof(u1),V2:Vof(u2)};
@@ -2916,14 +2920,15 @@ function attachZoomPan(id,axis,opts){
         return;
       }
       if(pinchAx==='db'){
-        /* zoom vertical dB : l'écartement vertical dilate/comprime la fenêtre dB autour de son centre */
+        /* zoom vertical dB : la valeur sous le MILIEU DES DOIGTS reste fixe (plus de dérive haut/bas) */
         const sprY=Math.abs(t[0].clientY-t[1].clientY);
         const ratio=Math.max(0.2,Math.min(5,anchors.sprY0/Math.max(4,sprY)));  // écarter = réduire la plage
-        const c=(anchors.dbLo+anchors.dbHi)/2, half=(anchors.dbHi-anchors.dbLo)/2*ratio;
-        let lo=Math.round(c-half), hi=Math.round(c+half);
-        if(hi-lo<10){const m=(lo+hi)/2;lo=Math.round(m-5);hi=Math.round(m+5);}
-        lo=Math.max(-20,lo); hi=Math.min(140,hi);
-        S.dbAuto=false; S.dbMin=lo; S.dbMax=hi;
+        const span0=anchors.dbHi-anchors.dbLo, yc=anchors.yc;
+        const anchorDb=anchors.dbLo+yc*span0;                 // dB sous les doigts (yc : 0 bas → 1 haut)
+        let span=span0*ratio; if(span<10)span=10;
+        let lo=anchorDb-yc*span, hi=lo+span;
+        if(lo<-20){hi+=-20-lo;lo=-20;} if(hi>140){lo-=hi-140;hi=140;}
+        S.dbAuto=false; S.dbMin=Math.round(lo); S.dbMax=Math.round(hi);
         ui(); opts.onChange&&opts.onChange();
         return;
       }
@@ -2967,6 +2972,10 @@ function attachZoomPan(id,axis,opts){
         const span=spanCur();
         apply(axis==='x'?anchV-u*span:anchV-(1-u)*span,span);
       }
+    }else if(mode==='cursor'&&e.touches.length===1){
+      const t=e.touches[0];
+      const u=Math.max(0,Math.min(1,uxOf(t,r)));
+      if(opts.onTap)opts.onTap(TFi(Vof(u)),u,u);       // déplace le curseur en continu
     }
   },{passive:false});
 
@@ -3019,7 +3028,8 @@ attachZoomPan('specCv','x',{
   freezeMain:()=>S.mode!=='fft',      // tiers/octave : barres figées (pas de pan/zoom fréquence)
   onChange:()=>{if(!S.running)drawSpectrum();},
   onTap:(f,u)=>{S.cursor={f,u};if(!S.running)drawSpectrum();},
-  onTap2:()=>{ S.maxCur=!S.maxCur; if(!S.running||S.paused)drawSpectrum(); }
+  onTap2:()=>{ S.maxCur=!S.maxCur; if(!S.running||S.paused)drawSpectrum(); },
+  getCursorU:()=>S.cursor?S.cursor.u:null
 });
 /* ===== gestes de la courbe d'évolution (temps × dB) ===== */
 (function(){
@@ -3161,7 +3171,7 @@ function ui(){
     : S.screen==='sgram' ? 'SPECTROGRAMME · POND. '+S.weight
     : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq'
     : S.screen==='menu' ? 'MODE EXPERT · TRAITEMENT DU SIGNAL'
-    : S.screen==='cal' ? 'CALIBRATION · CORRECTION AMPLITUDE' : 'VALEURS DE LA MESURE';
+    : S.screen==='cal' ? 'CALIBRATION · RÉFÉRENCE 0 dBFS' : 'VALEURS DE LA MESURE';
   $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='menu'?'Expert':'Valeurs';
   $('kMode').classList.toggle('locked',S.screen!=='spec');   // ANALYSE n'a de sens que sur le spectre
   /* lignes du mode expert */
@@ -3955,6 +3965,19 @@ function buildCsv(){
   return csv;
 }
 /* rend le canvas de l'écran courant dans une image titrée (fond façade + en-tête) */
+/* logo CETIM : reconstruit à partir du SVG déjà présent dans l'app (chemins exacts, sans recopie).
+   fill = couleur des lettres ; le carré reste rouge charte. */
+function cetimLogoSVG(fill){
+  const src=document.querySelector('header svg.logo')||document.querySelector('svg.splashlogo');
+  if(!src)return '';
+  const letters=[...src.querySelectorAll('g path')].map(p=>p.getAttribute('d'));
+  const red=[...src.children].filter(el=>el.tagName&&el.tagName.toLowerCase()==='path').map(p=>p.getAttribute('d'));
+  return '<svg viewBox="0 0 374.5 59" xmlns="http://www.w3.org/2000/svg"><g fill="'+fill+'">'+
+    letters.map(d=>'<path d="'+d+'"/>').join('')+'</g>'+
+    red.map(d=>'<path d="'+d+'" fill="#EF3346"/>').join('')+'</svg>';
+}
+const LOGO_IMG_LIGHT=new Image();   // version claire pré-rasterisée pour l'export PNG (fond marine)
+try{ LOGO_IMG_LIGHT.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(cetimLogoSVG('#EAF4FF')); }catch(_){}
 function buildGraphCanvas(){
   const id=S.screen==='sgram'?'sgramCv':S.screen==='hist'?'histCv':'specCv';
   const src=$(id); if(!src||!src.width)return null;
@@ -3965,10 +3988,14 @@ function buildGraphCanvas(){
   g.fillStyle='#04153A'; g.fillRect(0,0,out.width,out.height);
   g.setTransform(sc,0,0,sc,0,0);
   const W=out.width/sc;
-  // en-tête : titre + sous-titre empilés à gauche, date en haut à droite (plus de chevauchement)
-  g.fillStyle='#EF3346'; g.fillRect(pad,16,3,18);
-  g.fillStyle='#EAF4FF'; g.textAlign='left';
-  g.font='700 15px Arial'; g.fillText('CETIM · SONOMÈTRE',pad+9,29);
+  // en-tête : logo CETIM + sous-titre à gauche, date en haut à droite
+  if(LOGO_IMG_LIGHT.complete && LOGO_IMG_LIGHT.naturalWidth){
+    const lh=16, lw=lh*(374.5/59);
+    g.drawImage(LOGO_IMG_LIGHT, pad, 11, lw, lh);
+  }else{
+    g.fillStyle='#EF3346'; g.fillRect(pad,16,3,18);
+    g.fillStyle='#EAF4FF'; g.textAlign='left'; g.font='700 15px Arial'; g.fillText('CETIM · SONOMÈTRE',pad+9,29);
+  }
   const scr=S.screen==='sgram'?'Spectrogramme':S.screen==='hist'?'Évolution':(S.mode==='fft'?'Spectre FFT':S.mode==='oct'?'Octave':'Tiers d\'octave');
   const laeq=S.eqT>0?lvl(S.eq.A/S.eqT):-99;
   let extra='';
@@ -3992,7 +4019,8 @@ const REPORT_CSS=
   '#report{max-width:820px;margin:12px auto;background:#fff;padding:20px 22px;box-shadow:0 1px 8px rgba(0,0,0,.18)}'+
   '.noprint{position:sticky;top:0;z-index:5;display:flex;gap:8px;justify-content:flex-end;padding:10px 12px;background:#eef1f6}'+
   '.noprint button{background:#001E50;color:#fff;border:0;border-radius:9px;padding:11px 18px;font:700 14px Arial;letter-spacing:.02em}'+
-  '.rep-h{display:flex;align-items:flex-start;gap:9px;border-bottom:2px solid #001E50;padding-bottom:7px}'+
+  '.rep-h{display:flex;align-items:flex-start;gap:12px;border-bottom:2px solid #001E50;padding-bottom:8px}'+
+  '.rep-logo{flex:0 0 auto}.rep-logo svg{height:34px;width:auto;display:block}'+
   '.rep-bar{width:5px;height:38px;background:#EF3346;flex:0 0 auto}'+
   '.rep-t1{font-size:16px;font-weight:800;letter-spacing:.1em;color:#001E50}'+
   '.rep-t2{font-size:11px;color:#555;margin-top:2px}'+
@@ -4060,7 +4088,8 @@ function buildReportHTML(figs){
   if(S.eqT>0){ for(let b=0;b<S.bands.length;b++){ const L=lvl(S.bandEnergy[b]/S.eqT); spec+='<div><span>'+fmtF(S.bands[b])+' Hz</span><b>'+fmt(L)+'</b></div>'; } }
   const scr=S.screen==='sgram'?('Spectrogramme'+(S.sg3d?' 3D':'')):S.screen==='hist'?'Évolution temporelle':(S.mode==='fft'?'Spectre FFT':S.mode==='oct'?'Octave':'Tiers d\'octave');
   return ''+
-  '<div class="rep-h"><div class="rep-bar"></div><div><div class="rep-t1">CETIM · SONOMÈTRE</div>'+
+  '<div class="rep-h"><div class="rep-logo">'+cetimLogoSVG('#001E50')+'</div>'+
+    '<div><div class="rep-t1" style="font-size:13px;letter-spacing:.14em">SONOMÈTRE</div>'+
     '<div class="rep-t2">Rapport de mesure acoustique</div></div>'+
     '<div class="rep-meta">'+now+(ref?'<br>Réf. '+ref:'')+(site?'<br>'+site:'')+(oper?'<br>'+oper:'')+'</div></div>'+
   '<div class="rep-sec">Indices globaux (pondération '+S.weight+')</div>'+
@@ -4080,7 +4109,7 @@ function buildReportHTML(figs){
     '<div><span>Tiers d\'octave</span><b>'+srcName+'</b></div>'+
     '<div><span>Pondération fréq.</span><b>'+S.weight+'</b></div>'+
     '<div><span>Pondération temp.</span><b>'+timeName+'</b></div>'+
-    '<div><span>Correction d\'amplitude</span><b>'+S.offset.toFixed(1)+' dB</b></div>'+
+    '<div><span>Réf. pleine échelle (0 dBFS)</span><b>'+S.offset.toFixed(1)+' dB</b></div>'+
   '</div>'+
   figs.map(f=>f&&f.img?'<div class="rep-sec rep-avoid">'+f.title+'</div><img class="rep-img rep-avoid" src="'+f.img+'">':'').join('')+
   (spec?'<div class="rep-sec">Spectre par tiers d\'octave (Leq '+S.weight+')</div><div class="rep-spec">'+spec+'</div>':'')+
@@ -4250,7 +4279,7 @@ const TR={
  'Rendu 3D spectrogramme':{en:'3D spectrogram render',es:'Render 3D espectrograma'},
  'Pente filtre écoute ♪':{en:'Listen filter slope ♪',es:'Pendiente filtro escucha ♪'},
  'Thème de façade':{en:'Faceplate theme',es:'Tema de fachada'},
- 'Calibration / correction amplitude':{en:'Calibration / amplitude correction',es:'Calibración / corrección de amplitud'},
+ 'Calibration / réf. pleine échelle (0 dBFS)':{en:'Calibration / full-scale ref. (0 dBFS)',es:'Calibración / ref. fondo de escala (0 dBFS)'},
  'Mode générique auto':{en:'Generic auto mode',es:'Modo genérico auto'},
  'Profil chargé':{en:'Loaded profile',es:'Perfil cargado'},
  'Réinitialiser les paramètres':{en:'Reset settings',es:'Restablecer ajustes'},
