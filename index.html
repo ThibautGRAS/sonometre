@@ -461,7 +461,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.41</div>
+  <div class="splashver">V35.42</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -516,7 +516,7 @@ if('serviceWorker' in navigator){
     <div class="graphzone">
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
-      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="vibBtn">VIB</button><button class="sg3dbtn" id="emgBtn" style="right:60px">ÉMG</button><button class="sg3dbtn" id="avgBtn" style="right:112px">MOY</button></div>
+      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="avgBtn">MOY</button><button class="sg3dbtn" id="emgBtn" style="right:60px">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="display:none">VIB</button></div>
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
@@ -786,7 +786,6 @@ if('serviceWorker' in navigator){
         <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
         <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
-        <li>Spectre (tous modes) : icône <b>VIB</b> = corrélation vibro-acoustique. Pose le téléphone sur la structure vibrante : chaque bande est corrélée (coefficient 0→1) avec l'accéléromètre ; les bandes étrangères à la vibration s'estompent (en bande fine, un voile couvre les zones non corrélées ; en octave, coefficient agrégé), le badge indique le coefficient max. Corrélation sur les enveloppes (fluctuations de niveau, ±250 ms de délai toléré) : une source parfaitement constante ne peut pas être corrélée.</li>
         <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>instantané</b> (lissé selon TEMPS : Fast/Slow/V‑Slow) et <b>moyenné (Leq)</b> sur toute la durée de mesure — libellé « L<i>x</i>·Moy ». Le calcul moyenné tourne en permanence en parallèle (aucun surcoût), et le <b>rapport PDF</b> utilise toujours le spectre moyenné. Disponible en tiers d'octave, octave et bande fine.</li>
       </ul>
 
@@ -851,6 +850,11 @@ if('serviceWorker' in navigator){
         <label><input type="checkbox" id="figSgram" checked> Spectrogramme</label>
         <label><input type="checkbox" id="figHist" checked> Évolution</label>
       </div>
+      <div class="msub">RÉSOLUTION DU SPECTRE EXPORTÉ (Leq moyenné)</div>
+      <div class="ep-figs" id="expBandSel">
+        <label><input type="radio" name="expBand" value="toct"> Tiers d'octave</label>
+        <label><input type="radio" name="expBand" value="oct"> Octave</label>
+      </div>
       <div class="msub">RAPPORT COMPLET</div>
       <button class="exp-item" id="epReport"><b>Générer le rapport (PDF)</b><span>document A4 · impression iOS → « Enregistrer en PDF »</span></button>
       <div class="msub">DONNÉES &amp; IMAGE</div>
@@ -881,7 +885,7 @@ const S = {
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
-  win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10, specAvg:false,
+  win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10, specAvg:false, expBand:'toct',
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
   toctSrc:'iir', iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
@@ -1890,7 +1894,7 @@ function dynTicks(fmin,fmax,nmax){
   return inr.filter((_,i)=>i%step===0);
 }
 
-function drawSpectrum(avg){
+function drawSpectrum(avg,modeOverride){
   const c=CV.specCv; if(!c)return;
   const {g,w,h}=c;
   g.fillStyle=THEME.bg;g.fillRect(0,0,w,h);
@@ -1898,12 +1902,13 @@ function drawSpectrum(avg){
   if(!S.bands.length){grid(g,w,h,sc,padL,10);return;}
   /* moyenne : forcée par le param (rapport) sinon suit le toggle écran INST⇄MOY (S.specAvg) */
   const useAvg=(avg===undefined?S.specAvg:avg)&&S.eqT>0;
+  const mode=modeOverride||S.mode;             // export : force octave / tiers indépendamment de l'écran
 
-  if(S.mode==='toct'||S.mode==='oct'){
+  if(mode==='toct'||mode==='oct'){
     /* octave : agrège les tiers par groupes centrés sur les fréquences normalisées (…31.5,63,125,250,500,1k…) */
     let names, pw, peak;
     const pwT=useAvg?Array.from(S.bandEnergy,e=>e/S.eqT):(S.time==='F'?S.bandPowF:S.time==='S'?S.bandPowS:S.bandPowV);
-    if(S.mode==='oct'){
+    if(mode==='oct'){
       const OCT=[16,31.5,63,125,250,500,1000,2000,4000,8000,16000];
       names=[]; pw=[]; peak=[];
       for(const fc of OCT){
@@ -1936,7 +1941,7 @@ function drawSpectrum(avg){
     grid(g,w,h,sc,padL,10);
     const bw=(w-padL-4)/nb;
     g.textAlign='center';
-    const labelSet=(S.mode==='oct'||nb<=12)?names:[31.5,125,500,2000,8000];
+    const labelSet=(mode==='oct'||nb<=12)?names:[31.5,125,500,2000,8000];
     /* filtre vibro-acoustique : coefficient par bande (0 = étrangère à la vibration, estompée).
        En octave : max des tiers du groupe. */
     let vibC=null;
@@ -3221,10 +3226,8 @@ function ui(){
   $('mPeakInterp').querySelector('b').textContent=S.peakInterp?'Oui':'Non';
   $('emgBtn').classList.toggle('on',S.emgOn);
   $('emgBtn').style.display=S.mode==='fft'?'block':'none';
-  $('vibBtn').style.display='block';   // dispo en 1/3 oct, octave et bande fine
-  $('vibBtn').classList.toggle('on',VIB.on);
-  $('vibBtn').classList.toggle('dis',!VIB.sup);
-  $('avgBtn').style.display='block';   // INST⇄MOY : tous modes de spectre
+  $('vibBtn').style.display='none';   // module VIB retiré de l'interface (code conservé, réactivable)
+  $('avgBtn').style.display='block';   // INST⇄MOY : tous modes de spectre, tout à droite
   $('avgBtn').classList.toggle('on',S.specAvg);
   $('avgBtn').classList.toggle('dis',!(S.eqT>0));   // pas de moyenne tant qu'aucune mesure
   $('lsnBtn').classList.toggle('on',LSN.on);
@@ -3357,7 +3360,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
                    'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','specAvg','sg3dSmooth','lsnSlope','lsnGain','micId'];
+                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','specAvg','expBand','sg3dSmooth','lsnSlope','lsnGain','micId'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
@@ -3982,6 +3985,23 @@ function stopMeasure(auto){
 /* ================= Export CSV ================= */
 /* ===== EXPORT / PARTAGE ===== */
 function stamp(){ return new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'); }
+/* spectre Leq moyenné sur la mesure, à la résolution demandée pour l'export
+   ('toct' = tiers d'octave direct ; 'oct' = agrégat énergétique des tiers) */
+function expSpectrum(band){
+  band=band||S.expBand||'toct';
+  if(!(S.eqT>0)||!S.bandEnergy) return {names:[],L:[]};
+  const th=S.bands, en=S.bandEnergy;
+  if(band==='oct'){
+    const OCT=[16,31.5,63,125,250,500,1000,2000,4000,8000,16000], names=[],L=[];
+    for(const fc of OCT){ let s=0,any=false;
+      for(let b=0;b<th.length;b++){ const f=th[b]; if(f>=fc/1.4142&&f<fc*1.4142){s+=en[b];any=true;} }
+      if(any){ names.push(fc); L.push(lvl(s/S.eqT)); }
+    }
+    return {names,L};
+  }
+  const names=[],L=[]; for(let b=0;b<th.length;b++){ names.push(th[b]); L.push(lvl(en[b]/S.eqT)); }
+  return {names,L};
+}
 function buildCsv(){
   let csv='SONOMETRE CETIM - export\n';
   csv+='Date;'+new Date().toLocaleString('fr-FR')+';Duree [s];'+(S.eqT>0?S.eqT.toFixed(1):'0')+'\n';
@@ -3997,8 +4017,9 @@ function buildCsv(){
   csv+='LAFmax;'+fmt(S.lafMax)+';LAFmin;'+fmt(S.lafMin)+';LCpeak;'+fmt(S.lcPeak)+'\n';
   csv+='L10;'+fmt(S.L10)+';L50;'+fmt(S.L50)+';L90;'+fmt(S.L90)+'\n';
   csv+='LAE (SEL);'+((S.eqT>0&&laeq>-90)?fmt(laeq+10*Math.log10(Math.max(0.1,S.eqT))):'-')+';Delta LF (LCeq-LAeq);'+((laeq>-90&&lceq>-90)?fmt(lceq-laeq):'-')+'\n\n';
-  csv+='SPECTRE Leq (ponderation '+S.weight+' - '+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+')\nfc [Hz];Leq [dB]\n';
-  for(let b=0;b<S.bands.length;b++)csv+=S.bands[b]+';'+fmt(S.eqT>0?lvl(S.bandEnergy[b]/S.eqT):-99)+'\n';
+  const _sp=expSpectrum();
+  csv+='SPECTRE Leq (ponderation '+S.weight+' - '+(_sp.names.length&&S.expBand==='oct'?'octave':'tiers d octave')+' - '+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+')\nfc [Hz];Leq [dB]\n';
+  for(let b=0;b<_sp.names.length;b++)csv+=_sp.names[b]+';'+fmt(_sp.L[b])+'\n';
   csv+='\nHISTORIQUE (10 Hz)\nt [s];L'+S.weight+S.time+' [dB];L'+S.weight+'eq [dB]\n';
   for(const pt of S.hist)csv+=pt.t.toFixed(1)+';'+pt.L.toFixed(1)+';'+pt.Leq.toFixed(1)+'\n';
   return csv;
@@ -4035,7 +4056,7 @@ function buildGraphCanvas(){
     g.fillStyle='#EF3346'; g.fillRect(pad,16,3,18);
     g.fillStyle='#EAF4FF'; g.textAlign='left'; g.font='700 15px Arial'; g.fillText('CETIM · SONOMÈTRE',pad+9,29);
   }
-  const scr=S.screen==='sgram'?'Spectrogramme':S.screen==='hist'?'Évolution':(S.mode==='fft'?'Spectre FFT':S.mode==='oct'?'Octave':'Tiers d\'octave');
+  const scr=S.screen==='sgram'?'Spectrogramme':S.screen==='hist'?'Évolution':(S.expBand==='oct'?'Octave':'Tiers d\'octave')+' · Leq moyenné';
   const laeq=S.eqT>0?lvl(S.eq.A/S.eqT):-99;
   let extra='';
   if(S.screen==='sgram'){ const d=(S.tview.x1-S.tview.x0)*sgBufDur(); extra='  ·  '+(d>=10?Math.round(d):Math.round(d*10)/10)+' s'+(S.sg3d?' · 3D':''); }
@@ -4043,8 +4064,9 @@ function buildGraphCanvas(){
   g.fillText(scr+'  ·  pond. '+S.weight+'  ·  LAeq '+fmt(laeq)+' dB'+extra, pad+9, 47);
   g.textAlign='right';
   g.fillText(new Date().toLocaleString('fr-FR'), W-pad, 29);
-  // image du graphe
-  g.drawImage(src, pad, top, src.width/sc, src.height/sc);
+  // image du graphe (spectre : rendu Leq moyenné à la résolution d'export, puis écran restauré)
+  if(S.screen==='spec'){ drawSpectrum(true,S.expBand); g.drawImage(src, pad, top, src.width/sc, src.height/sc); drawSpectrum(); }
+  else g.drawImage(src, pad, top, src.width/sc, src.height/sc);
   return out;
 }
 function dl(blob,name){ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
@@ -4098,14 +4120,14 @@ function buildReportDoc(figs){
 function figureTitle(kind){
   if(kind==='sgram') return 'Spectrogramme'+(S.sg3d?' — vue 3D':' — 2D');
   if(kind==='hist')  return 'Évolution temporelle';
-  return 'Spectre — '+(S.mode==='fft'?'FFT':S.mode==='oct'?'Octave':'Tiers d\'octave');
+  return 'Spectre — '+(S.expBand==='oct'?'Octave':'Tiers d\'octave')+' (Leq moyenné)';
 }
 function figureDataURL(kind){
   try{
     const id=kind==='sgram'?'sgramCv':kind==='hist'?'histCv':'specCv';
     const c=$(id); if(!c)return '';
     sizeCanvas(id); if(!c.width)return '';
-    if(kind==='spec') drawSpectrum(true);
+    if(kind==='spec') drawSpectrum(true,S.expBand);
     else if(kind==='hist') drawHistory();
     else drawSgram();
     return c.toDataURL('image/png');
@@ -4128,8 +4150,8 @@ function buildReportHTML(figs){
   const site=repEsc((($('repSite')||{}).value||'').trim()), oper=repEsc((($('repOper')||{}).value||'').trim());
   const ref=repEsc((($('repRef')||{}).value||'').trim()), note=repEsc((($('repNote')||{}).value||'').trim());
   const idx=(lbl,v,u)=>'<div class="c"><small>'+lbl+'</small><b>'+fmt(v)+'</b> <i>'+(u||'dB')+'</i></div>';
-  let spec='';
-  if(S.eqT>0){ for(let b=0;b<S.bands.length;b++){ const L=lvl(S.bandEnergy[b]/S.eqT); spec+='<div><span>'+fmtF(S.bands[b])+' Hz</span><b>'+fmt(L)+'</b></div>'; } }
+  let spec=''; const _repSp=expSpectrum();
+  for(let b=0;b<_repSp.names.length;b++){ spec+='<div><span>'+fmtF(_repSp.names[b])+' Hz</span><b>'+fmt(_repSp.L[b])+'</b></div>'; }
   const scr=S.screen==='sgram'?('Spectrogramme'+(S.sg3d?' 3D':'')):S.screen==='hist'?'Évolution temporelle':(S.mode==='fft'?'Spectre FFT':S.mode==='oct'?'Octave':'Tiers d\'octave');
   return ''+
   '<div class="rep-h"><div class="rep-logo">'+cetimLogoSVG('#001E50')+'</div>'+
@@ -4160,7 +4182,7 @@ function buildReportHTML(figs){
     '<div><span>Réf. pleine échelle (0 dBFS)</span><b>'+S.offset.toFixed(1)+' dB</b></div>'+
   '</div>'+
   figs.map(f=>f&&f.img?'<div class="rep-fig"><div class="rep-sec">'+f.title+'</div><img class="rep-img" src="'+f.img+'"></div>':'').join('')+
-  (spec?'<div class="rep-sec">Spectre par tiers d\'octave (Leq '+S.weight+')</div><div class="rep-spec">'+spec+'</div>':'')+
+  (spec?'<div class="rep-sec">Spectre par '+(S.expBand==='oct'?'octave':'tiers d\'octave')+' (Leq '+S.weight+')</div><div class="rep-spec">'+spec+'</div>':'')+
   '<div class="rep-sec">Commentaire</div><div class="rep-note">'+(note||'—')+'</div>'+
   '<div class="rep-foot">Généré par le sonomètre CETIM · thibautgras.github.io/sonometre — '+now+'.<br>'+
     'Mesure indicative à titre d\'orientation : le microphone d\'un smartphone n\'est pas un capteur métrologique (réponse non garantie, notamment &lt; 50 Hz et en niveau absolu). '+
@@ -4192,7 +4214,7 @@ async function shareOrDownload(blob,name,title){
 }
 function csvBlob(){ return new Blob(["\ufeff"+buildCsv()],{type:'text/csv;charset=utf-8'}); }
 
-$('kCsv').onclick=()=>{ renderExpNote(); $('expPop').classList.add('on'); };
+$('kCsv').onclick=()=>{ renderExpNote(); document.querySelectorAll('input[name="expBand"]').forEach(r=>r.checked=(r.value===(S.expBand||'toct'))); $('expPop').classList.add('on'); };
 $('epClose').onclick=()=>$('expPop').classList.remove('on');
 $('expPop').addEventListener('click',e=>{if(e.target.id==='expPop')$('expPop').classList.remove('on');});
 function renderExpNote(){
@@ -4215,6 +4237,11 @@ $('epPngDl').onclick   =()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob
 ['figSpec','figSgram','figHist'].forEach(id=>{ const e=$(id); if(!e)return;
   try{ const v=localStorage.getItem('rep_'+id); if(v!==null)e.checked=(v==='1'); }catch(_){}
   e.addEventListener('change',()=>{ try{ localStorage.setItem('rep_'+id,e.checked?'1':'0'); }catch(_){} });
+});
+/* résolution du spectre exporté (Leq moyenné) : tiers d'octave ou octave */
+document.querySelectorAll('input[name="expBand"]').forEach(r=>{
+  r.checked=(r.value===(S.expBand||'toct'));
+  r.addEventListener('change',()=>{ if(r.checked){ S.expBand=r.value; savePrefs(); } });
 });
 
 /* init */
@@ -4462,7 +4489,7 @@ const HELP_EN=`
 <li>Spectrogram: <b>two fingers</b> = automatic maximum tracking.</li>
 <li>Narrowband spectrum: <b>two fingers</b> = max-tracking cursor in the zoomed window (re-tap to remove) · <b>ÉMG</b> icon = tonal-audibility detection (orange box, threshold in expert menu).</li>
 <li>Spectrogram: <b>🔊</b> icon = real-time filtered listening: the mic is routed to the audio output through a tight band-pass locked on the zoomed frequency band — the filter follows the zoom live. <b>Headphones required</b> (speaker feedback). Slope adjustable in expert menu: 24 / 48 / 96 dB/oct.</li>
-<li>Spectrum (all modes): <b>VIB</b> icon = vibro-acoustic correlation. Put the phone on the vibrating structure: each band is correlated (0→1) with the accelerometer; bands unrelated to the vibration fade out. Envelope correlation (level fluctuations, ±250 ms lag): a perfectly steady source cannot be correlated.</li></ul>
+<li>Spectrum (all modes): <b>MOY</b> icon = toggles the display between <b>instantaneous</b> (smoothed per TIME: Fast/Slow/V‑Slow) and <b>averaged (Leq)</b> over the whole measurement — label “L<i>x</i>·Moy”. The averaged curve is always computed in parallel (no overhead), and the <b>PDF report</b> always uses the averaged spectrum. Available in third-octave, octave and narrowband.</li></ul>
 <h3>Indices</h3>
 <ul><li><b>LAeq</b>: equivalent level over the measurement — the main result.</li>
 <li><b>LCpeak</b>: C-weighted peak (occupational noise).</li>
@@ -4502,7 +4529,7 @@ const HELP_ES=`
 <li>Espectrograma: <b>dos dedos</b> = seguimiento automático del máximo.</li>
 <li>Espectro banda fina: <b>dos dedos</b> = cursor de seguimiento del máx. en la ventana ampliada · icono <b>ÉMG</b> = detección de emergencia tonal (recuadro naranja, umbral en menú experto).</li>
 <li>Espectrograma: icono <b>🔊</b> = escucha filtrada en tiempo real: el micro se envía a la salida a través de un paso-banda estrecho fijado a la banda ampliada — el filtro sigue el zoom. <b>Auriculares imprescindibles</b> (acople en altavoz). Pendiente ajustable: 24/48/96 dB/oct.</li>
-<li>Espectro (todos los modos): icono <b>VIB</b> = correlación vibro-acústica. Apoya el teléfono en la estructura vibrante: cada banda se correlaciona (0→1) con el acelerómetro; las bandas ajenas a la vibración se atenúan. Correlación de envolventes (±250 ms): una fuente perfectamente constante no puede correlacionarse.</li></ul>
+<li>Espectro (todos los modos): icono <b>MOY</b> = alterna la visualización entre <b>instantáneo</b> (suavizado según TIEMPO: Fast/Slow/V‑Slow) y <b>promediado (Leq)</b> durante toda la medición — etiqueta «L<i>x</i>·Moy». El cálculo promediado corre siempre en paralelo (sin coste), y el <b>informe PDF</b> usa siempre el espectro promediado. Disponible en tercio de octava, octava y banda fina.</li></ul>
 <h3>Índices</h3>
 <ul><li><b>LAeq</b>: nivel equivalente — el resultado principal.</li>
 <li><b>LCpeak</b>: pico ponderado C (ruido laboral).</li>
