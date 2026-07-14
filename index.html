@@ -454,7 +454,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.26</div>
+  <div class="splashver">V35.27</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1479,7 +1479,7 @@ function resetMeasure(){
   if(SG.cols)SG.cols.fill(null);
   SG.colSeq=0; SG.vScaleKey=''; SG.vViewKey=''; SG.vSeq=-1;
   S.sgCursor=null; S.histCursor=null;
-  S.tview=sgWin(5); S.histView=null;
+  S.tview=sgDefaultView(); S.histView=null;
   updateNumbers(-99); drawActive();
 }
 /* effacements ciblés (mode expert) */
@@ -2470,7 +2470,7 @@ function beginRun(){
   /* départ VIERGE : la mesure commence exactement ici, rien d'antérieur à l'écran */
   if(S.bandPeak)S.bandPeak.fill(-99);
   if(S.bandEnergy)S.bandEnergy.fill(0);
-  S.histView=null; S.histCursor=null; S.tview=sgWin(5);
+  S.histView=null; S.histCursor=null; S.tview=sgDefaultView();
   if(SG.cols){SG.cols.fill(null);SG.colSeq=0;SG.vScaleKey='';SG.vSeq=-1;S.sgCursor=null;}
   ui();
 }
@@ -2485,6 +2485,8 @@ function sgInterval(){
 function sgBufDur(){ return (SG.Wp||1)*sgInterval()/1000; }
 /* fenêtre spectrogramme roulante de `sec` secondes finissant à maintenant (fraction du tampon) */
 function sgWin(sec){ const T=sgBufDur(); if(!isFinite(T)||T<0.5) return {x0:0,x1:1}; return {x0:Math.max(0,Math.min(0.97,1-sec/T)),x1:1}; }
+/* fenêtre de temps par défaut selon la vue : 2D → « Tout » ; 3D → 5 s */
+function sgDefaultView(){ return S.sg3d ? sgWin(5) : {x0:0,x1:1}; }
 function sgTick(){
   if(!S.binHz)return;
   if(!CV.sgramCv)sizeCanvas('sgramCv');               // dimensionne même si l'écran n'est pas affiché
@@ -2743,7 +2745,8 @@ function drawSgram(){
 let _scaleLbl='';
 function updScaleLbl(){
   const fullF=S.fview.min<=F_LOW()+0.01 && S.fview.max>=Math.min(20000,nyq())-1;
-  const fullT=S.tview.x0<=1e-3 && S.tview.x1>=0.999 && !S.histView;
+  const fullT = S.sg3d ? (Math.abs((1-S.tview.x0)*sgBufDur()-5)<0.6 && S.tview.x1>0.999)
+                       : (S.tview.x0<=1e-3 && S.tview.x1>=0.999 && !S.histView);
   const txt=(S.dbAuto&&S.sgAuto&&fullF&&fullT)?'Auto':'Manuel';
   if(txt!==_scaleLbl){_scaleLbl=txt;$('kDynV').textContent=txt;}
 }
@@ -2768,7 +2771,7 @@ function clampView(Vmin,span){
 function resetView(){
   S.fview.min=S.fscale==='lin'?0:20;
   S.fview.max=Math.min(20000,nyq());
-  S.tview=sgWin(5);
+  S.tview=sgDefaultView();
   S.cursor=null; drawActive();
 }
 function attachZoomPan(id,axis,opts){
@@ -3189,11 +3192,21 @@ document.querySelectorAll('.ppopt').forEach(btn=>{
   btn.onclick=()=>{ applyPreset(btn.getAttribute('data-preset')); $('presetPop').classList.remove('on'); };
 });
 $('sg3dBtn').onclick=()=>{
+  if(!S.sg3d){                       // 2D → 3D : mémorise la fenêtre 2D, applique la fenêtre 3D (jamais « Tout »)
+    S._tv2d={x0:S.tview.x0,x1:S.tview.x1};
+    let t=S._tv3d||sgWin(5);
+    if(t.x0<=1e-3&&t.x1>=0.999)t=sgWin(5);   // 3D ne fait pas « Tout »
+    S.tview={x0:t.x0,x1:t.x1};
+  }else{                             // 3D → 2D : mémorise la fenêtre 3D, restaure la fenêtre 2D (défaut « Tout »)
+    S._tv3d={x0:S.tview.x0,x1:S.tview.x1};
+    const t=S._tv2d||{x0:0,x1:1};
+    S.tview={x0:t.x0,x1:t.x1};
+  }
   S.sg3d=!S.sg3d;
   $('sg3dBtn').classList.toggle('on',S.sg3d);
   $('sg3dBtn').textContent=S.sg3d?'2D':'3D';
   $('lsnBtn').style.display=S.sg3d?'none':'flex';   // l'écoute n'a pas d'icône en 3D
-  drawSgram();
+  SG._3dKey=''; drawSgram(); renderDynPop();
 };
 /* rotation légère : glissement HORIZONTAL = azimut (autour vertical) ; glissement VERTICAL
    = tangage léger autour de l'axe des fréquences (vers le bas = vue plus en plongée) */
@@ -3361,7 +3374,7 @@ function renderDynPop(){
   /* ---- presets TEMPS (X) : spectrogramme / évolution ---- */
   if(isSgram||isHist){
     const gt=$('dpTPresets');gt.innerHTML='';
-    const TPRE = isSgram ? [['3 s',3],['5 s',5],['10 s',10]] : [['Tout',null],['3 s',3],['5 s',5],['10 s',10]];
+    const TPRE = (isSgram && S.sg3d) ? [['3 s',3],['5 s',5],['10 s',10]] : [['Tout',null],['3 s',3],['5 s',5],['10 s',10]];
     for(const [lbl,sec] of TPRE){
       const b=document.createElement('button');b.textContent=lbl;
       let on=false;
@@ -3417,7 +3430,7 @@ $('kDyn').addEventListener('pointerdown',()=>{
     S.dbAuto=true;                       // dB auto
     S.sgAuto=true;                        // couleurs spectrogramme auto
     S.fview={min:S.fscale==='lin'?0:20,max:Math.min(20000,nyq())};  // fréquence pleine bande
-    S.tview=sgWin(5); S.histView=null; // spectrogramme : fenêtre 5 s par défaut ; évolution : plein
+    S.tview=sgDefaultView(); S.histView=null; // spectrogramme : fenêtre 5 s par défaut ; évolution : plein
     S.cursor=null; SG.vSeq=-1;
     ui();drawActive();
     if($('dynPop').classList.contains('on'))renderDynPop();
