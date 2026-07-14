@@ -452,7 +452,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.16</div>
+  <div class="splashver">V35.17</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2508,7 +2508,10 @@ function drawSgram3D(){
   const wantCols=fullT ? seq : Math.max(8,Math.round((S.tview.x1-S.tview.x0)*Wp));   // « Tout » = tout le tampon (comme la 2D)
   const avail=Math.min(wantCols, seq, Wp);
   const maxSlices=surf?32:90;
-  const stepT=Math.max(1,Math.ceil(avail/maxSlices));
+  /* pas minimal de 3 colonnes/tranche : assez de moyennage temporel pour ne pas scintiller,
+     mais tranches CONTIGUËS (pas de chevauchement) → une raie qui se propage recule de façon
+     continue au lieu d'onduler (le chevauchement la faisait entrer/sortir de plusieurs tranches). */
+  const stepT=Math.max(3,Math.ceil(avail/maxSlices));
   const nT=Math.floor((avail-1)/stepT)+1;
   const idxs=[]; for(let k=nT-1;k>=0;k--)idxs.push(Wp-1-k*stepT);
   const nF=surf?80:96;
@@ -2569,10 +2572,8 @@ function drawSgram3D(){
   {
     const prof=new Float32Array(nF);
     for(let j=0;j<nT;j++){
-      /* chaque tranche moyenne au moins ~4 colonnes, même quand le pas de décimation est
-         petit (fenêtres 3/5/10 s) : sinon une tranche = 1 colonne → elle saute à chaque
-         nouvelle colonne = scintillement. Les fenêtres voisines se recouvrent (lissage). */
-      const xEnd=idxs[j], xStart=Math.max(0,xEnd-Math.max(stepT,4)+1);
+      /* fenêtre contiguë = exactement le pas (pas de chevauchement entre tranches voisines) */
+      const xEnd=idxs[j], xStart=Math.max(0,xEnd-stepT+1);
       for(let i=0;i<nF;i++){
         /* MOYENNE dans le TEMPS d'un MAX en FRÉQUENCE : une raie fine (1-2 lignes) noyée
            dans un bin large n'est plus diluée par la moyenne — elle ressort à son vrai
