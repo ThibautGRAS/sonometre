@@ -112,7 +112,7 @@ if('serviceWorker' in navigator){
   header{display:flex;align-items:center;justify-content:space-between;padding:2px 18px 8px 20px;flex:0 0 auto}
   .brandwrap{display:flex;align-items:center;gap:10px}
   .logobox{background:#fff;border-radius:9px;padding:5px 10px;display:flex;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.25)}
-  .logo{height:18px;width:auto;display:block}
+  .logo{height:15px;width:auto;display:block}
   .wordmark{font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:.16em;color:var(--ink);text-transform:uppercase;padding-left:11px;border-left:2px solid var(--red);line-height:1}
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}
@@ -2026,8 +2026,8 @@ function drawSpectrum(){
       let ic=Math.max(1,Math.min(n-1,Math.round(S.cursor.f/S.binHz)));
       let bi=ic, pk;
       if(S.cursor.snap!==false){
-        // accroche le maximum local dans une petite fenêtre (±0,5 % ou ≥2 bins) autour du tap
-        const half=Math.max(2,Math.round(ic*0.02));
+        // accroche le maximum local dans une fenêtre (±4 % ou ≥3 bins) autour du tap
+        const half=Math.max(3,Math.round(ic*0.04));
         let bv=-Infinity;
         for(let k=Math.max(1,ic-half);k<=Math.min(n-1,ic+half);k++){const v=getDb(k);if(v>bv){bv=v;bi=k;}}
         pk=parabolicPeak(getDb,bi,S.binHz);
