@@ -411,11 +411,13 @@ if('serviceWorker' in navigator){
   .cp-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
   .cp-presets button{background:rgba(255,255,255,.06);border:1px solid var(--line);color:#fff;border-radius:9px;padding:12px 4px;font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer}
   .cp-presets button.on{background:var(--ice);color:var(--navy);border-color:var(--ice)}
-  .cp-fine{display:flex;align-items:center;gap:6px;margin-bottom:12px}
-  .cp-fine button{flex:0 0 auto;width:46px;height:42px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:#fff;font-family:var(--mono);font-size:16px;font-weight:700;cursor:pointer}
+  .cp-fine{display:flex;align-items:center;gap:5px;margin-bottom:12px}
+  .cp-fine button{flex:0 0 auto;width:40px;height:42px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:#fff;font-family:var(--mono);font-size:16px;font-weight:700;cursor:pointer}
   .cp-fine span{flex:1;text-align:center;font-family:var(--mono);font-size:18px;font-weight:700;color:#F2FAFF}
   .cp-fine span.cp-mini{flex:0 0 auto;font-size:10px;letter-spacing:.08em;color:#5F7FB8;font-family:var(--font)}
-  .cp-fine span.cp-val{flex:0 0 52px;font-size:17px}
+  .cp-fine span.cp-val{flex:0 0 44px;font-size:17px}
+  .cp-tog{flex:0 0 auto;height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:#8FB2E8;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer}
+  .cp-tog.on{border-color:rgba(47,138,229,.6);background:rgba(47,138,229,.18);color:#CFE4FF}
   .cp-ok{width:64px;height:42px;border-radius:10px;border:1px solid rgba(47,191,131,.45);background:rgba(47,191,131,.15);color:#9EF0C9;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)}
   .cp-full{width:100%;background:rgba(47,191,131,.14);border:1px solid rgba(47,191,131,.4);color:#9EF0C9;border-radius:10px;padding:12px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
 
@@ -452,7 +454,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.21</div>
+  <div class="splashver">V35.22</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -532,7 +534,6 @@ if('serviceWorker' in navigator){
       <div class="gpane" id="paneMenu">
         <div class="menu">
           <div class="mrow" id="mPreset" style="border-color:rgba(79,195,255,.4);background:rgba(79,195,255,.10)"><span>Optimiser le spectrogramme</span><b id="mPresetV" style="color:#4FC3FF">▸ choisir</b></div>
-          <div class="mrow" id="mFscale"><span>Échelle fréquence</span><b>LOG</b></div>
           <div class="mrow" id="mWin"><span>Type de fenêtre</span><b>Blackman</b></div>
           <div class="mrow" id="mFft"><span>Nombre de points (FFT)</span><b>16384</b></div>
           <div class="mrow" id="mRes"><span>Résolution · bande</span><b>2.9 Hz</b></div>
@@ -541,7 +542,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
           <div class="mrow" id="mEmgThr"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
-          <div class="mrow" id="mSg3dMode"><span>Rendu 3D spectrogramme</span><b>Fil de fer</b></div>
+          <div class="mrow" id="mSg3dSmooth"><span>Lissage / perf. 3D</span><b>Standard</b></div>
           <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
           <div class="mrow" id="mLsnGain"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
           <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
@@ -672,7 +673,7 @@ if('serviceWorker' in navigator){
       <div class="cp-fine">
         <span class="cp-mini">min</span>
         <button id="dpDbMinM">−</button><span class="cp-val" id="dpDbMin">20</span><button id="dpDbMinP">+</button>
-        <span class="cp-mini" style="margin-left:10px">max</span>
+        <span class="cp-mini" style="margin-left:4px">max</span>
         <button id="dpDbMaxM">−</button><span class="cp-val" id="dpDbMax">110</span><button id="dpDbMaxP">+</button>
       </div>
     </div>
@@ -684,14 +685,17 @@ if('serviceWorker' in navigator){
       <div class="cp-fine">
         <span class="cp-mini">min</span>
         <button id="dpCMinM">−</button><span class="cp-val" id="dpCMin">20</span><button id="dpCMinP">+</button>
-        <span class="cp-mini" style="margin-left:10px">max</span>
+        <span class="cp-mini" style="margin-left:4px">max</span>
         <button id="dpCMaxM">−</button><span class="cp-val" id="dpCMax">110</span><button id="dpCMaxP">+</button>
       </div>
     </div>
 
     <!-- FRÉQUENCE : spectre (X) + spectrogramme (Y) -->
     <div id="dpSecFreq">
-      <div class="cp-lbl" id="dpFLbl" style="margin-top:10px">FRÉQUENCE (X)</div>
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+        <span class="cp-lbl" id="dpFLbl" style="margin:0">FRÉQUENCE (X)</span>
+        <button id="dpFscale" class="cp-tog">LOG</button>
+      </div>
       <div class="cp-presets" id="dpFPresets"></div>
       <div class="cp-fine">
         <input class="cin" id="dpFMin" type="number" inputmode="numeric" min="1" step="10" value="20" style="width:74px">
@@ -701,7 +705,7 @@ if('serviceWorker' in navigator){
       </div>
     </div>
 
-    <div class="cp-row" id="dpSecInterp" style="margin-top:10px"><span>Interpolation spectrogramme</span><button id="dpInterp">Activée</button></div>
+    <div class="cp-row" id="dpSecInterp" style="margin-top:10px"><span>Interpolation spectrogramme</span><button id="dpInterp" class="cp-tog">Activée</button></div>
     <div class="mnote" style="margin-top:8px">Affichage uniquement — réglable pendant la mesure · pincer à deux doigts reste actif</div>
   </div></div>
 
@@ -806,7 +810,7 @@ if('serviceWorker' in navigator){
       <p>Dans l'écran <b>Valeurs</b> (page 2), la cellule « Émergence tonale » indique la raie tonale dominante : <b>+X dB @ Y Hz</b>, ou « aucune » s'il n'y a pas de vraie composante tonale. Calcul par la méthode <b>ISO 1996-2</b> (bande critique de Bark), avec confirmation sur plusieurs mesures pour ne retenir que les raies stables dans le temps (une raie tonale persiste, un pic de bruit saute). L'émergence est <b>toujours évaluée</b> dans le tableau de valeurs. Le <b>Seuil d'alerte</b> (menu expert, 6 à 15 dB) fixe le niveau à partir duquel une raie est retenue pour le tableau et pour la détection auto (icône <b>ÉMG</b>, encadré orange sur la bande fine). Au <b>curseur unique</b> sur la FFT, l'émergence de la raie visée est affichée en permanence. Indicateur de diagnostic, non certifié.</p>
 
       <h3>Vue 3D du spectrogramme</h3>
-      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène, <b>verticalement</b> pour l'incliner (plongée, rotation autour de l'axe des fréquences). La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : un preset 3/5/10 s affiche cette durée (défaut 5 s), avec un glissement continu de l'affichage. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>rendu</b> se choisit dans le mode expert : <b>Fil de fer</b> (crêtes) ou <b>Surface</b> (maillage plein coloré).</p>
+      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène, <b>verticalement</b> pour l'incliner (plongée, rotation autour de l'axe des fréquences). La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : un preset 3/5/10 s affiche cette durée (défaut 5 s), avec un glissement continu de l'affichage. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>lissage / performance</b> du rendu se règle dans le mode expert (<i>Fluide</i> pour un smartphone à la peine, jusqu'à <i>Surface</i> pour un maillage plein).</p>
 
       <h3>Optimiser le spectrogramme</h3>
       <p>Menu expert ▸ <b>Optimiser le spectrogramme</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse et échelle. <b>Tonal</b> (résolution fréquence max, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, pour chocs/parole), <b>Équilibré</b> (polyvalent). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
@@ -859,7 +863,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null, theme:'oled', sg3dMode:'wire', lsnSlope:24, lsnGain:12, micId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -2501,7 +2505,8 @@ function drawSgram3D(){
   if(!SG.cols){ g.fillStyle=THEME.bg; g.fillRect(0,0,W,H); return; }
   const Wp=SG.Wp, bufH=SG.bufH, seq=SG.colSeq||0;
   if(seq<2){ g.fillStyle=THEME.bg; g.fillRect(0,0,W,H); g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
-  const surf=(S.sg3dMode==='surf');
+  const smoothLvl=Math.max(0,Math.min(3,S.sg3dSmooth|0));
+  const surf=(smoothLvl>=3);                 // niveau max = rendu surface (le mode surface n'est plus une option séparée)
   /* « Tout » (fenêtre = tout le tampon) : trop long pour le glissement (captures trop
      espacées → saccadé) ET un buffer d'instantanés ne peut pas montrer le passé déjà là.
      → en « Tout » on garde l'ANCIEN rendu décimé (cadence colonne, léger). Le glissement
@@ -2541,7 +2546,7 @@ function drawSgram3D(){
   const pitch=Math.max(0,Math.min(1,S.sg3dPitch||0));
   /* cache : en « Tout » redraw sur nouvelle colonne (léger, comme avant) ; en fenêtre
      bornée redraw chaque frame en marche (glissement), figé à l'arrêt. */
-  const key=[isTout?('seq'+seq):(S.running&&!S.paused?'run':'stop'),rot.toFixed(3),pitch.toFixed(3),S.sg3dMode,lo,hi,fmin|0,fmax|0,S.tview.x0.toFixed(4),S.tview.x1.toFixed(4),S.theme,W,H].join('|');
+  const key=[isTout?('seq'+seq):(S.running&&!S.paused?'run':'stop'),rot.toFixed(3),pitch.toFixed(3),smoothLvl,lo,hi,fmin|0,fmax|0,S.tview.x0.toFixed(4),S.tview.x1.toFixed(4),S.theme,W,H].join('|');
   if((isTout||!S.running||S.paused) && SG._3dKey===key)return;
   SG._3dKey=key;
   g.fillStyle=THEME.bg; g.fillRect(0,0,W,H);
@@ -2564,7 +2569,9 @@ function drawSgram3D(){
     rowA[i]=Math.max(0,Math.min(bufH-1,Math.min(rA,rB)));
     rowB[i]=Math.max(0,Math.min(bufH-1,Math.max(rA,rB)));
   }
-  /* lissage d'un profil normalisé selon le mode (partagé par les deux chemins) */
+  /* lissage d'un profil normalisé selon le mode (partagé par les deux chemins).
+     wirePass : passes 1-2-1 supplémentaires en fil de fer selon le niveau (0 net, 1 lisse). */
+  const wirePass = surf?0:(smoothLvl>=2?1:0);
   const smoothProf=prof=>{
     let sm;
     if(surf){
@@ -2575,6 +2582,7 @@ function drawSgram3D(){
     }else{
       sm=new Float32Array(nF); sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
       for(let i=1;i<nF-1;i++) sm[i]=(prof[i]>=prof[i-1]&&prof[i]>=prof[i+1])?prof[i]:(prof[i-1]+2*prof[i]+prof[i+1])*0.25; // pics préservés
+      for(let p=0;p<wirePass;p++){ const o=sm.slice(); for(let i=1;i<nF-1;i++) sm[i]=(o[i-1]+2*o[i]+o[i+1])*0.25; }  // adoucissement optionnel
     }
     return sm;
   };
@@ -2583,7 +2591,7 @@ function drawSgram3D(){
     /* ===== « TOUT » : ancien rendu DÉCIMÉ (tout le tampon en ~90 tranches à âges fixes),
        redessiné à la cadence colonne. Léger et montre l'intégralité du passé (un buffer
        d'instantanés glissant ne pourrait pas afficher le passé déjà enregistré). ===== */
-    const maxSlices=surf?32:90;
+    const maxSlices=surf?32:(smoothLvl<=0?52:90);
     const avail=Math.min(seq,Wp);
     const stepT=Math.max(3,Math.ceil(avail/maxSlices));
     nT=Math.floor((avail-1)/stepT)+1;
@@ -2620,7 +2628,7 @@ function drawSgram3D(){
     /* ===== FENÊTRE BORNÉE (3/5/10 s) : buffer de COURBES-INSTANTANÉS QUI GLISSENT =====
        Capture régulière + EMA, profondeur continue interpolée par phase fractionnaire →
        mouvement fluide indépendant de la cadence FFT. Le rendu reste identique. */
-    const maxFrames = surf?42:96;
+    const maxFrames = surf?42:(smoothLvl<=0?52:96);
     const capInt = Math.max(16, winSec*1000/(maxFrames-1));       // ms entre deux instantanés
     const sig=[surf?'s':'w',nF,fmin|0,fmax|0,maxFrames].join('|');
     if(!window.V3) window.V3={frames:[],ema:null,acc:0,lastT:0,sig:''};
@@ -3153,7 +3161,7 @@ function ui(){
   $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='menu'?'Expert':'Valeurs';
   $('kMode').classList.toggle('locked',S.screen!=='spec');   // ANALYSE n'a de sens que sur le spectre
   /* lignes du mode expert */
-  $('mFscale').querySelector('b').textContent=S.fscale==='log'?'LOG':'LINÉAIRE';
+  $('mSg3dSmooth').querySelector('b').textContent=['Fluide','Standard','Lisse','Surface'][Math.max(0,Math.min(3,S.sg3dSmooth|0))];
   const fs=S.ctx?S.ctx.sampleRate:48000;
   $('mWin').querySelector('b').textContent=WINS[S.win].name;
   $('mFft').querySelector('b').textContent=S.fftN.toString();
@@ -3173,7 +3181,6 @@ function ui(){
   $('mEmgThr').style.opacity='1';   // le seuil sert toujours (tableau de valeurs), même bouton ÉMG éteint
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
-  $('mSg3dMode').querySelector('b').textContent=S.sg3dMode==='surf'?'Surface':'Fil de fer';
   $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
   { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=String(S.lsnGain||0); }
 
@@ -3257,7 +3264,6 @@ $('sg3dBtn').onclick=()=>{
   },{passive:true});
   cv.addEventListener('touchend',()=>{sx=null;sy=null;});
 })();
-$('mFscale').onclick=()=>{S.fscale=S.fscale==='log'?'lin':'log';SG.init=false;resetView();ui();};
 $('mWin').onclick=()=>{
   S.win=WIN_ORDER[(WIN_ORDER.indexOf(S.win)+1)%WIN_ORDER.length];
   if(S.analyser)configureAnalyser();
@@ -3288,7 +3294,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
                    'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','sg3dMode','lsnSlope','lsnGain','micId'];
+                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','sg3dSmooth','lsnSlope','lsnGain','micId'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
@@ -3331,7 +3337,7 @@ $('mTheme').onclick=()=>{
   S.theme=THEMES[(i+1)%THEMES.length][0];
   applyTheme(); ui();
 };
-$('mSg3dMode').onclick=()=>{ S.sg3dMode=S.sg3dMode==='surf'?'wire':'surf'; SG._3dKey=''; ui(); if(S.sg3d)drawSgram(); };
+$('mSg3dSmooth').onclick=()=>{ S.sg3dSmooth=((S.sg3dSmooth|0)+1)%4; SG._3dKey=''; if(window.V3)window.V3.sig=''; savePrefs(); ui(); if(S.sg3d)drawSgram(); };
 $('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); savePrefs(); };
 $('lsnGainSel').onchange=(e)=>{ S.lsnGain=+e.target.value||0; lsnSetGain(); savePrefs(); };
 $('micSel').onchange=async(e)=>{
@@ -3375,6 +3381,7 @@ function renderDynPop(){
   $('dpSecFreq').style.display   = (isSpec||isSgram)?'block':'none';
   $('dpSecInterp').style.display = isSgram?'flex':'none';
   $('dpFLbl').textContent = isSgram?'FRÉQUENCE (Y)':'FRÉQUENCE (X)';
+  { const fb=$('dpFscale'); if(fb){ fb.textContent=S.fscale==='log'?'LOG':'LIN'; fb.classList.toggle('on',S.fscale==='log'); } }
 
   /* ---- presets dB (Y) : spectre / évolution ---- */
   if(isSpec||isHist){
@@ -3526,6 +3533,7 @@ $('dpFApply').onclick=applyFreqInput;
 $('dpFMin').addEventListener('change',applyFreqInput);
 $('dpFMax').addEventListener('change',applyFreqInput);
 $('dpInterp').onclick=()=>{S.sgInterp=!S.sgInterp;SG.vSeq=-1;SG.vViewKey='';drawActive();renderDynPop();};
+$('dpFscale').onclick=()=>{ S.fscale=S.fscale==='log'?'lin':'log'; SG.init=false; resetView(); savePrefs(); ui(); renderDynPop(); };
 $('mCalib').onclick=()=>{S.screen='cal';ui();requestAnimationFrame(renderCal);};
 $('calClose').onclick=()=>{S.screen='menu';ui();};
 
@@ -4230,7 +4238,7 @@ const HELP_EN=`
 <h3>1/3-octave: FFT or IEC filters</h3><p><b>FFT synthesis</b>: fast, energy sum of bins. <b>IEC 61260 filters</b>: per-band Butterworth filter bank, closer to the normative template (especially at low frequencies).</p>
 <h3>Export</h3><p><b>Share</b> key: iOS share sheet or download, as <b>CSV</b> (metadata + mic + indices + spectrum + history) or titled <b>PNG</b> of the current graph.</p>
 <h3>Tonal audibility</h3><p>Values screen (page 2): dominant tonal line as <b>+X dB @ Y Hz</b>, or “none”. ISO 1996-2 method (Bark critical band) with temporal confirmation. Expert menu: enable/disable and alert threshold (6–15 dB). Diagnostic indicator, not certified.</p>
-<h3>3D spectrogram view</h3><p>On the spectrogram, <b>3D</b> switches to an isometric waterfall: amplitude gives relief and colour, the vivid front slice is “now”. <b>Drag horizontally</b> to rotate. The <b>time window</b> follows the TIME setting of SCALES (“All” = auto ≈ 3 s; presets show that duration). Frequency zoom and colourbar follow the displayed area. Render (expert menu): <b>Wireframe</b> or <b>Surface</b>.</p>
+<h3>3D spectrogram view</h3><p>On the spectrogram, <b>3D</b> switches to an isometric waterfall: amplitude gives relief and colour, the vivid front slice is “now”. <b>Drag horizontally</b> to rotate. The <b>time window</b> follows the TIME setting of SCALES (“All” = auto ≈ 3 s; presets show that duration). Frequency zoom and colourbar follow the displayed area. Render smoothing / performance is set in the expert menu (<i>Fluid</i> for a struggling phone, up to <i>Surface</i> for a filled mesh).</p>
 <h3>Optimising the spectrogram</h3><p>Expert menu ▸ three presets set FFT, window, overlap, speed and scale at once: <b>Tonal</b>, <b>Transient</b>, <b>Balanced</b>. Gabor trade-off: you cannot be sharp in frequency AND time at once.</p>
 <h3>Themes</h3><p>Expert menu ▸ faceplate theme: Marine, Steel, Light lab, OLED black, <b>Game Boy</b> and <b>Matrix</b>. Everything follows the theme; the CETIM logo stays brand-compliant.</p>
 <h3>Preferences</h3><p>All settings are <b>saved automatically</b> and restored. Expert menu ▸ Reset settings (↺) restores defaults.</p>
