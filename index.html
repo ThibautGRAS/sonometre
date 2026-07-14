@@ -452,7 +452,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.17</div>
+  <div class="splashver">V35.18</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2500,20 +2500,15 @@ function drawSgram3D(){
   const Wp=SG.Wp, bufH=SG.bufH, seq=SG.colSeq||0;
   if(seq<2){ g.fillStyle=THEME.bg; g.fillRect(0,0,W,H); g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
   const surf=(S.sg3dMode==='surf');
+  /* plafond de cadence de rendu : le glissement reste fluide (phase fractionnaire interpole
+     entre captures) mais on évite de saturer le Canvas de l'iPhone à 60 FPS × ~96 courbes. */
+  if(S.running){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<23)return; SG._3dLast=_tn; }
   /* FENÊTRE DE TEMPS (réglage TEMPS du popover ÉCHELLES) — échantillonnage ANCRÉ SUR
      L'AVANT : tranches à pas fixe depuis la colonne live (Wp-1). Fini le re-phasage qui
      faisait scintiller les longues fenêtres (l'ancien ancrage arrière + live forcé
      faisait sauter l'espacement des tranches de tête à chaque nouvelle colonne). */
-  const fullT=S.tview.x0<=1e-3 && S.tview.x1>=0.999;
-  const wantCols=fullT ? seq : Math.max(8,Math.round((S.tview.x1-S.tview.x0)*Wp));   // « Tout » = tout le tampon (comme la 2D)
-  const avail=Math.min(wantCols, seq, Wp);
-  const maxSlices=surf?32:90;
-  /* pas minimal de 3 colonnes/tranche : assez de moyennage temporel pour ne pas scintiller,
-     mais tranches CONTIGUËS (pas de chevauchement) → une raie qui se propage recule de façon
-     continue au lieu d'onduler (le chevauchement la faisait entrer/sortir de plusieurs tranches). */
-  const stepT=Math.max(3,Math.ceil(avail/maxSlices));
-  const nT=Math.floor((avail-1)/stepT)+1;
-  const idxs=[]; for(let k=nT-1;k>=0;k--)idxs.push(Wp-1-k*stepT);
+  /* fenêtre de temps (réglage TEMPS du popover ÉCHELLES), en colonnes */
+  const winCols=Math.min(seq, Wp, Math.max(8, Math.round((S.tview.x1-S.tview.x0)*Wp)));
   const nF=surf?80:96;
   /* fenêtre de fréquence visible */
   const fmin=Math.max(F_LOW(),S.fview.min), fmax=Math.min(S.fview.max,nyq());
@@ -2529,7 +2524,8 @@ function drawSgram3D(){
     let dlo=Infinity,dhi=-Infinity;
     const r0=Math.min(rTop,rBot), r1=Math.max(rTop,rBot);
     const stR=Math.max(1,Math.round((r1-r0+1)/160));
-    for(const x of idxs){
+    const cx=Math.max(1,Math.round(winCols/48));
+    for(let x=Math.max(0,Wp-winCols);x<Wp;x+=cx){
       const a=SG.cols[x]; if(!a)continue;
       for(let r=r0;r<=r1;r+=stR){const v=a[r];if(v>-90){if(v<dlo)dlo=v;if(v>dhi)dhi=v;}}
     }
@@ -2540,8 +2536,8 @@ function drawSgram3D(){
   /* rotation */
   const rot=(S.sg3dRot===undefined?0:S.sg3dRot);
   /* CACHE : ne redessiner que si quelque chose a changé (données, vue, échelle, thème) */
-  const key=[seq,rot.toFixed(3),S.sg3dMode,lo,hi,fmin|0,fmax|0,S.tview.x0.toFixed(4),S.tview.x1.toFixed(4),S.theme,W,H].join('|');
-  if(SG._3dKey===key)return;
+  const key=[S.running?'run':'stop',rot.toFixed(3),S.sg3dMode,lo,hi,fmin|0,fmax|0,S.tview.x0.toFixed(4),S.tview.x1.toFixed(4),S.theme,W,H].join('|');
+  if(!S.running && SG._3dKey===key)return;      // à l'arrêt : pas de redraw inutile ; en marche : chaque frame (60 FPS)
   SG._3dKey=key;
   g.fillStyle=THEME.bg; g.fillRect(0,0,W,H);
   /* géométrie */
@@ -2554,13 +2550,8 @@ function drawSgram3D(){
   const baseXof=dz=> marginL + (skewTot>=0 ? skewTot*(1-dz) : absSkew*dz);
   const baseYof=dz=> marginT + (plotH-depth) + depth*dz;
   const lineRow=fi=>Math.round(rBot - fi/(nF-1)*(rBot-rTop));
-  /* profils lissés de toutes les tranches (t ∈ 0..1).
-     ANTI-SCINTILLEMENT : chaque tranche MOYENNE les stepT colonnes de son intervalle
-     (décimation propre) au lieu d'en piocher une seule — sinon le contenu de chaque
-     tranche tressaute entre colonnes intermédiaires à chaque tick (repliement temporel). */
-  /* bornes de lignes par bin de fréquence : chaque point du profil MOYENNE toutes les
-     lignes de son intervalle (anti-vaguelettes : le point-sampling d'une seule ligne
-     sur ~16 laissait ressortir le bruit fin) */
+  /* bornes de lignes par bin de fréquence : chaque point du profil prend le MAX de toutes
+     les lignes de son intervalle (anti-vaguelettes + raies fines préservées) */
   const rowA=new Int32Array(nF), rowB=new Int32Array(nF);
   for(let i=0;i<nF;i++){
     const rA=Math.round(rBot-(i-0.5)/(nF-1)*(rBot-rTop));
@@ -2568,63 +2559,59 @@ function drawSgram3D(){
     rowA[i]=Math.max(0,Math.min(bufH-1,Math.min(rA,rB)));
     rowB[i]=Math.max(0,Math.min(bufH-1,Math.max(rA,rB)));
   }
-  const P=[];
-  {
-    const prof=new Float32Array(nF);
-    for(let j=0;j<nT;j++){
-      /* fenêtre contiguë = exactement le pas (pas de chevauchement entre tranches voisines) */
-      const xEnd=idxs[j], xStart=Math.max(0,xEnd-stepT+1);
-      for(let i=0;i<nF;i++){
-        /* MOYENNE dans le TEMPS d'un MAX en FRÉQUENCE : une raie fine (1-2 lignes) noyée
-           dans un bin large n'est plus diluée par la moyenne — elle ressort à son vrai
-           niveau, comme sur la 2D. Le temps reste moyenné (décimation propre). */
-        let sum=0,n=0;
-        for(let x=xStart;x<=xEnd;x++){
-          const a=SG.cols[x]; if(!a)continue;
-          let mx=-Infinity;
-          for(let r=rowA[i];r<=rowB[i];r++){ const L=a[r]; if(isFinite(L)&&L>mx)mx=L; }
-          if(mx>-Infinity){ sum+=mx; n++; }
-        }
-        let L=n?sum/n:lo;
-        if(L<lo)L=lo; if(L>hi)L=hi;
-        prof[i]=(L-lo)/span;
-      }
-      let sm;
-      if(surf){
-        /* surface : arrondir la crête pour une dorsale LISSE (fini le peigne d'aiguilles).
-           Dilatation (élargit une raie fine à ~3 points, sans perdre de hauteur) puis
-           lissage doux : la crête devient un relief continu au lieu d'aiguilles empilées. */
-        const dil=new Float32Array(nF);
-        for(let i=0;i<nF;i++){ let m=prof[i]; if(i>0&&prof[i-1]>m)m=prof[i-1]; if(i<nF-1&&prof[i+1]>m)m=prof[i+1]; dil[i]=m; }
-        let s=new Float32Array(nF); s[0]=dil[0]; s[nF-1]=dil[nF-1];   // 1 passe (2 lissait trop, la surface perdait le détail vs fil de fer)
-        for(let i=1;i<nF-1;i++) s[i]=(dil[i-1]+2*dil[i]+dil[i+1])*0.25;
-        sm=s;
-      }else{
-        /* fil de fer : préservation stricte des pics → raies nettes */
-        const o=new Float32Array(nF); o[0]=prof[0]; o[nF-1]=prof[nF-1];
-        for(let i=1;i<nF-1;i++) o[i]=(prof[i]>=prof[i-1]&&prof[i]>=prof[i+1])?prof[i]:(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
-        sm=o;
-      }
-      P.push(sm);
-    }
-    /* lissage LE LONG DU TEMPS : moyenne glissante à BORDS RÉPLIQUÉS (aucune tranche
-       privilégiée). Avant, garder les tranches extrêmes brutes tout en lissant le milieu
-       creusait un « U » : un niveau constant semblait chuter au milieu puis remonter aux bouts. */
-    for(let pass=0,tP=(surf?2:1); pass<tP; pass++){
-      if(nT>3){
-        const Q=[];
-        for(let j=0;j<nT;j++){
-          const a=P[Math.max(0,j-1)], b=P[j], c=P[Math.min(nT-1,j+1)];
-          const q=new Float32Array(nF);
-          for(let i=0;i<nF;i++) q[i]=0.25*a[i]+0.5*b[i]+0.25*c[i];
-          Q.push(q);
-        }
-        P.length=0; P.push(...Q);
-      }
-    }
+  /* ===== BUFFER DE COURBES-INSTANTANÉS QUI GLISSENT (mouvement continu 60 FPS) =====
+     Fini le ré-échantillonnage à âges fixes (crêtes qui SAUTENT de tranche en tranche) :
+     on capture une courbe à cadence régulière et on la fait reculer en continu. Entre deux
+     captures, une phase fractionnaire décale toute la profondeur → glissement fluide,
+     indépendant de la cadence FFT. Le rendu (rideaux, dunes, couleurs) reste inchangé. */
+  const maxFrames = surf?42:96;
+  const winSec = Math.max(0.3,(S.tview.x1-S.tview.x0)*sgBufDur());
+  const capInt = Math.max(16, winSec*1000/(maxFrames-1));       // ms entre deux instantanés
+  const sig=[surf?'s':'w',nF,fmin|0,fmax|0,maxFrames].join('|');
+  if(!window.V3) window.V3={frames:[],ema:null,acc:0,lastT:0,sig:''};
+  const V=window.V3;
+  if(V.sig!==sig){ V.frames=[]; V.ema=null; V.acc=0; V.sig=sig; }   // vue/mode changé → reconstruire
+  const _now=performance.now();
+  if(!V.lastT)V.lastT=_now;
+  let _dt=_now-V.lastT; V.lastT=_now; if(_dt<0)_dt=0; if(_dt>200)_dt=200;
+  const capture3D=()=>{
+    const col=SG.cols[Wp-1]; if(!col)return;
+    const raw=new Float32Array(nF);
+    for(let i=0;i<nF;i++){ let mx=-Infinity; for(let r=rowA[i];r<=rowB[i];r++){const L=col[r]; if(isFinite(L)&&L>mx)mx=L;} raw[i]=(mx>-Infinity)?mx:lo; }
+    if(!V.ema)V.ema=raw.slice(); else { for(let i=0;i<nF;i++)V.ema[i]+=0.4*(raw[i]-V.ema[i]); }   // moyennage exponentiel modéré
+    V.frames.push(V.ema.slice());
+    while(V.frames.length>maxFrames)V.frames.shift();
+  };
+  if(S.running){
+    if(V.frames.length===0)capture3D();
+    V.acc+=_dt; let guard=0;
+    while(V.acc>=capInt && guard++<6){ capture3D(); V.acc-=capInt; }
   }
-  const px=(j,i)=>baseXof(j/(nT-1||1))+i*colW;
-  const py=(j,i)=>baseYof(j/(nT-1||1))-P[j][i]*ampH;
+  const phase=Math.min(1,V.acc/capInt), len=V.frames.length, nT=len;
+  /* profils normalisés + lissés (MAX en fréquence : raies fines préservées) et profondeur
+     CONTINUE : la capture la plus récente (k=len-1) au front (dz≈1), recule en vieillissant. */
+  const P=[], dzArr=new Float32Array(nT);
+  for(let k=0;k<len;k++){
+    const fr=V.frames[k], prof=new Float32Array(nF);
+    for(let i=0;i<nF;i++){ let L=fr[i]; if(L<lo)L=lo; if(L>hi)L=hi; prof[i]=(L-lo)/span; }
+    let sm;
+    if(surf){
+      /* surface : dilatation + lissage doux → dorsale continue (pas de peigne d'aiguilles) */
+      const dil=new Float32Array(nF);
+      for(let i=0;i<nF;i++){ let m=prof[i]; if(i>0&&prof[i-1]>m)m=prof[i-1]; if(i<nF-1&&prof[i+1]>m)m=prof[i+1]; dil[i]=m; }
+      sm=new Float32Array(nF); sm[0]=dil[0]; sm[nF-1]=dil[nF-1];
+      for(let i=1;i<nF-1;i++) sm[i]=(dil[i-1]+2*dil[i]+dil[i+1])*0.25;
+    }else{
+      /* fil de fer : préservation stricte des pics → raies nettes */
+      sm=new Float32Array(nF); sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
+      for(let i=1;i<nF-1;i++) sm[i]=(prof[i]>=prof[i-1]&&prof[i]>=prof[i+1])?prof[i]:(prof[i-1]+2*prof[i]+prof[i+1])*0.25;
+    }
+    P.push(sm);
+    const age=(len-1-k)+phase;                    // k=len-1 (récent) → age≈phase (front)
+    dzArr[k]=1 - age/(maxFrames-1);
+  }
+  const px=(j,i)=>baseXof(dzArr[j])+i*colW;
+  const py=(j,i)=>baseYof(dzArr[j])-P[j][i]*ampH;
   if(surf){
     /* ===== MODE SURFACE : dunes pleines OMBRÉES, masquage arrière (algorithme du peintre) =====
        Chaque tranche remplie jusqu'à la base cache celles derrière (pas de peigne). Remplissage =
@@ -2636,7 +2623,7 @@ function drawSgram3D(){
       g.lineTo(px(j,nF-1),py(j,nF-1));
     };
     for(let j=0;j<nT;j++){
-      const dz=j/(nT-1||1), baseY=baseYof(dz), fade=0.72+0.28*dz;
+      const dz=dzArr[j]; if(dz<0)continue; const baseY=baseYof(dz), fade=0.72+0.28*dz;
       const gr=g.createLinearGradient(px(j,0),0,px(j,nF-1),0);
       for(let i=0;i<nF;i+=2){
         const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
@@ -2667,7 +2654,7 @@ function drawSgram3D(){
   }else{
     /* ===== MODE FIL DE FER : silhouettes opaques + crêtes colorées ===== */
     for(let j=0;j<nT;j++){
-      const dz=j/(nT-1||1);
+      const dz=dzArr[j]; if(dz<0)continue;
       const baseY=baseYof(dz);
       g.beginPath();
       g.moveTo(px(j,0), baseY);
@@ -2736,7 +2723,7 @@ function drawSgram3D(){
     g.fillText(Math.round(v), cbX+cbW+2, y+3);
   }
   /* étiquette d'entête synchronisée (sinon elle gèle sur les valeurs du dernier rendu 2D) */
-  const dispSec=((nT-1)*stepT)*sgInterval()/1000;
+  const dispSec=winSec;
   const secTxt=dispSec>=10?dispSec.toFixed(0):dispSec.toFixed(1);
   $('gScale').textContent=Math.round(lo)+'–'+Math.round(hi)+' dB · '+fmtF(fmin)+'–'+fmtF(fmax)+'Hz · '+secTxt+' s';
 }
