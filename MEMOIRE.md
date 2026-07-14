@@ -89,6 +89,7 @@ Convention **enregistreur** (comme le Dictaphone iOS) : bouton principal **rouge
 
 > Les versions antérieures à V27 sont documentées dans l'historique Git.
 
+- **V35.20** : options TEMPS spectrogramme = **3/5/10 s** (plus de « Tout » ; défaut **5 s** ; « Tout » conservé pour l'évolution) ; ÉCHELLES Auto met le temps à 5 s ; amplitude spectrogramme par défaut **fixe 0–90 dB** (preset 0–90 ajouté) ; **pause fige** le glissement 3D (capture/avance conditionnées à `!S.paused`) tout en laissant tourner/incliner ; **tangage** vertical (`S.sg3dPitch`, glisser bas = plongée) = rotation légère autour de l'axe des fréquences.
 - **V35.19** : glissement continu réservé aux fenêtres bornées **3/5/10 s** ; en mode **Tout** retour à l'ancien rendu décimé léger (le glissement était saccadé/lourd sur tout le tampon). Helper `smoothProf` partagé.
 - **V35.18** : fil de fer 3D à **glissement continu** — buffer de courbes-instantanés (`window.V3`) capturées à cadence régulière + EMA, profondeur continue interpolée par phase fractionnaire (fini le saut de tranche en tranche), redraw chaque frame en marche, plafond ~43 FPS. Look/masquage/couleurs inchangés.
 
