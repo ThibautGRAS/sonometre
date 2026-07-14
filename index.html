@@ -454,7 +454,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.28</div>
+  <div class="splashver">V35.29</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2628,18 +2628,27 @@ function drawSgram3D(){
     const _now=performance.now();
     if(!V.lastT)V.lastT=_now;
     let _dt=_now-V.lastT; V.lastT=_now; if(_dt<0)_dt=0; if(_dt>200)_dt=200;
-    const capture3D=()=>{
-      const col=SG.cols[Wp-1]; if(!col)return;
+    /* EMA CONTINUE : la colonne live est lissée à CHAQUE image (constante de temps ~55 ms),
+       et le front (dernier frame) est resynchronisé sur cette EMA chaque image → sa forme
+       morphe en continu au lieu de sauter par paliers à la cadence de capture. */
+    const liveEMA=()=>{
+      const col=SG.cols[Wp-1]; if(!col)return false;
       const raw=new Float32Array(nF);
       for(let i=0;i<nF;i++){ let mx=-Infinity; for(let r=rowA[i];r<=rowB[i];r++){const L=col[r]; if(isFinite(L)&&L>mx)mx=L;} raw[i]=(mx>-Infinity)?mx:lo; }
-      if(!V.ema)V.ema=raw.slice(); else { for(let i=0;i<nF;i++)V.ema[i]+=0.4*(raw[i]-V.ema[i]); }   // moyennage exponentiel modéré
-      V.frames.push(V.ema.slice());
-      while(V.frames.length>maxFrames)V.frames.shift();
+      if(!V.ema)V.ema=raw.slice();
+      else { const a=1-Math.exp(-_dt/55); for(let i=0;i<nF;i++)V.ema[i]+=a*(raw[i]-V.ema[i]); }
+      return true;
     };
     if(S.running && !S.paused){
-      if(V.frames.length===0)capture3D();
-      V.acc+=_dt; let guard=0;
-      while(V.acc>=capInt && guard++<6){ capture3D(); V.acc-=capInt; }
+      if(liveEMA()){
+        if(V.frames.length===0)V.frames.push(V.ema.slice());
+        else V.frames[V.frames.length-1]=V.ema.slice();   // le front suit le live en continu
+        V.acc+=_dt; let guard=0;
+        while(V.acc>=capInt && guard++<6){                 // à capInt : on fige l'ancien front et on repart d'un nouveau front live
+          V.frames.push(V.ema.slice()); V.acc-=capInt;
+          while(V.frames.length>maxFrames)V.frames.shift();
+        }
+      }
     }
     const phase=Math.min(1,V.acc/capInt), len=V.frames.length; nT=len;
     dzArr=new Float32Array(nT);
