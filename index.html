@@ -459,7 +459,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.39</div>
+  <div class="splashver">V35.40</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -836,12 +836,12 @@ if('serviceWorker' in navigator){
 
   <div id="expPop" class="calpop"><div class="calpop-in">
     <div class="cp-head">EXPORTER / RAPPORT <button id="epClose">✕</button></div>
-    <div style="display:flex;flex-direction:column;gap:6px;max-height:72vh;overflow:auto;-webkit-overflow-scrolling:touch">
+    <div style="display:flex;flex-direction:column;gap:6px;max-height:72vh;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain">
       <div class="msub" style="padding-top:0">INFOS DU RAPPORT · FACULTATIF</div>
       <input class="ep-in" id="repSite" placeholder="Site / lieu de mesure">
       <input class="ep-in" id="repOper" placeholder="Opérateur">
       <input class="ep-in" id="repRef" placeholder="Référence / affaire">
-      <textarea class="ep-in" id="repNote" rows="2" placeholder="Commentaire…" style="resize:none"></textarea>
+      <textarea class="ep-in" id="repNote" rows="4" placeholder="Commentaire…" style="resize:vertical;min-height:76px"></textarea>
       <div class="msub">FIGURES DANS LE RAPPORT</div>
       <div class="ep-figs">
         <label><input type="checkbox" id="figSpec" checked> Spectre</label>
@@ -4064,12 +4064,13 @@ const REPORT_CSS=
   '.rep-idx .c b{font-size:15px;color:#001E50}'+
   '.rep-idx .c i{font-style:normal;font-size:9px;color:#889}'+
   '.rep-img{width:100%;border:1px solid #dde3ec;border-radius:5px;margin-top:3px;background:#04153A}'+
+  '.rep-fig{break-inside:avoid}'+
   '.rep-spec{columns:3;column-gap:16px;font-size:9.5px;margin-top:2px}'+
   '.rep-spec>div{display:flex;justify-content:space-between;break-inside:avoid;border-bottom:1px dotted #e5e9f0;padding:1px 0}'+
   '.rep-note{white-space:pre-wrap;font-size:10.5px;border:1px solid #dde3ec;border-radius:5px;padding:7px;min-height:32px}'+
   '.rep-foot{margin-top:14px;font-size:8.5px;color:#7a8398;border-top:1px solid #cfd8e6;padding-top:5px}'+
   '@media screen and (max-width:600px){#report{padding:16px 14px}.rep-h{gap:10px}.rep-logo svg{height:22px}.rep-bar{min-height:24px}.rep-t1{font-size:12.5px;letter-spacing:.05em}.rep-t2{font-size:9.5px}.rep-htxt{flex-basis:0}.rep-meta{flex-basis:100%;order:3;margin:8px 0 0;text-align:left;font-size:9.5px;display:flex;flex-wrap:wrap;gap:2px 16px}.rep-meta>div{white-space:nowrap}.rep-meta .rl{margin-right:5px}}'+
-  '@media print{@page{size:A4;margin:12mm}html,body{background:#fff}.noprint{display:none}#report{margin:0;max-width:none;box-shadow:none;padding:0}.rep-avoid{break-inside:avoid}}';
+  '@media print{@page{size:A4;margin:12mm}html,body{background:#fff}.noprint{display:none}#report{margin:0;max-width:none;box-shadow:none;padding:0}.rep-avoid{break-inside:avoid}.rep-fig{break-before:page;break-inside:avoid}.rep-fig .rep-img{max-height:225mm;object-fit:contain}}';
 function buildReportDoc(figs){
   return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'+
     '<meta name="viewport" content="width=device-width,initial-scale=1">'+
@@ -4145,7 +4146,7 @@ function buildReportHTML(figs){
     '<div><span>Pondération temp.</span><b>'+timeName+'</b></div>'+
     '<div><span>Réf. pleine échelle (0 dBFS)</span><b>'+S.offset.toFixed(1)+' dB</b></div>'+
   '</div>'+
-  figs.map(f=>f&&f.img?'<div class="rep-sec rep-avoid">'+f.title+'</div><img class="rep-img rep-avoid" src="'+f.img+'">':'').join('')+
+  figs.map(f=>f&&f.img?'<div class="rep-fig"><div class="rep-sec">'+f.title+'</div><img class="rep-img" src="'+f.img+'"></div>':'').join('')+
   (spec?'<div class="rep-sec">Spectre par tiers d\'octave (Leq '+S.weight+')</div><div class="rep-spec">'+spec+'</div>':'')+
   '<div class="rep-sec">Commentaire</div><div class="rep-note">'+(note||'—')+'</div>'+
   '<div class="rep-foot">Généré par le sonomètre CETIM · thibautgras.github.io/sonometre — '+now+'.<br>'+
@@ -4195,6 +4196,8 @@ $('epPngDl').onclick   =()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob
 ['repSite','repOper','repRef','repNote'].forEach(id=>{ const e=$(id); if(!e)return;
   try{ e.value=localStorage.getItem('rep_'+id)||''; }catch(_){}
   e.addEventListener('input',()=>{ try{ localStorage.setItem('rep_'+id,e.value); }catch(_){} });
+  /* iOS : à l'ouverture du clavier, remonter le champ dans la zone visible (sinon masqué) */
+  e.addEventListener('focus',()=>{ setTimeout(()=>{ try{ e.scrollIntoView({block:'center',behavior:'smooth'}); }catch(_){} },300); });
 });
 ['figSpec','figSgram','figHist'].forEach(id=>{ const e=$(id); if(!e)return;
   try{ const v=localStorage.getItem('rep_'+id); if(v!==null)e.checked=(v==='1'); }catch(_){}
