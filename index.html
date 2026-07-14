@@ -17,7 +17,9 @@ if('serviceWorker' in navigator){
     // updateViaCache:'none' → le navigateur va TOUJOURS chercher sw.js sur le réseau (jamais son cache HTTP)
     // réseau d'abord + cache:reload (voir sw.js) suffisent à servir la version fraîche à chaque ouverture.
     // PAS de reload automatique : il provoquait un double-chargement visible à chaque mise à jour.
-    navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ reg.update(); }).catch(()=>{});
+    // Canal beta (main:/beta/) : pas de service worker, la page de test est toujours servie fraîche.
+    if(!location.pathname.includes('/beta/'))
+      navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ reg.update(); }).catch(()=>{});
   });
 }
 </script>
@@ -250,6 +252,8 @@ if('serviceWorker' in navigator){
   .exp-item b{font-size:14px;font-weight:700}
   .exp-item span{font-size:11px;color:#8fa3c4}
   .ep-in{width:100%;box-sizing:border-box;background:rgba(0,0,0,.30);border:1px solid var(--line);color:#fff;border-radius:9px;padding:9px 11px;font-family:var(--font);font-size:13px;font-weight:600}
+  .ep-btn{flex:1;height:40px;border-radius:10px;border:1px solid rgba(79,195,255,.45);background:rgba(79,195,255,.14);color:#CFEBFF;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font)}
+  .ep-btn:disabled{opacity:.35}
   .ep-in::placeholder{color:#6f83a6}
   .ep-figs{display:flex;gap:16px;flex-wrap:wrap;padding:2px}
   .ep-figs label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#cfe3ff;cursor:pointer}
@@ -461,7 +465,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">1.35.44</div>
+  <div class="splashver" id="splashVer">2.0.1-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -858,6 +862,15 @@ if('serviceWorker' in navigator){
         <label><input type="radio" name="expBand" value="toct"> Tiers d'octave</label>
         <label><input type="radio" name="expBand" value="oct"> Octave</label>
       </div>
+      <div class="msub">AUDIO · V2 BÊTA</div>
+      <div class="ep-figs">
+        <label><input type="checkbox" id="arecTgl"> Enregistrer l'audio pendant la mesure</label>
+      </div>
+      <div class="mnote" style="margin:0 0 4px" id="arecState">désactivé</div>
+      <div style="display:flex;gap:8px">
+        <button class="ep-btn" id="arecWavShare" disabled>Partager WAV</button>
+        <button class="ep-btn" id="arecWavDl" disabled>Télécharger WAV</button>
+      </div>
       <div class="msub">RAPPORT COMPLET</div>
       <button class="exp-item" id="epReport"><b>Générer le rapport (PDF)</b><span>document A4 · impression iOS → « Enregistrer en PDF »</span></button>
       <div class="msub">DONNÉES &amp; IMAGE</div>
@@ -888,7 +901,7 @@ const S = {
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
-  win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10, specAvg:false, expBand:'toct',
+  win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
   toctSrc:'iir', iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
@@ -1394,6 +1407,47 @@ async function initAudio(){
   configureAnalyser();
 }
 /* (ré)acquiert le flux micro et le branche sur l'analyseur existant */
+/* ===== V2 · CAPTURE AUDIO (chantier 1) =====================================
+   Captage CONTINU du flux micro par nœud dédié (l'AnalyserNode d'affichage perd
+   des échantillons entre deux frames). ScriptProcessor : universel et mono-fichier.
+   Empile des blocs Int16 pendant la mesure effective (mêmes règles que le Leq :
+   rien pendant l'armement, le départ différé, l'attente de seuil ou la pause).
+   Garde-fou mémoire : 20 min max (~115 Mo), arrêt propre de la capture au-delà. */
+const AREC={chunks:[], len:0, fs:0, node:null, sink:null, t0:null, full:false, MAXS:20*60};
+function arecReset(){ AREC.chunks=[]; AREC.len=0; AREC.fs=S.ctx?S.ctx.sampleRate:0; AREC.t0=new Date(); AREC.full=false; arecUi(); }
+function arecWire(){
+  if(AREC.node){ try{AREC.node.disconnect();}catch(_){} AREC.node=null; }
+  if(!S.recAudio||!S.ctx||!S.srcNode) return;
+  const bs=4096, pr=S.ctx.createScriptProcessor(bs,1,1);
+  pr.onaudioprocess=e=>{
+    if(!S.running||S.paused||S._idle||AREC.full) return;
+    if(AREC.len/(AREC.fs||1)>=AREC.MAXS){ AREC.full=true; arecUi(); return; }
+    const x=e.inputBuffer.getChannelData(0), q=new Int16Array(x.length);
+    for(let i=0;i<x.length;i++){ const v=Math.max(-1,Math.min(1,x[i])); q[i]=v<0?v*32768:v*32767; }
+    AREC.chunks.push(q); AREC.len+=q.length;
+  };
+  /* iOS n'active le processor que s'il est raccordé à la destination : gain muet */
+  if(!AREC.sink){ AREC.sink=S.ctx.createGain(); AREC.sink.gain.value=0; AREC.sink.connect(S.ctx.destination); }
+  S.srcNode.connect(pr); pr.connect(AREC.sink); AREC.node=pr;
+}
+function arecWavBlob(){
+  const n=AREC.len, fs=AREC.fs||44100, bytes=44+n*2, b=new ArrayBuffer(bytes), v=new DataView(b);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF'); v.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,fs,true); v.setUint32(28,fs*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  ws(36,'data'); v.setUint32(40,n*2,true);
+  let o=44; for(const c of AREC.chunks){ new Int16Array(b,o,c.length).set(c); o+=c.length*2; }
+  return new Blob([b],{type:'audio/wav'});
+}
+function arecUi(){
+  const st=$('arecState'), bs=$('arecWavShare'), bd=$('arecWavDl'); if(!st) return;
+  const dur=AREC.fs?AREC.len/AREC.fs:0, mb=(AREC.len*2/1048576);
+  st.textContent=!S.recAudio?'désactivé':
+    AREC.len?((AREC.full?'plein (20 min) · ':'')+dur.toFixed(1)+' s · '+mb.toFixed(1)+' Mo · '+Math.round(AREC.fs)+' Hz'):
+    'prêt (capte pendant la mesure)';
+  const has=AREC.len>0; if(bs)bs.disabled=!has; if(bd)bd.disabled=!has;
+}
 async function acquireMic(){
   lsnOff();
   if(S.srcNode){try{S.srcNode.disconnect();}catch(e){}}
@@ -1403,6 +1457,7 @@ async function acquireMic(){
   S.stream=await navigator.mediaDevices.getUserMedia({audio:ac});
   S.srcNode=S.ctx.createMediaStreamSource(S.stream);
   S.srcNode.connect(S.analyser);
+  arecWire();                                   // V2 : rebranche le captage continu (srcNode neuf)
   S.lcLastCt=S.ctx.currentTime;                 // évite un saut de bloc dans les filtres temporels
   const tr=S.stream.getAudioTracks()[0];
   if(tr){
@@ -1546,6 +1601,7 @@ function loop(ts){
      avec un minimum de 0,8 s et un maximum de 3 s de sécurité. Rien n'est intégré pendant ce temps. */
   const warm = S.warmT>0;
   const idle = warm || S.delayT>0 || S.trigWait;    // aucune intégration tant que la mesure n'a pas VRAIMENT commencé
+  S._idle=idle;                                     // miroir lu par la capture audio (V2)
   S.elapsed+=dt;
 
   const mag=computeSpectrum();
@@ -2537,6 +2593,7 @@ function beginRun(){
   if(S.bandPeak)S.bandPeak.fill(-99);
   if(S.bandEnergy)S.bandEnergy.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
+  if(S.recAudio)arecReset();                    // V2 : nouvel enregistrement audio par mesure
   S.histView=null; S.histCursor=null; S.tview=sgDefaultView();
   if(SG.cols){SG.cols.fill(null);SG.colSeq=0;SG.vScaleKey='';SG.vSeq=-1;S.sgCursor=null;}
   resetSg3d();
@@ -3386,7 +3443,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
                    'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','specAvg','expBand','sg3dSmooth','lsnSlope','lsnGain','micId'];
+                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','specAvg','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
@@ -4258,7 +4315,7 @@ async function shareOrDownload(blob,name,title){
 }
 function csvBlob(){ return new Blob(["\ufeff"+buildCsv()],{type:'text/csv;charset=utf-8'}); }
 
-$('kCsv').onclick=()=>{ renderExpNote(); document.querySelectorAll('input[name="expBand"]').forEach(r=>r.checked=(r.value===(S.expBand||'toct'))); $('expPop').classList.add('on'); };
+$('kCsv').onclick=()=>{ renderExpNote(); document.querySelectorAll('input[name="expBand"]').forEach(r=>r.checked=(r.value===(S.expBand||'toct'))); if($('arecTgl'))$('arecTgl').checked=!!S.recAudio; arecUi(); $('expPop').classList.add('on'); };
 $('epClose').onclick=()=>$('expPop').classList.remove('on');
 $('expPop').addEventListener('click',e=>{if(e.target.id==='expPop')$('expPop').classList.remove('on');});
 function renderExpNote(){
@@ -4268,6 +4325,15 @@ function renderExpNote(){
 }
 $('epReport').onclick=()=>generateReport();
 $('epCsvShare').onclick=()=>shareOrDownload(csvBlob(),'sonometre_'+stamp()+'.csv','Mesure sonomètre CETIM');
+/* ===== V2 : capture audio — toggle et exports WAV ===== */
+$('arecTgl').onchange=e=>{
+  S.recAudio=e.target.checked; savePrefs();
+  if(S.recAudio){ if(S.ctx&&S.srcNode)arecWire(); if(!AREC.len)arecReset(); }
+  else { if(AREC.node){try{AREC.node.disconnect();}catch(_){} AREC.node=null;} }
+  arecUi();
+};
+$('arecWavShare').onclick=()=>{ if(AREC.len)shareOrDownload(arecWavBlob(),'sonometre_audio_'+stamp()+'.wav','Audio sonomètre CETIM'); };
+$('arecWavDl').onclick   =()=>{ if(AREC.len)dl(arecWavBlob(),'sonometre_audio_'+stamp()+'.wav'); };
 $('epCsvDl').onclick   =()=>dl(csvBlob(),'sonometre_'+stamp()+'.csv');
 $('epPngShare').onclick=()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>shareOrDownload(b,'sonometre_'+stamp()+'.png','Graphe sonomètre CETIM'),'image/png'); };
 $('epPngDl').onclick   =()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>dl(b,'sonometre_'+stamp()+'.png'),'image/png'); };
