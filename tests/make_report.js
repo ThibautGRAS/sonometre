@@ -8,7 +8,7 @@ const {
 
 const RES = JSON.parse(fs.readFileSync(__dirname + '/results.json', 'utf8'));
 const NAVY = '001E50', RED = 'EF3346', GREY = '5B6472', LIGHT = 'EEF1F6';
-const APPV = 'V35.42';
+const APPV = '1.35.44';
 const DATE = new Date().toLocaleDateString('fr-FR');
 
 const F = 'Arial';
