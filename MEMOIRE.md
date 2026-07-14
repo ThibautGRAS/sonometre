@@ -60,6 +60,7 @@ Déploiement via l'API GitHub Contents (`api.github.com`), pas de build local (t
   - **cache** : `key` contient `S.running?'run':'stop'` et non plus `seq` → redraw **chaque frame en marche** (glissement), figé à l'arrêt ;
   - **plafond de cadence ~43 FPS** (`SG._3dLast`, garde 23 ms) pour ne pas saturer le Canvas iPhone (~96 courbes × stroke par segment). La fluidité vient de l'interpolation de `phase`, pas du FPS brut.
   - Rendu (silhouettes opaques de masquage, dunes ombrées, couleurs par segment, axes, colorbar, marqueur ▲ présent) **inchangé** — seul le positionnement est devenu continu.
+- **Deux chemins de rendu 3D (depuis V35.19)** : le glissement continu ne s'applique QU'AUX fenêtres **bornées 3/5/10 s** (`!isTout`). En mode **« Tout »** (`isTout`, fenêtre = tout le tampon) on garde l'**ancien rendu décimé** (tranches à âges fixes, `dzArr[j]=j/(nT-1)`, cache par `seq`, pas de throttle) — un buffer d'instantanés ne peut pas afficher le passé déjà enregistré, et une fenêtre trop longue rendait le glissement saccadé/lourd. Le lissage d'un profil (`smoothProf`) est partagé par les deux chemins.
 
 ## 5. Fonctions principales
 
@@ -88,6 +89,7 @@ Convention **enregistreur** (comme le Dictaphone iOS) : bouton principal **rouge
 
 > Les versions antérieures à V27 sont documentées dans l'historique Git.
 
+- **V35.19** : glissement continu réservé aux fenêtres bornées **3/5/10 s** ; en mode **Tout** retour à l'ancien rendu décimé léger (le glissement était saccadé/lourd sur tout le tampon). Helper `smoothProf` partagé.
 - **V35.18** : fil de fer 3D à **glissement continu** — buffer de courbes-instantanés (`window.V3`) capturées à cadence régulière + EMA, profondeur continue interpolée par phase fractionnaire (fini le saut de tranche en tranche), redraw chaque frame en marche, plafond ~43 FPS. Look/masquage/couleurs inchangés.
 
 - **V27–V33** : vue 3D waterfall (rotation, cache de rendu, modes fil de fer/surface, anti-scintillement), colorbar 3D unifiée avec la 2D, logo CETIM vectorisé, thèmes Game Boy et Matrice, modules VIB (corrélation vibro-acoustique) et écoute filtrée (🔊), traduction FR/EN/ES.
