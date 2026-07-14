@@ -91,6 +91,11 @@ Convention **enregistreur** (comme le Dictaphone iOS) : bouton principal **rouge
 
 ---
 
+## 7bis. Validation du traitement du signal (banc de tests)
+
+Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP** :
+`node extract_dsp.js` (extrait les fonctions depuis `index.html` → on teste le code déployé) puis `node run_tests.js` (61 tests vs références analytiques/normatives IEC 61672-1, IEC 61260-1, Parseval ; sortie console + `results.json`, code retour 0 = OK). Rapport détaillé : `make_report.js` → docx format CETIM (réf. SONO-VAL-001). Écarts documentés : pondération C **+0,65 dB à 8 kHz** (bilinéaire, fs=48k, sans effet sur LCpeak) ; **sommet de raie fine −10·log10(ENBW)** (normalisation Parseval : bandes et globaux exacts, sommet ponctuel étalé). Hors périmètre : chaîne micro iOS, calibration absolue, émergence ISO 1996-2 complète (validation sur appareil).
+
 ## 8. Journal des versions
 
 > Les versions antérieures à V27 sont documentées dans l'historique Git.
