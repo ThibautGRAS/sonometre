@@ -454,7 +454,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.29</div>
+  <div class="splashver">V35.30</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -542,7 +542,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
           <div class="mrow" id="mEmgThr"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
-          <div class="mrow" id="mSg3dSmooth"><span>Lissage / perf. 3D</span><b>Standard</b></div>
+          <div class="mrow" id="mSg3dSmooth"><span>Lissage / perf. 3D</span><b>Lisse</b></div>
           <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
           <div class="mrow" id="mLsnGain"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
           <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
@@ -808,7 +808,7 @@ if('serviceWorker' in navigator){
       <p>Dans l'écran <b>Valeurs</b> (page 2), la cellule « Émergence tonale » indique la raie tonale dominante : <b>+X dB @ Y Hz</b>, ou « aucune » s'il n'y a pas de vraie composante tonale. Calcul par la méthode <b>ISO 1996-2</b> (bande critique de Bark), avec confirmation sur plusieurs mesures pour ne retenir que les raies stables dans le temps (une raie tonale persiste, un pic de bruit saute). L'émergence est <b>toujours évaluée</b> dans le tableau de valeurs. Le <b>Seuil d'alerte</b> (menu expert, 6 à 15 dB) fixe le niveau à partir duquel une raie est retenue pour le tableau et pour la détection auto (icône <b>ÉMG</b>, encadré orange sur la bande fine). Au <b>curseur unique</b> sur la FFT, l'émergence de la raie visée est affichée en permanence. Indicateur de diagnostic, non certifié.</p>
 
       <h3>Vue 3D du spectrogramme</h3>
-      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène, <b>verticalement</b> pour l'incliner (plongée, rotation autour de l'axe des fréquences). La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : un preset 3/5/10 s affiche cette durée (défaut 5 s), avec un glissement continu de l'affichage. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>lissage / performance</b> du rendu se règle dans le mode expert (<i>Fluide</i> pour un smartphone à la peine, jusqu'à <i>Très lisse</i>).</p>
+      <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène, <b>verticalement</b> pour l'incliner (plongée, rotation autour de l'axe des fréquences). La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : un preset 3/5/10 s affiche cette durée (défaut 5 s), avec un glissement continu de l'affichage. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>lissage</b> du rendu se règle dans le mode expert (<i>Standard</i>, <i>Lisse</i>, <i>Très lisse</i>).</p>
 
       <h3>Optimiser le spectrogramme</h3>
       <p>Menu expert ▸ <b>Optimiser le spectrogramme</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse et échelle. <b>Tonal</b> (résolution fréquence max, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, pour chocs/parole), <b>Équilibré</b> (polyvalent). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
@@ -1478,12 +1478,15 @@ function resetMeasure(){
   /* spectrogramme : vider le tampon de données et les curseurs/zoom associés */
   if(SG.cols)SG.cols.fill(null);
   SG.colSeq=0; SG.vScaleKey=''; SG.vViewKey=''; SG.vSeq=-1;
+  resetSg3d();
   S.sgCursor=null; S.histCursor=null;
   S.tview=sgDefaultView(); S.histView=null;
   updateNumbers(-99); drawActive();
 }
+/* vide le buffer du waterfall 3D (sinon on revoit l'ancienne mesure au relancement) */
+function resetSg3d(){ if(window.V3){window.V3.frames.length=0;window.V3.ema=null;window.V3.acc=0;window.V3.lastT=0;} SG._3dKey=''; SG._3dLast=0; }
 /* effacements ciblés (mode expert) */
-function clearSgram(){ if(SG.cols)SG.cols.fill(null); SG.colSeq=0; SG.vScaleKey=''; SG.vSeq=-1; S.sgCursor=null; drawActive(); }
+function clearSgram(){ if(SG.cols)SG.cols.fill(null); SG.colSeq=0; SG.vScaleKey=''; SG.vSeq=-1; resetSg3d(); S.sgCursor=null; drawActive(); }
 function clearHist(){ S.hist=[]; S.histLast=0; drawActive(); }
 function clearPeak(){ S.lafMax=-Infinity; S.lafMin=Infinity; S.peakHold=0; if(S.bandPeak)S.bandPeak.fill(-99); updateNumbers(-99); drawActive(); }
 
@@ -2472,6 +2475,7 @@ function beginRun(){
   if(S.bandEnergy)S.bandEnergy.fill(0);
   S.histView=null; S.histCursor=null; S.tview=sgDefaultView();
   if(SG.cols){SG.cols.fill(null);SG.colSeq=0;SG.vScaleKey='';SG.vSeq=-1;S.sgCursor=null;}
+  resetSg3d();
   ui();
 }
 /* alimente le spectrogramme (appelé par la boucle même quand un autre écran/menu est affiché) */
@@ -2505,7 +2509,7 @@ function drawSgram3D(){
   if(!SG.cols){ g.fillStyle=THEME.bg; g.fillRect(0,0,W,H); return; }
   const Wp=SG.Wp, bufH=SG.bufH, seq=SG.colSeq||0;
   if(seq<2){ g.fillStyle=THEME.bg; g.fillRect(0,0,W,H); g.fillStyle=THEME.axis;g.font='10px Arial';g.textAlign='center';g.fillText('démarre la mesure…',W/2,H/2); return; }
-  const smoothLvl=Math.max(0,Math.min(3,S.sg3dSmooth|0));   // 0 Fluide · 1 Standard · 2 Lisse · 3 Très lisse (fil de fer uniquement)
+  const smoothLvl=Math.max(0,Math.min(2,S.sg3dSmooth|0));   // 0 Standard · 1 Lisse · 2 Très lisse (fil de fer)
   /* « Tout » (fenêtre = tout le tampon) : trop long pour le glissement (captures trop
      espacées → saccadé) ET un buffer d'instantanés ne peut pas montrer le passé déjà là.
      → en « Tout » on garde l'ANCIEN rendu décimé (cadence colonne, léger). Le glissement
@@ -2568,13 +2572,19 @@ function drawSgram3D(){
     rowA[i]=Math.max(0,Math.min(bufH-1,Math.min(rA,rB)));
     rowB[i]=Math.max(0,Math.min(bufH-1,Math.max(rA,rB)));
   }
+  /* scratch PERSISTANTS : évite ~20 000 Float32Array/s à 60 FPS (la pression GC finissait
+     par provoquer des à-coups au bout de quelques minutes de mesure). Tout est réutilisé. */
+  if(!SG._sc) SG._sc={pool:[],slice:new Float32Array(nF),norm:new Float32Array(nF),raw:new Float32Array(nF),dz:new Float32Array(96)};
+  const SC=SG._sc;
+  const poolBuf=k=>{ let b=SC.pool[k]; if(!b){ b=new Float32Array(nF); SC.pool[k]=b; } return b; };
   /* lissage d'un profil normalisé selon le mode (partagé par les deux chemins).
-     wirePass : passes 1-2-1 supplémentaires en fil de fer selon le niveau (0 net, 1 lisse). */
-  const wirePass = Math.max(0, smoothLvl-1);   // passes 1-2-1 supplémentaires : 0 (Fluide/Standard) · 1 (Lisse) · 2 (Très lisse)
-  const smoothProf=prof=>{
-    const sm=new Float32Array(nF); sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
+     wirePass : passes 1-2-1 supplémentaires en fil de fer selon le niveau (0 net, 1 lisse).
+     `out` fourni → écrit dedans (aucune allocation) ; sinon alloue (chemin « Tout », plus rare). */
+  const wirePass = smoothLvl;   // passes 1-2-1 supplémentaires : 0 (Standard) · 1 (Lisse) · 2 (Très lisse)
+  const smoothProf=(prof,out)=>{
+    const sm=out||new Float32Array(nF); sm[0]=prof[0]; sm[nF-1]=prof[nF-1];
     for(let i=1;i<nF-1;i++) sm[i]=(prof[i]>=prof[i-1]&&prof[i]>=prof[i+1])?prof[i]:(prof[i-1]+2*prof[i]+prof[i+1])*0.25; // pics préservés
-    for(let p=0;p<wirePass;p++){ const o=sm.slice(); for(let i=1;i<nF-1;i++) sm[i]=(o[i-1]+2*o[i]+o[i+1])*0.25; }  // adoucissement optionnel
+    for(let p=0;p<wirePass;p++){ SC.slice.set(sm); const o=SC.slice; for(let i=1;i<nF-1;i++) sm[i]=(o[i-1]+2*o[i]+o[i+1])*0.25; }  // adoucissement optionnel
     return sm;
   };
   let P=[], dzArr, nT;
@@ -2582,7 +2592,7 @@ function drawSgram3D(){
     /* ===== « TOUT » : ancien rendu DÉCIMÉ (tout le tampon en ~90 tranches à âges fixes),
        redessiné à la cadence colonne. Léger et montre l'intégralité du passé (un buffer
        d'instantanés glissant ne pourrait pas afficher le passé déjà enregistré). ===== */
-    const maxSlices=(smoothLvl<=0?52:90);
+    const maxSlices=90;
     const avail=Math.min(seq,Wp);
     const stepT=Math.max(3,Math.ceil(avail/maxSlices));
     nT=Math.floor((avail-1)/stepT)+1;
@@ -2619,7 +2629,7 @@ function drawSgram3D(){
     /* ===== FENÊTRE BORNÉE (3/5/10 s) : buffer de COURBES-INSTANTANÉS QUI GLISSENT =====
        Capture régulière + EMA, profondeur continue interpolée par phase fractionnaire →
        mouvement fluide indépendant de la cadence FFT. Le rendu reste identique. */
-    const maxFrames = (smoothLvl<=0?52:96);
+    const maxFrames = 96;
     const capInt = Math.max(16, winSec*1000/(maxFrames-1));       // ms entre deux instantanés
     const sig=['w',nF,fmin|0,fmax|0,maxFrames].join('|');
     if(!window.V3) window.V3={frames:[],ema:null,acc:0,lastT:0,sig:''};
@@ -2633,7 +2643,7 @@ function drawSgram3D(){
        morphe en continu au lieu de sauter par paliers à la cadence de capture. */
     const liveEMA=()=>{
       const col=SG.cols[Wp-1]; if(!col)return false;
-      const raw=new Float32Array(nF);
+      const raw=SC.raw;
       for(let i=0;i<nF;i++){ let mx=-Infinity; for(let r=rowA[i];r<=rowB[i];r++){const L=col[r]; if(isFinite(L)&&L>mx)mx=L;} raw[i]=(mx>-Infinity)?mx:lo; }
       if(!V.ema)V.ema=raw.slice();
       else { const a=1-Math.exp(-_dt/55); for(let i=0;i<nF;i++)V.ema[i]+=a*(raw[i]-V.ema[i]); }
@@ -2642,7 +2652,7 @@ function drawSgram3D(){
     if(S.running && !S.paused){
       if(liveEMA()){
         if(V.frames.length===0)V.frames.push(V.ema.slice());
-        else V.frames[V.frames.length-1]=V.ema.slice();   // le front suit le live en continu
+        else V.frames[V.frames.length-1].set(V.ema);       // le front suit le live en continu (réécrit le tampon, pas d'allocation)
         V.acc+=_dt; let guard=0;
         while(V.acc>=capInt && guard++<6){                 // à capInt : on fige l'ancien front et on repart d'un nouveau front live
           V.frames.push(V.ema.slice()); V.acc-=capInt;
@@ -2651,11 +2661,12 @@ function drawSgram3D(){
       }
     }
     const phase=Math.min(1,V.acc/capInt), len=V.frames.length; nT=len;
-    dzArr=new Float32Array(nT);
+    if(SC.dz.length!==nT)SC.dz=new Float32Array(nT);
+    dzArr=SC.dz;
     for(let k=0;k<len;k++){
-      const fr=V.frames[k], prof=new Float32Array(nF);
+      const fr=V.frames[k], prof=SC.norm;
       for(let i=0;i<nF;i++){ let L=fr[i]; if(L<lo)L=lo; if(L>hi)L=hi; prof[i]=(L-lo)/span; }
-      P.push(smoothProf(prof));
+      P.push(smoothProf(prof, poolBuf(k)));               // sortie dans le pool réutilisé
       const age=(len-1-k)+phase;                    // k=len-1 (récent) → age≈phase (front)
       dzArr[k]=1 - age/(maxFrames-1);
     }
@@ -3124,7 +3135,7 @@ function ui(){
   $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='menu'?'Expert':'Valeurs';
   $('kMode').classList.toggle('locked',S.screen!=='spec');   // ANALYSE n'a de sens que sur le spectre
   /* lignes du mode expert */
-  $('mSg3dSmooth').querySelector('b').textContent=['Fluide','Standard','Lisse','Très lisse'][Math.max(0,Math.min(3,S.sg3dSmooth|0))];
+  $('mSg3dSmooth').querySelector('b').textContent=['Standard','Lisse','Très lisse'][Math.max(0,Math.min(2,S.sg3dSmooth|0))];
   const fs=S.ctx?S.ctx.sampleRate:48000;
   $('mWin').querySelector('b').textContent=WINS[S.win].name;
   $('mFft').querySelector('b').textContent=S.fftN.toString();
@@ -3310,7 +3321,7 @@ $('mTheme').onclick=()=>{
   S.theme=THEMES[(i+1)%THEMES.length][0];
   applyTheme(); ui();
 };
-$('mSg3dSmooth').onclick=()=>{ S.sg3dSmooth=((S.sg3dSmooth|0)+1)%4; SG._3dKey=''; if(window.V3)window.V3.sig=''; savePrefs(); ui(); if(S.sg3d)drawSgram(); };
+$('mSg3dSmooth').onclick=()=>{ S.sg3dSmooth=((S.sg3dSmooth|0)+1)%3; SG._3dKey=''; if(window.V3)window.V3.sig=''; savePrefs(); ui(); if(S.sg3d)drawSgram(); };
 $('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); savePrefs(); };
 $('lsnGainSel').onchange=(e)=>{ S.lsnGain=+e.target.value||0; lsnSetGain(); savePrefs(); };
 $('micSel').onchange=async(e)=>{
