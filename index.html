@@ -461,7 +461,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.42</div>
+  <div class="splashver">V35.43</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1992,12 +1992,21 @@ function drawSpectrum(avg,modeOverride){
     const x2=f=>padL+((TF(f)-V0)/(V1-V0))*(w-padL-4);
     const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
     const binPow=S.time==='F'?S.binPowF:S.time==='S'?S.binPowS:S.binPowV;
+    /* source EFFECTIVE : en mode MOY, tampon persistant binEnergy/eqT — la courbe,
+       les curseurs (tap + max) et l'émergence lisent tous la MÊME donnée */
+    let binPowEff=binPow;
+    if(useAvg&&S.binEnergy){
+      const nE=S.binEnergy.length;
+      if(!S._avgBinPow||S._avgBinPow.length!==nE)S._avgBinPow=new Float32Array(nE);
+      const inv=1/S.eqT; for(let i=0;i<nE;i++)S._avgBinPow[i]=S.binEnergy[i]*inv;
+      binPowEff=S._avgBinPow;
+    }
     let dLo=Infinity,dHi=-Infinity;
     const pts=[];
     const i0=Math.max(1,Math.floor(fmin/S.binHz)), i1=Math.min(S.fftDb.length-1,Math.ceil(fmax/S.binHz));
     for(let i=i0;i<=i1;i++){
       const f=S.freqs[i];
-      let p=useAvg?(S.binEnergy?S.binEnergy[i]/S.eqT:0):(binPow?binPow[i]:0);   // moyenné (Leq) ou live lissé
+      let p=binPowEff?binPowEff[i]:0;   // moyenné (Leq) ou live lissé selon MOY
       if(!isFinite(p))p=0;
       if(wSel)p*=wSel[i];                // pondération A/C appliquée à l'affichage
       const L=lvl(p); pts.push([x2(f),L]);
@@ -2032,7 +2041,7 @@ function drawSpectrum(avg,modeOverride){
     }
     /* helpers communs curseur / émergence / max */
     const n=S.fftDb?S.fftDb.length:0;
-    const getDb=k=>{let p=binPow?binPow[Math.max(1,Math.min(n-1,k))]:0;if(!isFinite(p)||p<=0)return -180;if(wSel)p*=wSel[Math.max(1,Math.min(n-1,k))];return 10*Math.log10(p);};
+    const getDb=k=>{let p=binPowEff?binPowEff[Math.max(1,Math.min(n-1,k))]:0;if(!isFinite(p)||p<=0)return -180;if(wSel)p*=wSel[Math.max(1,Math.min(n-1,k))];return 10*Math.log10(p);};
     let labY=36;                                  // empilement vertical : démarre SOUS les boutons VIB/ÉMG (y 6..32)
     /* curseur : accroche un pic local si posé AU-DESSUS de la courbe, sinon fréquence libre */
     if(S.cursor&&S.cursor.f>=fmin&&S.cursor.f<=fmax&&S.binHz){
@@ -2051,24 +2060,38 @@ function drawSpectrum(avg,modeOverride){
       g.strokeStyle=THEME.cursor;g.lineWidth=1;g.setLineDash([3,3]);
       g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
       g.fillStyle=THEME.cursor;g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
-      const emg=tonalEmergence(binPow,bi,wSel);
+      const emg=tonalEmergence(binPowEff,bi,wSel);
       let clbl=fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+S.weight+((S.cursor.snap!==false&&S.peakInterp)?' ⟂':'');
       if(emg) clbl+=' · émg +'+emg.dL.toFixed(1)+'dB';   // toujours affichée au curseur unique
       cursorLabel(g,w,x,clbl,labY); labY+=19;
     }
-    /* ===== ÉMERGENCE TONALE confirmée : encadré ORANGE (sous l'encadré curseur s'il existe) ===== */
-    if(S.emgOn && S._emgHits>=3 && S._emgCand && S.binHz){
-      const e=S._emgCand.emg;
-      if(e.fc>=fmin && e.fc<=fmax){
-        const x=x2(e.fc);
-        g.strokeStyle='#FFB454';g.lineWidth=1;g.setLineDash([2,3]);
-        g.beginPath();g.moveTo(x,labY);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
-        labelBox(g,w,x,'émergence +'+e.dL.toFixed(1)+' dB · '+fmtF(e.fc)+'Hz',labY,'#3A2404','#FFB454','#FFD9A0');
-        labY+=19;
+    /* ===== ÉMERGENCE TONALE : encadré ORANGE =====
+       Live : candidate confirmée temporellement (S._emgCand, hystérésis).
+       MOY : détection DIRECTE sur le spectre moyenné (stable par nature, pas de confirmation). */
+    let emgShow=null;
+    if(S.emgOn && S.binHz){
+      if(useAvg){
+        let bi=-1,bv=-Infinity;
+        const j0=Math.max(2,Math.ceil(fmin/S.binHz)), j1=Math.min(n-2,Math.floor(fmax/S.binHz));
+        for(let i=j0;i<=j1;i++){
+          let p=binPowEff[i]; if(!isFinite(p)||p<=0)continue; if(wSel)p*=wSel[i];
+          let pl=binPowEff[i-1]||0,pr=binPowEff[i+1]||0; if(wSel){pl*=wSel[i-1];pr*=wSel[i+1];}
+          if(p>=pl&&p>=pr&&p>bv){bv=p;bi=i;}
+        }
+        if(bi>0){ const e=tonalEmergence(binPowEff,bi,wSel); if(e&&e.strong)emgShow=e; }
+      }else if(S._emgHits>=3 && S._emgCand){
+        emgShow=S._emgCand.emg;
       }
     }
+    if(emgShow && emgShow.fc>=fmin && emgShow.fc<=fmax){
+      const x=x2(emgShow.fc);
+      g.strokeStyle='#FFB454';g.lineWidth=1;g.setLineDash([2,3]);
+      g.beginPath();g.moveTo(x,labY);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
+      labelBox(g,w,x,'émergence +'+emgShow.dL.toFixed(1)+' dB · '+fmtF(emgShow.fc)+'Hz',labY,'#3A2404','#FFB454','#FFD9A0');
+      labY+=19;
+    }
     /* ===== curseur SUIVEUR DE MAX (tap à deux doigts) : max de la fenêtre zoomée ===== */
-    if(S.maxCur && binPow && S.binHz && n){
+    if(S.maxCur && binPowEff && S.binHz && n){
       const i0=Math.max(1,Math.ceil(fmin/S.binHz)), i1=Math.min(n-1,Math.floor(fmax/S.binHz));
       let bi=-1,bv=-Infinity;
       for(let k=i0;k<=i1;k++){const v=getDb(k);if(v>bv){bv=v;bi=k;}}
