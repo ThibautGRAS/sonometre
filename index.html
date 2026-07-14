@@ -454,7 +454,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver">V35.27</div>
+  <div class="splashver">V35.28</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2512,7 +2512,7 @@ function drawSgram3D(){
      continu ne sert que pour les fenêtres bornées 3/5/10 s. */
   const isTout = S.tview.x0<=1e-3 && S.tview.x1>=0.999;
   /* plafond de cadence (~43 FPS) uniquement pour le glissement borné (pas en « Tout ») */
-  if(S.running && !S.paused && !isTout){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<23)return; SG._3dLast=_tn; }
+  if(S.running && !S.paused && !isTout){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<10)return; SG._3dLast=_tn; }  // ~60 FPS (pas de glissement plus petits → moins de scintillement)
   /* fenêtre de temps (réglage TEMPS du popover ÉCHELLES), en colonnes */
   const winCols=Math.min(seq, Wp, Math.max(8, Math.round((S.tview.x1-S.tview.x0)*Wp)));
   const winSec = Math.max(0.3,(S.tview.x1-S.tview.x0)*sgBufDur());
@@ -2655,7 +2655,9 @@ function drawSgram3D(){
   const py=(j,i)=>baseYof(dzArr[j])-P[j][i]*ampH;
   /* ===== FIL DE FER : silhouettes opaques (masquage) + crêtes colorées en dégradé ===== */
   for(let j=0;j<nT;j++){
-    const dz=dzArr[j]; if(dz<0)continue;
+    const dz=dzArr[j]; if(dz<-0.02)continue;
+    const edgeA = dz<0.10 ? Math.max(0,Math.min(1,(dz+0.02)/0.12)) : 1;   // fondu arrière : ~0 pile au retrait (plus de pop)
+    g.globalAlpha=edgeA;
     const baseY=baseYof(dz);
     g.beginPath();
     g.moveTo(px(j,0), baseY);
@@ -2663,13 +2665,13 @@ function drawSgram3D(){
     g.lineTo(px(j,nF-1), baseY);
     g.closePath();
     g.fillStyle=THEME.bg; g.fill();
-    const fade=0.45+0.55*dz;
+    const fade=0.45+0.55*Math.max(0,dz);
     /* couleur en DÉGRADÉ le long de la courbe (interpolation RGB entre points) au lieu
        d'une couleur figée par segment → plus de sauts de couleur marqués aux pics. */
     const gr=g.createLinearGradient(px(j,0),0,px(j,nF-1),0);
-    for(let i=0;i<nF;i++){
+    for(let i=0;i<nF;i+=2){
       const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
-      gr.addColorStop(i/(nF-1),'rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')');
+      gr.addColorStop(Math.min(1,i/(nF-1)),'rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')');
     }
     g.strokeStyle=gr; g.lineWidth = j===nT-1 ? 1.6 : 1; g.lineJoin='round';
     g.beginPath();
@@ -2677,6 +2679,7 @@ function drawSgram3D(){
     for(let i=1;i<nF;i++) g.lineTo(px(j,i), py(j,i));
     g.stroke();
   }
+  g.globalAlpha=1;
   /* ===== graduations de fréquence ===== */
   const frontY=marginT+plotH;
   if(isFinite(Vlo)&&isFinite(Vhi)&&Vhi>Vlo){
