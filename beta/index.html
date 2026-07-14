@@ -193,6 +193,7 @@ if('serviceWorker' in navigator){
   .badge{font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(79,195,255,.14);border:1px solid rgba(79,195,255,.35);color:#BFE3FF;font-size:10px;font-family:var(--font);letter-spacing:.04em;
     min-width:64px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;white-space:nowrap}
   .badge.rec{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 10px rgba(239,51,70,.55)}
+  .badge.replay{background:#1668B8;border-color:#4FC3FF;color:#fff;box-shadow:0 0 10px rgba(79,195,255,.5)}
   .badge.rec::before{content:"● ";animation:blink 1.2s step-end infinite}
   @keyframes blink{50%{opacity:.2}}
 
@@ -471,7 +472,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.2-beta</div>
+  <div class="splashver" id="splashVer">2.0.3-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1429,6 +1430,7 @@ function arecWire(){
   if(!S.recAudio||!S.ctx||!S.srcNode) return;
   const bs=4096, pr=S.ctx.createScriptProcessor(bs,1,1);
   pr.onaudioprocess=e=>{
+    if(REPL.on) return;                                     // jamais de capture pendant un replay
     if(!S.running||S.paused||S._idle||AREC.full) return;
     if(AREC.len/(AREC.fs||1)>=AREC.MAXS){ AREC.full=true; arecUi(); return; }
     const x=e.inputBuffer.getChannelData(0), q=new Int16Array(x.length);
@@ -1534,8 +1536,9 @@ async function renderRecList(){
   for(const m of recs){
     const d=document.createElement('div'); d.className='rec-item';
     d.innerHTML='<div class="ri-t"><b></b><span>'+new Date(m.date).toLocaleString('fr-FR')+' · '+m.dur.toFixed(1)+' s · '+(m.len*2/1048576).toFixed(1)+' Mo · '+Math.round(m.fs)+' Hz</span></div>'+
-      '<div class="ri-a"><button data-a="wav">WAV</button><button data-a="ren">✎</button><button data-a="del">🗑</button></div>';
+      '<div class="ri-a"><button data-a="play">▶</button><button data-a="wav">WAV</button><button data-a="ren">✎</button><button data-a="del">🗑</button></div>';
     d.querySelector('b').textContent=m.name;
+    d.querySelector('[data-a="play"]').onclick=()=>{ replayStart(m.id); };
     d.querySelector('[data-a="wav"]').onclick=async()=>{ toast('Préparation du WAV…'); shareOrDownload(await recWavBlob(m.id,m),(m.name.replace(/[^\w\- ]+/g,'_')||'enregistrement')+'.wav','Audio sonomètre CETIM'); };
     d.querySelector('[data-a="ren"]').onclick=async()=>{ const n=prompt('Nom de l\'enregistrement :',m.name); if(n){ await recRename(m.id,n); renderRecList(); } };
     d.querySelector('[data-a="del"]').onclick=async()=>{ if(confirm('Supprimer « '+m.name+' » ?')){ await recDelete(m.id); renderRecList(); } };
@@ -1544,6 +1547,57 @@ async function renderRecList(){
   if(usage){ const u=document.createElement('div'); u.className='mnote'; u.style.margin='2px 0 0'; u.textContent=usage; box.appendChild(u); }
 }
 function toast(msg){ const el=$('err'); if(!el)return; el.style.display='block'; el.textContent=msg; clearTimeout(toast._t); toast._t=setTimeout(()=>el.style.display='none',3000); }
+/* ===== V2 · MOTEUR DE REPLAY (chantier 3) ===================================
+   Rejoue un enregistrement de la bibliothèque DANS la chaîne d'analyse, à la
+   place du micro : AudioBufferSourceNode → S.analyser. Tout le pipeline tourne
+   à l'identique (spectre, Leq, MOY, émergence, LCpeak et banc IIR alimentés
+   depuis S.tap). WebAudio rééchantillonne si la fs stockée diffère du contexte.
+   Calibration : l'offset DE L'ENREGISTREMENT est appliqué le temps du replay
+   (dB SPL du jour de la mesure), puis restauré. Pas d'armement (signal propre).
+   Pause = suspend/resume du contexte. Fin (naturelle ou stop) → retour micro. */
+const REPL={on:false, src:null, meta:null, savedOff:null};
+async function replayStart(id){
+  if(S.running){ toast('Arrête la mesure en cours avant de rejouer'); return; }
+  let meta=null, segs=[];
+  try{ meta=(await recList()).find(r=>r.id===id); segs=meta?await recSegs(id):[]; }catch(_){}
+  if(!meta||!segs.length){ toast('Enregistrement introuvable'); return; }
+  if(!S.ctx){ try{ S.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ toast('Audio indisponible'); return; } }
+  if(S.ctx.state!=='running'){ try{ await S.ctx.resume(); }catch(_){} }
+  if(!S.analyser){ S.analyser=S.ctx.createAnalyser(); }
+  configureAnalyser();
+  /* PCM int16 → AudioBuffer à la fs d'origine (resamplé à la lecture si besoin) */
+  const buf=S.ctx.createBuffer(1,meta.len,meta.fs||S.ctx.sampleRate);
+  const ch=buf.getChannelData(0); let o=0;
+  for(const s of segs){ for(let i=0;i<s.length;i++)ch[o++]=s[i]/32768; }
+  if(S.srcNode){ try{S.srcNode.disconnect();}catch(_){}}   // micro écarté (rebranché à la fin)
+  REPL.savedOff=S.offset; if(typeof meta.offset==='number')S.offset=meta.offset;
+  const src=S.ctx.createBufferSource(); src.buffer=buf; src.connect(S.analyser);
+  REPL.on=true; REPL.src=src; REPL.meta=meta;
+  resetMeasure();
+  S.running=true; S.paused=false; S.lastT=0;
+  S.warmT=0; S.warmAge=0; S.delayT=0; S.trigWait=false;    // pas d'armement ni de déclenchement
+  S.K=0; S.lcBq=null; S.lcLastCt=S.ctx.currentTime;        // filtres temporels réamorcés
+  beginRun();
+  setTransport(); setLocks();
+  src.onended=()=>{ if(REPL.on) stopMeasure(true); };
+  src.start();
+  try{S.wake=null;}catch(_){}
+  cancelAnimationFrame(S.raf); S.raf=requestAnimationFrame(loop);
+  $('expPop').classList.remove('on');
+  toast('Replay : '+meta.name);
+  ui();
+}
+function replayTeardown(){
+  if(!REPL.on) return;
+  REPL.on=false;
+  try{ REPL.src&&REPL.src.stop(); }catch(_){}
+  try{ REPL.src&&REPL.src.disconnect(); }catch(_){}
+  REPL.src=null;
+  if(REPL.savedOff!=null){ S.offset=REPL.savedOff; REPL.savedOff=null; }
+  if(S.ctx&&S.ctx.state==='suspended'){ try{S.ctx.resume();}catch(_){} }
+  if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} arecWire(); }  // retour micro
+  ui();
+}
 async function acquireMic(){
   lsnOff();
   if(S.srcNode){try{S.srcNode.disconnect();}catch(e){}}
@@ -1683,7 +1737,7 @@ function loop(ts){
      (arrière-plan, écran verrouillé, appel…), on met en pause au lieu d'intégrer du vide.
      Tolérance : on attend ~0,4 s de micro mort d'affilée pour ne pas réagir à un simple
      hoquet transitoire pendant le geste de bascule de l'app. */
-  if(S.running && !micAlive()){
+  if(S.running && !REPL.on && !micAlive()){
     S.micDeadT=(S.micDeadT||0)+dt;
     if(S.micDeadT>0.4){
       S.paused=true; setTransport();
@@ -2689,7 +2743,7 @@ function beginRun(){
   if(S.bandPeak)S.bandPeak.fill(-99);
   if(S.bandEnergy)S.bandEnergy.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
-  if(S.recAudio)arecReset();                    // V2 : nouvel enregistrement audio par mesure
+  if(S.recAudio&&!REPL.on)arecReset();          // V2 : nouvel enregistrement audio par mesure (jamais en replay)
   S.histView=null; S.histCursor=null; S.tview=sgDefaultView();
   if(SG.cols){SG.cols.fill(null);SG.colSeq=0;SG.vScaleKey='';SG.vSeq=-1;S.sgCursor=null;}
   resetSg3d();
@@ -3428,8 +3482,8 @@ function ui(){
   $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
   const badge=$('modeBadge');
   if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
-  else if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
-  else if(S.paused){badge.textContent='PAUSE';badge.className='badge';}
+  else if(S.running&&!S.paused){ if(REPL.on){badge.textContent='REPLAY';badge.className='badge replay';} else {badge.textContent='MESURE';badge.className='badge rec';} }
+  else if(S.paused){badge.textContent=REPL.on?'REPLAY · PAUSE':'PAUSE';badge.className='badge';}
   ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
   $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
   $('bottomStrip').style.visibility = S.screen==='val' ? 'hidden' : 'visible';   // redondant sur Valeurs
@@ -4165,18 +4219,21 @@ $('kStart').onclick=async function(){
 $('kPause').onclick=()=>{
   if(!S.running)return;
   S.paused=!S.paused;
+  if(REPL.on){ try{ S.paused?S.ctx.suspend():S.ctx.resume(); }catch(_){} }   // gèle/reprend la lecture rejouée
   setTransport();
   S.lastT=0;                               // repartir proprement sans compter le temps de pause
   ui();
 };
 function stopMeasure(auto){
+  const wasReplay=REPL.on;
   S.running=false;S.paused=false;
   cancelAnimationFrame(S.raf);
+  replayTeardown();
   setTransport();
   setLocks();
   try{S.wake?.release();S.wake=null;}catch(e){}
   const badge=$('modeBadge');
-  badge.textContent=auto?'FINI · Leq figé':'ARRÊTÉ';badge.className='badge';
+  badge.textContent=wasReplay?(auto?'REPLAY FINI · Leq figé':'REPLAY ARRÊTÉ'):(auto?'FINI · Leq figé':'ARRÊTÉ');badge.className='badge';
 }
 
 /* ================= Export CSV ================= */
