@@ -461,7 +461,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">1.35.46</div>
+  <div class="splashver" id="splashVer">1.35.47</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2151,20 +2151,21 @@ function drawHistory(){
   for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const x=x2(pt.t),y=y2(pt.Leq,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
   g.stroke();
   g.textAlign='left';g.font='9px Arial';
-  g.fillStyle=THEME.line;g.fillText('L'+S.weight+(useAvg?'·Moy':S.time),padL+4,10);
+  g.fillStyle=THEME.line;g.fillText('L'+S.weight+S.time,padL+4,10);
   g.fillStyle=THEME.lineEq;g.fillText('L'+S.weight+'eq',padL+40,10);
   axisUnits(g,w,h,padL,'s');
   /* curseur mobile : trouve le point le plus proche en temps */
   if(S.histCursor!=null){
     const tc=t0+S.histCursor*span;
+    const x=x2(tc);
+    g.strokeStyle=THEME.cursor;g.lineWidth=1;g.setLineDash([3,3]);
+    g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
     let best=null,bd=1e9;
     for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const d=Math.abs(pt.t-tc);if(d<bd){bd=d;best=pt;}}
     if(best){
-      const x=x2(best.t);
-      g.strokeStyle=THEME.cursor;g.lineWidth=1;g.setLineDash([3,3]);
-      g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
-      g.fillStyle=THEME.line;g.beginPath();g.arc(x,y2(best.L,h,sc),3,0,7);g.fill();
-      g.fillStyle=THEME.lineEq;g.beginPath();g.arc(x,y2(best.Leq,h,sc),3,0,7);g.fill();
+      const xb=x2(best.t);
+      g.fillStyle=THEME.line;g.beginPath();g.arc(xb,y2(best.L,h,sc),3,0,7);g.fill();
+      g.fillStyle=THEME.lineEq;g.beginPath();g.arc(xb,y2(best.Leq,h,sc),3,0,7);g.fill();
       const ago=tEnd-best.t;
       cursorLabel(g,w,x,'−'+(ago<10?ago.toFixed(1):Math.round(ago))+'s · L '+fmt(best.L)+' · eq '+fmt(best.Leq));
     }
