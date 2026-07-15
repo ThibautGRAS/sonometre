@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.16-beta</div>
+  <div class="splashver" id="splashVer">2.0.17-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4383,7 +4383,10 @@ function stopMeasure(auto){
   try{S.wake?.release();S.wake=null;}catch(e){}
   const badge=$('modeBadge');
   badge.textContent=wasReplay?(auto?'REPLAY FINI · Leq figé':'REPLAY ARRÊTÉ'):(auto?'FINI · Leq figé':'ARRÊTÉ');badge.className='badge';
-  if(wasReplay&&REPL.lastId){ $('replBar').classList.add('on'); $('rbReplay').style.display='block'; }   // rejouer sans repasser par le menu
+  if(wasReplay&&REPL.lastId){
+    $('replBar').classList.add('on'); $('rbReplay').style.display='block';   // rejouer sans repasser par le menu
+    REPL.startOff=0; REPL.pendingSeek=null; REPL.scrub=null; replTickUi(0);   // curseur remis au début
+  }
 }
 
 /* ================= Export CSV ================= */
