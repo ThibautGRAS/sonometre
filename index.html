@@ -541,7 +541,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.51-beta</div>
+  <div class="splashver" id="splashVer">2.0.52-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -850,7 +850,7 @@ if('serviceWorker' in navigator){
       <button class="ppopt" data-preset="transient">
         <b>Transitoire / événements brefs</b>
         <span>Chocs, impacts, parole. Résolution temporelle privilégiée pour voir quand les choses arrivent.</span>
-        <em>FFT 4096 · Hann · overlap 75 % · 40 col/s · log · moyennage 8×</em>
+        <em>FFT 4096 · Hann · overlap 75 % · 40 col/s · log · moyennage 2×</em>
       </button>
       <button class="ppopt" data-preset="balanced">
         <b>Équilibré (polyvalent)</b>
@@ -926,7 +926,7 @@ if('serviceWorker' in navigator){
       <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène, <b>verticalement</b> pour l'incliner (plongée, rotation autour de l'axe des fréquences). La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : un preset 3/5/10 s affiche cette durée (défaut 5 s), avec un glissement continu de l'affichage. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>lissage</b> du rendu se règle dans le mode expert (<i>Standard</i>, <i>Lisse</i>, <i>Très lisse</i>).</p>
 
       <h3>Type de spectre</h3>
-      <p>Menu expert ▸ <b>Type de spectre</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse, échelle <b>et moyennage</b>. <b>Tonal</b> (résolution fréquence max, moyennage 2×, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, moyennage 8×, pour chocs/parole), <b>Équilibré</b> (polyvalent, moyennage 4×). Lissage fréquentiel désactivé par défaut (activable à part). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
+      <p>Menu expert ▸ <b>Type de spectre</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse, échelle <b>et moyennage</b>. <b>Tonal</b> (résolution fréquence max, moyennage 2×, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, moyennage 2×, pour chocs/parole), <b>Équilibré</b> (polyvalent, moyennage 4×). Lissage fréquentiel désactivé par défaut (activable à part). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
 
       <h3>Thèmes</h3>
       <p>Menu expert ▸ <b>Thème de façade</b> : Marine, Acier, Clair labo, OLED noir, <b>Game Boy</b> (écran vert monochrome) et <b>Matrice</b> (noir et verts phosphorescents). Tout suit le thème — façade, écran de mesure, capsule, touches et couleurs des courbes. Le logo CETIM reste conforme à la charte (blanc ou bleu selon le fond).</p>
@@ -4151,7 +4151,7 @@ $('kMenu').addEventListener('click',()=>{
 /* ===== presets d'optimisation du spectrogramme ===== */
 const SG_PRESETS={
   tonal:     {fftN:32768, win:'blackman', overlap:0.75, colMs:50, fscale:'log', specFrames:2, specSmooth:0, label:'Tonal'},
-  transient: {fftN:4096,  win:'hann',     overlap:0.75, colMs:25, fscale:'log', specFrames:8, specSmooth:0, label:'Transitoire'},
+  transient: {fftN:4096,  win:'hann',     overlap:0.75, colMs:25, fscale:'log', specFrames:2, specSmooth:0, label:'Transitoire'},
   balanced:  {fftN:16384, win:'blackman', overlap:0.75, colMs:50, fscale:'log', specFrames:4, specSmooth:0, label:'Équilibré'}
 };
 function applyPreset(key){
