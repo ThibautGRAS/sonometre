@@ -200,10 +200,18 @@ if('serviceWorker' in navigator){
   }
   body.rec-on .bezel::before{ opacity:1; animation:ledSpin 2.6s linear infinite; }
   @keyframes ledSpin{ to{ --ledA:360deg; } }
+  /* EN PAUSE : la comète s'arrête, le liseré devient un anneau uniforme léger qui clignote */
+  body.rec-paused .bezel::before{
+    opacity:1;
+    background:conic-gradient(from 0deg, rgba(239,51,70,.5), rgba(255,120,135,.5) 50%, rgba(239,51,70,.5));
+    animation:ledBlink 1.5s ease-in-out infinite;
+  }
+  @keyframes ledBlink{ 0%,100%{opacity:.22} 50%{opacity:.7} }
   /* accessibilité : pas d'animation → pulsation douce du liseré à la place */
   @media (prefers-reduced-motion:reduce){
     body.rec-on .bezel::before{ animation:ledPulse 1.8s ease-in-out infinite;
       background:conic-gradient(from 0deg, rgba(239,51,70,.5), rgba(255,120,135,.5)); }
+    body.rec-paused .bezel::before{ animation:none; opacity:.45; }
     @keyframes ledPulse{ 0%,100%{opacity:.35} 50%{opacity:.9} }
   }
 
@@ -533,7 +541,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.42-beta</div>
+  <div class="splashver" id="splashVer">2.0.43-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4028,8 +4036,9 @@ function ui(){
   else if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
   else if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
   else if(S.paused){badge.textContent='PAUSE';badge.className='badge';}
-  /* liseré LED rotatif : uniquement pendant l'enregistrement micro effectif (pas INIT/pause/replay) */
+  /* liseré LED : tourne pendant l'enregistrement micro (rec-on), se fige et clignote en pause (rec-paused) */
   document.body.classList.toggle('rec-on', S.running&&!S.paused&&!REPL.on&&!(S.warmT>0));
+  document.body.classList.toggle('rec-paused', S.running&&S.paused&&!REPL.on);
   if(S.running&&!REPL.on){$('replBar').classList.remove('on'); REPL.buf=null; REPL.meta=null; REPL.frames=null;}   // mesure micro : barre masquée, mémoire libérée
   ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
   $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
@@ -4865,7 +4874,7 @@ $('kPause').onclick=()=>{
 function stopMeasure(auto){
   const wasReplay=REPL.on;
   S.running=false;S.paused=false;
-  document.body.classList.remove('rec-on');
+  document.body.classList.remove('rec-on','rec-paused');
   cancelAnimationFrame(S.raf);
   replayTeardown();
   setTransport();

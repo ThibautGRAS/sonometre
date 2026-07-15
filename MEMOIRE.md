@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.43-beta** : en PAUSE d'enregistrement, le lisere LED cesse de tourner et clignote legerement. Nouvel etat `body.rec-paused` (toggle dans ui() : S.running && S.paused && !REPL.on ; retire dans stopMeasure). CSS : anneau rouge uniforme (conic-gradient statique) + keyframes ledBlink (opacite .22->.7, 1.5s). rec-on et rec-paused mutuellement exclusifs. Reduced-motion : anneau statique en pause.
+
 - **2.0.42-beta** : differenciation du bouton PAUSE selon le contexte (setTransport). ENREGISTREMENT en pause : garde l'icone pause (plus de triangle vert), effet halo pulse `.pausedrec` (pauseGlow + bars clignotantes). LECTURE (replay/fichier charge) : bouton VERT a triangle BLANC `.playgreen`. L'ancien style `.paused` (ambre + triangle vert) n'est plus applique. Cle de cache _transport enrichie (gp/gl/rp/rr).
 
 - **2.0.41-beta** : lisere LED rotatif autour du bezel comme indicateur d'enregistrement (leger). Comete rouge parcourant le contour via `.bezel::before` (anneau conic-gradient masque padding + mask-composite exclude, angle anime par @property --ledA, keyframes ledSpin 2.6s). Active par `body.rec-on` (toggle dans ui() : S.running && !paused && !REPL.on && !warm ; retire dans stopMeasure). Repli prefers-reduced-motion : pulsation douce. Pas en INIT/pause/replay.
