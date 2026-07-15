@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.36-beta</div>
+  <div class="splashver" id="splashVer">2.0.37-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -752,7 +752,7 @@ if('serviceWorker' in navigator){
     </div>
 
     <div class="cp-row" id="dpSecInterp" style="margin-top:10px"><span>Interpolation spectrogramme</span><button id="dpInterp" class="cp-tog">Activée</button></div>
-    <div class="mnote" style="margin-top:8px">Affichage uniquement — réglable pendant la mesure · pincer à deux doigts reste actif</div>
+    <div class="mnote" id="dynNote" style="margin-top:8px">Affichage uniquement — réglable pendant la mesure · pincer à deux doigts reste actif</div>
   </div></div>
 
   <!-- popover DÉCLENCHEMENT (appui long sur Démarrer) -->
@@ -820,10 +820,10 @@ if('serviceWorker' in navigator){
       </ul>
 
       <h3>Gestes sur les graphes</h3>
-      <ul>
-        <li><b>Pincer</b> horizontal/vertical : zoom fréquence, temps ou dB.</li>
-        <li><b>Glisser</b> : déplacer la vue.</li>
-        <li><b>Toucher</b> : poser un curseur de lecture (fréquence + niveau). Toucher le curseur le referme.</li>
+      <ul id="gestList">
+        <li id="liGest1"><b>Pincer</b> horizontal/vertical : zoom fréquence, temps ou dB.</li>
+        <li id="liGest2"><b>Glisser</b> : déplacer la vue.</li>
+        <li id="liGest3"><b>Toucher</b> : poser un curseur de lecture (fréquence + niveau). Toucher le curseur le referme.</li>
         <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
         <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
@@ -1404,6 +1404,16 @@ const TAU={F:0.125,S:1.0,V:10.0};                  // constantes de temps (s)
 const TIME_ORDER=['F','S','V'];
 const TIME_LBL={F:'Fast',S:'Slow',V:'V-Slow'};
 const $=id=>document.getElementById(id);
+/* détection PC (souris fine + survol) vs tactile → consignes adaptées */
+const IS_PC = !!(window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches);
+function applyInputHints(){
+  if(!IS_PC)return;                       // tactile : on garde les libellés par défaut
+  const g1=$('liGest1'), g2=$('liGest2'), g3=$('liGest3'), dn=$('dynNote');
+  if(g1)g1.innerHTML='<b>Molette</b> : zoom vertical (Y). <b>Ctrl+molette</b> : zoom horizontal (X).';
+  if(g2)g2.innerHTML='<b>Clic-glisser</b> : déplacer la vue (ou le curseur).';
+  if(g3)g3.innerHTML='<b>Clic</b> : poser un curseur de lecture. <b>Double-clic</b> : réinitialiser la vue (double-clic sur le curseur = le refermer).';
+  if(dn)dn.textContent='Affichage uniquement — réglable pendant la mesure · molette de zoom reste active';
+}
 
 /* ============ Pondérations IEC 61672 ============ */
 function aWeight(f){ if(f<=0)return -200;
@@ -3011,7 +3021,7 @@ function sgBlit(c){
   const agoL=(1-S.tview.x0)*Tbuf, agoM=(1-(S.tview.x0+S.tview.x1)/2)*Tbuf, agoR=(1-S.tview.x1)*Tbuf;
   const ft=t=>t<0.05?'0 s':'−'+(t<10?t.toFixed(1):Math.round(t))+' s';
   g.textAlign='left';  g.fillText(ft(agoL),padL+3*c.dpr,H-4*c.dpr);
-  g.textAlign='center';g.fillText(ft(agoM)+'  ·  pincer ↕ fréq / ↔ temps',padL+Wp/2,H-4*c.dpr);
+  g.textAlign='center';g.fillText(ft(agoM)+(IS_PC?'  ·  molette ↕ fréq / Ctrl+molette ↔ temps':'  ·  pincer ↕ fréq / ↔ temps'),padL+Wp/2,H-4*c.dpr);
   g.textAlign='right'; g.fillText(ft(agoR),Wr-3*c.dpr,H-4*c.dpr);
   /* ===== COLORBAR dB (jet) à droite ===== */
   {
@@ -3698,6 +3708,14 @@ function attachZoomPan(id,axis,opts){
     else { const u=Math.max(0,Math.min(1,uOf(e,r))), span=spanCur(); apply(axis==='x'?mAnchV-u*span:mAnchV-(1-u)*span,span); }
   });
   window.addEventListener('mouseup',()=>{ if(mDown&&mMoved)_supClick=true; mDown=false; });
+  cv.addEventListener('dblclick',e=>{
+    if(off3d()||Date.now()-_lastTouchT<700)return;
+    e.preventDefault(); _supClick=true;
+    const r=cv.getBoundingClientRect();
+    const cu=opts.getCursorU?opts.getCursorU():null, u0=Math.max(0,Math.min(1,uxOf(e,r)));
+    if(cu!=null&&Math.abs(u0-cu)<0.05&&opts.onCursorRemove){ opts.onCursorRemove(); return; }  // sur le curseur → retirer
+    resetView();                                                                                // ailleurs → reset vue
+  });
   cv.addEventListener('click',e=>{
     if(_supClick){_supClick=false;return;}                     // fin de glissé : pas un tap
     if(overOverlayBtn(e,cv))return;   // tap visant une icône superposée : ignoré
@@ -4117,7 +4135,7 @@ async function applyMicChoice(sel){
 $('micSel').onchange=e=>applyMicChoice(e.target);
 $('micSelPop').onchange=e=>applyMicChoice(e.target);
 $('outSelPop').onchange=e=>applyOutChoice(e.target);
-loadPrefs(); applyTheme(); _prefsReady=true;
+loadPrefs(); applyTheme(); _prefsReady=true; applyInputHints();
 $('mToctSrc').onclick=()=>{
   S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
   S.iirBank=null;                                        // (re)construit au prochain passage

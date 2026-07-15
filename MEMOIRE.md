@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.37-beta** : consignes adaptees PC vs tactile. Detection IS_PC (matchMedia hover:hover + pointer:fine). Si PC, applyInputHints() reecrit l'aide Gestes (molette=Y, Ctrl+molette=X, clic-glisser=deplacer, clic=curseur, double-clic=reset), la note du menu dynamique, et le texte incruste du spectrogramme. Ajout double-clic PC = reset vue / retrait curseur dans attachZoomPan (equivalent du double-tap tactile). Tactile : libelles inchanges.
+
 - **2.0.36-beta** : **support souris PC** sur les 3 graphes. Convention orientation-écran : **molette = axe Y (vertical)**, **Ctrl(ou ⌘)+molette = axe X (horizontal)**, **clic-glisser = comme un doigt** (pan/curseur). Mapping : spectre → Y=dB (zoom, amorcé depuis l'auto), X=fréquence ; spectrogramme → Y=fréquence, X=temps ; évolution → Y=dB, X=temps, glissé=déplace le curseur. Souris synthétique post-tactile (iOS) ignorée (fenêtre 700 ms) ; clic supprimé après un glissé. Ancienne molette (Shift=temps) remplacée.
 
 - **2.0.35-beta** : **CORRECTIF débordement LAeq (écran Valeurs)**. Sur iPhone le grand nombre LAeq débordait de sa case et chevauchait LCpeak/LAFmax. Cause : auto-agrandissement de police iOS (`text-size-adjust` non défini) qui gonflait le nombre héro. Correctif : `-webkit-text-size-adjust:100%` sur html/body + `line-height:1` sur la valeur héro, `line-height:1.05` sur les valeurs, `overflow:hidden` sur les cellules (anti-débordement). **Porté aussi en V1 (1.35.48)** — même bug en production.
