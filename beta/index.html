@@ -541,7 +541,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.45-beta</div>
+  <div class="splashver" id="splashVer">2.0.46-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -628,6 +628,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
           <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
           <div class="mrow" id="mEmgThr"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
+          <div class="mrow" id="mSpecSm"><span>Lissage spectre (affichage)</span><b>0,5 s</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
           <div class="mrow" id="mSg3dSmooth"><span>Lissage / perf. 3D</span><b>Lisse</b></div>
           <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
@@ -892,7 +893,7 @@ if('serviceWorker' in navigator){
         <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
         <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
-        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>instantané</b> (lissé selon TEMPS : Fast/Slow/V‑Slow) et <b>moyenné (Leq)</b> sur toute la durée de mesure — libellé « L<i>x</i>·Moy ». Le calcul moyenné tourne en permanence en parallèle (aucun surcoût), et le <b>rapport PDF</b> utilise toujours le spectre moyenné. Disponible en tiers d'octave, octave et bande fine.</li>
+        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>instantané</b> et <b>moyenné (Leq)</b> sur toute la durée de mesure — libellé « L<i>x</i>·Moy ». Le spectre instantané a son propre <b>lissage d'affichage</b> réglable (menu Expert : Live / 0,25 / 0,5 / 1 s), <b>indépendant du bouton TEMPS</b> (Fast/Slow/V‑Slow ne s'appliquent qu'aux niveaux globaux). Le calcul moyenné tourne en permanence en parallèle, et le <b>rapport PDF</b> utilise toujours le spectre moyenné. Disponible en tiers d'octave, octave et bande fine.</li>
       </ul>
 
       <h3>Indices</h3>
@@ -995,8 +996,9 @@ const S = {
   fftDb:null, td:null, K:0, freqs:null, binHz:0,
   wA:null, wC:null, compGain:null,
   bands:[], bandBins:[],
-  bandPowF:null, bandPowS:null, bandPowV:null, bandPeak:null, bandEnergy:null,
-  binPowF:null, binPowS:null, binPowV:null, binEnergy:null,
+  bandPowF:null, bandPowS:null, bandPowV:null, bandPowD:null, bandPeak:null, bandEnergy:null,
+  binPowF:null, binPowS:null, binPowV:null, binPowD:null, binEnergy:null,
+  specTau:0.5,                    // lissage d'affichage du spectre (s) — indépendant de TEMPS
   pF:{A:0,C:0,Z:0}, pS:{A:0,C:0,Z:0}, pV:{A:0,C:0,Z:0},
   eq:{A:0,C:0,Z:0}, eqT:0,
   lafMax:-Infinity, lafMin:Infinity,
@@ -1595,6 +1597,7 @@ function configureAnalyser(){
     S.bandPowF=new Float32Array(nb);
     S.bandPowS=new Float32Array(nb);
     S.bandPowV=new Float32Array(nb);
+    S.bandPowD=new Float32Array(nb);
     S.bandEnergy=new Float64Array(nb);
     S.bandPeak=new Float32Array(nb).fill(-99);
   }
@@ -1602,6 +1605,7 @@ function configureAnalyser(){
     S.binPowF=new Float32Array(n);
     S.binPowS=new Float32Array(n);
     S.binPowV=new Float32Array(n);
+    S.binPowD=new Float32Array(n);
     S.binEnergy=new Float64Array(n);
   }
   S.iirBank=null;                      // le banc IIR dépend de fs/binHz/compGain : reconstruit
@@ -1935,7 +1939,7 @@ function renderReplayFrame(i){
   S.pS.A=F.tSA[i]; S.pS.C=F.tSC[i]; S.pS.Z=F.tSZ[i];
   S.pV.A=F.tVA[i]; S.pV.C=F.tVC[i]; S.pV.Z=F.tVZ[i];
   const bF=F.tFband[i], bS=F.tSband[i], bV=F.tVband[i];
-  for(let b=0;b<F.nb;b++){ const g=wfc?wfc[b]:1; S.bandPowF[b]=bF[b]*g; S.bandPowS[b]=bS[b]*g; S.bandPowV[b]=bV[b]*g; }
+  for(let b=0;b<F.nb;b++){ const g=wfc?wfc[b]:1; S.bandPowF[b]=bF[b]*g; S.bandPowS[b]=bS[b]*g; S.bandPowV[b]=bV[b]*g; S.bandPowD[b]=bF[b]*g; }
   S.lafMax=F.maxLAF[i]; S.lafMin=F.minLAF[i]; S.lcPeak=F.maxC[i];
   /* spectre bande fine : pistes réduites pré-calculées (F/S/V + MOY cumulative), étendues
      à la résolution FFT via la table finMap. Le spectre suit donc le curseur, avec MOY exacte. */
@@ -1944,7 +1948,7 @@ function renderReplayFrame(i){
     const nn=mag.length; for(let k=0;k<nn;k++) S.fftDb[k]=mag[k]>0?10*Math.log10(mag[k]):-180; }   // fftDb net (émergence/pics)
   const nn=S.binPowF.length;
   for(let k=0;k<nn;k++){ const r=F.finMap[k]||0;
-    S.binPowF[k]=F.tFfine[base+r]; S.binPowS[k]=F.tSfine[base+r]; S.binPowV[k]=F.tVfine[base+r];
+    S.binPowF[k]=F.tFfine[base+r]; S.binPowS[k]=F.tSfine[base+r]; S.binPowV[k]=F.tVfine[base+r]; S.binPowD[k]=F.tFfine[base+r];
     if(S.binEnergy) S.binEnergy[k]=F.cumFine[base+r]*invT*T;   // MOY fine : /eqT (=T) → moyenne début→curseur
   }
   /* valeur principale = piste temporelle sélectionnée, pondération courante */
@@ -2191,9 +2195,11 @@ function resetMeasure(){
   if(S.bandPowF)S.bandPowF.fill(0);
   if(S.bandPowS)S.bandPowS.fill(0);
   if(S.bandPowV)S.bandPowV.fill(0);
+  if(S.bandPowD)S.bandPowD.fill(0);
   if(S.binPowF)S.binPowF.fill(0);
   if(S.binPowS)S.binPowS.fill(0);
   if(S.binPowV)S.binPowV.fill(0);
+  if(S.binPowD)S.binPowD.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
   if(S.bandPeak)S.bandPeak.fill(-99);
   /* spectrogramme : vider le tampon de données et les curseurs/zoom associés */
@@ -2292,13 +2298,15 @@ function loop(ts){
   for(const k of ['A','C','Z']){ const p=k==='A'?pA:k==='C'?pC:pZ; if(!idle) S.eq[k]+=p*dt; }
   if(!idle) S.eqT+=dt;
   const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
+  /* Lissage d'AFFICHAGE du spectre : constante DÉDIÉE S.specTau (0 = live pur), totalement
+     indépendante du détecteur de niveau F/S/V. Les bandes et les bins fins partagent ce lissage.
+     MOY (Leq) et Max-hold restent des vues séparées (bandEnergy / bandPeak). */
+  const aD = S.specTau>0 ? Math.exp(-dt/S.specTau) : 0;
   for(let b=0;b<nb;b++){
-    S.bandPowF[b]=aF*S.bandPowF[b]+(1-aF)*bp[b];
-    S.bandPowS[b]=aS*S.bandPowS[b]+(1-aS)*bp[b];
-    S.bandPowV[b]=aV*S.bandPowV[b]+(1-aV)*bp[b];
+    S.bandPowD[b]=aD*S.bandPowD[b]+(1-aD)*bp[b];
     if(!idle){
       S.bandEnergy[b]+=bp[b]*dt;
-      const Lb=lvl(pick(S.bandPowF[b],S.bandPowS[b],S.bandPowV[b]));
+      const Lb=lvl(bp[b]);                                  // max-hold sur le niveau instantané
       if(Lb>S.bandPeak[b])S.bandPeak[b]=Lb; else S.bandPeak[b]-=dt*3;
     }
   }
@@ -2326,14 +2334,12 @@ function loop(ts){
       }
     }
   }
-  /* lissage du spectre FFT par bin (mêmes constantes) : Fast/Slow/V-Slow agissent aussi sur les bandes fines */
+  /* lissage d'affichage du spectre fin (même constante S.specTau que les bandes) */
   for(let i=1;i<n;i++){
     let p=mag[i]; if(!isFinite(p))p=0;
     if(S.corr!=='off')p*=S.compGain[i];
     p*=K;
-    S.binPowF[i]=aF*S.binPowF[i]+(1-aF)*p;
-    S.binPowS[i]=aS*S.binPowS[i]+(1-aS)*p;
-    S.binPowV[i]=aV*S.binPowV[i]+(1-aV)*p;
+    S.binPowD[i]=aD*S.binPowD[i]+(1-aD)*p;
     if(!idle&&S.binEnergy)S.binEnergy[i]+=p*dt;   // énergie cumulée par bin → spectre Leq moyenné (rapport)
   }
 
@@ -2442,7 +2448,7 @@ function updateNumbers(L){
      Hystérésis : il faut aussi plusieurs échantillons "absents" pour retirer l'affichage. */
   if(nowS-(S.emgT||0)>200){
     S.emgT=nowS;
-    const bp=S.time==='F'?S.binPowF:S.time==='S'?S.binPowS:S.binPowV;
+    const bp=S.binPowD;
     const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
     let cand=null;
     if(bp){
@@ -2598,7 +2604,7 @@ function drawSpectrum(avg,modeOverride){
   if(mode==='toct'||mode==='oct'){
     /* octave : agrège les tiers par groupes centrés sur les fréquences normalisées (…31.5,63,125,250,500,1k…) */
     let names, pw, peak;
-    const pwT=useAvg?Array.from(S.bandEnergy,e=>e/S.eqT):(S.time==='F'?S.bandPowF:S.time==='S'?S.bandPowS:S.bandPowV);
+    const pwT=useAvg?Array.from(S.bandEnergy,e=>e/S.eqT):S.bandPowD;
     if(mode==='oct'){
       const OCT=[16,31.5,63,125,250,500,1000,2000,4000,8000,16000];
       names=[]; pw=[]; peak=[];
@@ -2682,7 +2688,7 @@ function drawSpectrum(avg,modeOverride){
     const V0=TF(fmin), V1=TF(fmax);
     const x2=f=>padL+((TF(f)-V0)/(V1-V0))*(w-padL-4);
     const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
-    const binPow=S.time==='F'?S.binPowF:S.time==='S'?S.binPowS:S.binPowV;
+    const binPow=S.binPowD;
     /* source EFFECTIVE : en mode MOY, tampon persistant binEnergy/eqT — la courbe,
        les curseurs (tap + max) et l'émergence lisent tous la MÊME donnée */
     let binPowEff=binPow;
@@ -3850,7 +3856,7 @@ function attachZoomPan(id,axis,opts){
 
 /* niveau affiché de la courbe FFT à la fréquence f (avec pondération + réf.) */
 function specCurveDb(f){
-  const binPow=S.time==='F'?S.binPowF:S.time==='S'?S.binPowS:S.binPowV;
+  const binPow=S.binPowD;
   if(!binPow||!S.binHz)return -180;
   const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null, n=binPow.length;
   const k=Math.max(1,Math.min(n-1,Math.round(f/S.binHz)));
@@ -4041,6 +4047,7 @@ function ui(){
   $('kMode').classList.toggle('locked',S.screen!=='spec');   // ANALYSE n'a de sens que sur le spectre
   /* lignes du mode expert */
   $('mSg3dSmooth').querySelector('b').textContent=['Standard','Lisse','Très lisse'][Math.max(0,Math.min(2,S.sg3dSmooth|0))];
+  $('mSpecSm').querySelector('b').textContent=(S.specTau<=0?'Live':S.specTau<0.4?'0,25 s':S.specTau<0.75?'0,5 s':'1 s');
   const fs=S.ctx?S.ctx.sampleRate:48000;
   $('mWin').querySelector('b').textContent=WINS[S.win].name;
   $('mFft').querySelector('b').textContent=S.fftN.toString();
@@ -4191,7 +4198,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
                    'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','specAvg','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
+                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','specAvg','specTau','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
@@ -4238,6 +4245,8 @@ $('mTheme').onclick=()=>{
   applyTheme(); ui();
 };
 $('mSg3dSmooth').onclick=()=>{ S.sg3dSmooth=((S.sg3dSmooth|0)+1)%3; SG._3dKey=''; if(window.V3)window.V3.sig=''; savePrefs(); ui(); if(S.sg3d)drawSgram(); };
+/* lissage d'affichage du spectre (indépendant de TEMPS) : Live → 0,25 → 0,5 → 1 s */
+$('mSpecSm').onclick=()=>{ const seq=[0,0.25,0.5,1.0]; let i=seq.findIndex(v=>Math.abs(v-S.specTau)<0.01); S.specTau=seq[(i+1)%seq.length]; savePrefs(); ui(); if(!REPL.on)drawActive(); };
 $('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); savePrefs(); };
 $('lsnGainSel').onchange=(e)=>{ S.lsnGain=+e.target.value||0; lsnSetGain(); savePrefs(); };
 async function applyMicChoice(sel){
@@ -4599,7 +4608,7 @@ function renderSweep(){
 function bandLevelNow(fc){
   const b=S.bands.indexOf(fc);
   if(b<0)return null;
-  return lvl(S.time==='F'?S.bandPowF[b]:S.time==='S'?S.bandPowS[b]:S.bandPowV[b]);
+  return lvl(S.bandPowD[b]);
 }
 function sweepBand(fc){
   if(!S.running){alert("Démarre la mesure (▶) avant de calibrer : l'iPhone doit capter la source.");return;}
@@ -4681,7 +4690,7 @@ $('calDo1k').onclick=()=>{
   if(!isFinite(ref)){alert('Référence invalide.');return;}
   const b=S.bands.indexOf(1000);
   if(b<0){alert('Bande 1 kHz indisponible.');return;}
-  const cur=lvl(S.time==='F'?S.bandPowF[b]:S.time==='S'?S.bandPowS[b]:S.bandPowV[b]);
+  const cur=lvl(S.bandPowD[b]);
   if(cur<=-90){alert('Pas de signal à 1 kHz. Vérifie le calibreur.');return;}
   S.offset+= (ref-cur);
   afterOffsetChange();
