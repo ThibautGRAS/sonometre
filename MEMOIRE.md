@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.21-beta** : **retrait du bouton ⟲** (rembobinage devenu inutile : stop rembobine déjà à 0 avec ▶ prêt) — HTML/CSS/handler supprimés. **Sortie du replay (2e stop) masque la barre** et déverrouille Pondération/Temps (via setLocks/S.running=false). La barre n'apparaît donc que pendant un replay actif.
+
 - **2.0.20-beta** : **stop en replay affiné**. 1er stop (en lecture ou curseur >0) → rembobine à 0:00, met en pause, **bouton lecture ▶ prêt** ; 2e stop (déjà à 0) → quitte le replay (retour micro/repos). Pondération et Temps restent **verrouillés** pendant tout le replay, lecture comme pause (déjà via setLocks/S.running). Fin naturelle → ▶ prêt (relance depuis le début).
 
 - **2.0.19-beta** : **ré-analyse auto au changement de réglage d'analyse**. Pendant un replay, changer **fenêtre / taille FFT / préréglage / correction micro** (tout ce qui passe par `configureAnalyser`) déclenche un toast « ré-analyse… » et **relance la passe à froid depuis le début** (`replReanalyze`, débounce 60 ms, garde `REPL._building` pour ne pas s'auto-déclencher pendant le setup). Fini l'incohérence « spectre calculé avec l'ancienne fenêtre ». **Pondération A/C/Z** : toujours instantanée (pas de ré-analyse, appliquée à la volée depuis le brut). **Offset de calibration** : appliqué à l'affichage sans ré-analyse. *(Rappel limites en cours : Fast/Slow sans effet en replay — trames = instantanés ; spectrogramme-rembobinage et MOY bande fine = prochaine étape, nécessitent le stockage des spectres par trame.)*
