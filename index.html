@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.24-beta</div>
+  <div class="splashver" id="splashVer">2.0.25-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2602,14 +2602,15 @@ function drawHistory(){
   /* curseur mobile : trouve le point le plus proche en temps */
   if(S.histCursor!=null){
     const tc=t0+S.histCursor*span;
+    const x=x2(tc);
+    g.strokeStyle=THEME.cursor;g.lineWidth=1;g.setLineDash([3,3]);
+    g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);   // ligne TOUJOURS visible au point touché
     let best=null,bd=1e9;
     for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const d=Math.abs(pt.t-tc);if(d<bd){bd=d;best=pt;}}
     if(best){
-      const x=x2(best.t);
-      g.strokeStyle=THEME.cursor;g.lineWidth=1;g.setLineDash([3,3]);
-      g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
-      g.fillStyle=THEME.line;g.beginPath();g.arc(x,y2(best.L,h,sc),3,0,7);g.fill();
-      g.fillStyle=THEME.lineEq;g.beginPath();g.arc(x,y2(best.Leq,h,sc),3,0,7);g.fill();
+      const xb=x2(best.t);
+      g.fillStyle=THEME.line;g.beginPath();g.arc(xb,y2(best.L,h,sc),3,0,7);g.fill();
+      g.fillStyle=THEME.lineEq;g.beginPath();g.arc(xb,y2(best.Leq,h,sc),3,0,7);g.fill();
       const ago=tEnd-best.t;
       cursorLabel(g,w,x,'−'+(ago<10?ago.toFixed(1):Math.round(ago))+'s · L '+fmt(best.L)+' · eq '+fmt(best.Leq));
     }
