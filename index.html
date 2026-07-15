@@ -478,7 +478,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.22-beta</div>
+  <div class="splashver" id="splashVer">2.0.23-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1786,12 +1786,12 @@ function replReanalyze(){
    Pondération/Temps réactivés. La figure reste gelée sur le début. */
 function replExit(){
   const hadFrames=!!REPL.frames;
+  S.running=false; S.paused=false;     // AVANT teardown : évite le nettoyage « mesure micro » de ui() qui libérerait le fichier
   replayTeardown();                    // sort du replay (offset/micro restaurés), garde buf/frames
   REPL.i=0;
   if(hadFrames&&REPL.frames) renderReplayFrame(0);   // fige l'affichage au début
   $('replBar').classList.add('on');    // barre gardée : relance possible (glissé ou ▶)
   replTickUi(0);
-  S.running=false; S.paused=false;
   setTransport(); setLocks();
   const b=$('modeBadge'); if(b){b.textContent='PRÊT';b.className='badge';}
 }
