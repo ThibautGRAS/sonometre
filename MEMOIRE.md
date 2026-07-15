@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.22-beta** : **stop en deux temps repensé**. **1er stop** : quitte le mode replay → retour à 0, **Pondération/Temps réactivés immédiatement**, fichier CONSERVÉ (barre visible, figure gelée au début, ▶ relance). **2e stop** : **décharge le fichier** (buf/frames/meta libérés), masque la barre, **réinitialise toutes les figures** (resetMeasure). Transport découplé de S.running : `replFileLoaded()` garde le bouton stop + la touche lecture actifs tant qu'un fichier est chargé ; `setLocks` ne verrouille que pendant mesure micro ou replay ACTIF. Démarrer une mesure micro décharge d'abord le fichier. `replExit`/`replUnload` ajoutés.
+
 - **2.0.21-beta** : **retrait du bouton ⟲** (rembobinage devenu inutile : stop rembobine déjà à 0 avec ▶ prêt) — HTML/CSS/handler supprimés. **Sortie du replay (2e stop) masque la barre** et déverrouille Pondération/Temps (via setLocks/S.running=false). La barre n'apparaît donc que pendant un replay actif.
 
 - **2.0.20-beta** : **stop en replay affiné**. 1er stop (en lecture ou curseur >0) → rembobine à 0:00, met en pause, **bouton lecture ▶ prêt** ; 2e stop (déjà à 0) → quitte le replay (retour micro/repos). Pondération et Temps restent **verrouillés** pendant tout le replay, lecture comme pause (déjà via setLocks/S.running). Fin naturelle → ▶ prêt (relance depuis le début).
