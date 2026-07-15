@@ -478,7 +478,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.21-beta</div>
+  <div class="splashver" id="splashVer">2.0.22-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1782,12 +1782,32 @@ function replReanalyze(){
   toast('Réglage d\u2019analyse changé — ré-analyse depuis le début…');
   replayStart(REPL.lastId,0,true);
 }
+/* 1er STOP : quitte le mode replay, revient à 0, fichier CONSERVÉ (barre visible),
+   Pondération/Temps réactivés. La figure reste gelée sur le début. */
+function replExit(){
+  const hadFrames=!!REPL.frames;
+  replayTeardown();                    // sort du replay (offset/micro restaurés), garde buf/frames
+  REPL.i=0;
+  if(hadFrames&&REPL.frames) renderReplayFrame(0);   // fige l'affichage au début
+  $('replBar').classList.add('on');    // barre gardée : relance possible (glissé ou ▶)
+  replTickUi(0);
+  S.running=false; S.paused=false;
+  setTransport(); setLocks();
+  const b=$('modeBadge'); if(b){b.textContent='PRÊT';b.className='badge';}
+}
+/* 2e STOP : décharge le fichier, masque la barre, réinitialise toutes les figures. */
+function replUnload(){
+  REPL.buf=null; REPL.frames=null; REPL.meta=null; REPL.lastId=null; REPL.i=0;
+  $('replBar').classList.remove('on');
+  resetMeasure();                      // remet à zéro spectrogramme, courbes, vues, chiffres
+  setTransport(); setLocks();
+  const b=$('modeBadge'); if(b){b.textContent='PRÊT';b.className='badge';}
+}
 function replayTeardown(){
   if(!REPL.on) return;
   clearTimeout(REPL._reanaT);
   replPause();
   REPL.on=false; S._previewRing=false;
-  $('replBar').classList.remove('on');
   if(REPL.savedOff!=null){ S.offset=REPL.savedOff; REPL.savedOff=null; }
   if(REPL._binEn){ S.binEnergy=REPL._binEn; REPL._binEn=null; }   // restaure l'accumulateur MOY fine pour la mesure micro
   if(S.ctx&&S.ctx.state==='suspended'){ try{S.ctx.resume();}catch(_){} }
@@ -4348,8 +4368,9 @@ $('cpFull').onclick=()=>{$('calPop').classList.remove('on');S.screen='cal';ui();
 $('kReset').onclick=()=>{if(S.running)stopMeasure(false);resetMeasure();$('modeBadge').textContent='PRÊT';$('modeBadge').className='badge';setLocks();};
 
 /* verrouille/déverrouille les réglages qui biaiseraient une mesure en cours */
+function replFileLoaded(){ return !!(REPL.lastId && REPL.buf && REPL.frames && $('replBar').classList.contains('on')); }
 function setLocks(){
-  const active=S.running;                 // verrouillé dès qu'une mesure tourne (y compris en pause)
+  const active=S.running||REPL.on;        // verrouillé pendant mesure micro OU replay actif (pas si fichier seulement chargé)
   ['kW','kT','kDur','kCal'].forEach(id=>$(id).classList.toggle('locked',active));
 }
 
@@ -4361,18 +4382,20 @@ const ICO={
   play:'<svg class="tico" viewBox="0 0 24 24"><path d="M8 5.6c0-1.2 1.3-1.9 2.3-1.3l9.2 6.4c.9.6.9 1.9 0 2.5l-9.2 6.4c-1 .7-2.3-.1-2.3-1.3V5.6z"/></svg>'
 };
 function setTransport(){
-  const paused = REPL.on ? !REPL.playing : S.paused;   // en replay, l'état vient de REPL.playing
-  const key=(S.running?'R':'r')+(paused?'P':'p');
+  const loaded=replFileLoaded();
+  const showStop = S.running || REPL.on || loaded;                 // stop tant qu'une mesure/replay tourne OU qu'un fichier est chargé
+  const paused = REPL.on ? !REPL.playing : (loaded ? true : S.paused);
+  const key=(showStop?'R':'r')+(paused?'P':'p');
   if(S._transport===key)return;                 // rien n'a changé : ne pas re-rendre les SVG
   S._transport=key;
-  $('kStart').querySelector('.kv').innerHTML=S.running?ICO.stop:ICO.record;
-  $('kStart').classList.toggle('running',S.running);
-  $('kStart').setAttribute('aria-label',S.running?'Arrêter':'Démarrer');
+  $('kStart').querySelector('.kv').innerHTML=showStop?ICO.stop:ICO.record;
+  $('kStart').classList.toggle('running',showStop);
+  $('kStart').setAttribute('aria-label',showStop?'Arrêter':'Démarrer');
   const p=$('kPause');
   p.querySelector('.kv').innerHTML=paused?ICO.play:ICO.pause;   // ▶ vert quand la lecture est en pause, ⏸ en lecture
   p.classList.toggle('paused',paused);
   p.setAttribute('aria-label',paused?'Reprendre':'Pause');
-  p.disabled=!S.running;
+  p.disabled=!(S.running||REPL.on||loaded);
 }
 /* ===== menu DÉCLENCHEMENT (appui long sur Démarrer) ===== */
 function renderTrigPop(){
@@ -4406,16 +4429,10 @@ $('kStart').addEventListener('pointerdown',()=>{
 $('kStart').onclick=async function(){
   if(startLong){startLong=false;return;}       // l'appui long a ouvert le menu, pas de démarrage
 
-  if(REPL.on){                                 // STOP en replay
-    if(REPL.playing || REPL.i>0){              // 1er stop : rembobine au début, bouton lecture prêt
-      replPause(); REPL.i=0; renderReplayFrame(0); setTransport();
-      const b=$('modeBadge'); if(b){b.textContent='REPLAY · PAUSE'; b.className='badge';}
-    } else {                                   // déjà au début : quitter le replay
-      stopMeasure(false);
-    }
-    return;
-  }
+  if(REPL.on){ replExit(); return; }                    // 1er stop : sortir du replay (retour 0, réglages réactivés, fichier gardé)
+  if(replFileLoaded()){ replUnload(); return; }         // 2e stop : décharger le fichier + réinitialiser les figures
   if(S.running){stopMeasure(false);return;}
+  if(replFileLoaded()){ REPL.buf=null; REPL.frames=null; REPL.meta=null; REPL.lastId=null; $('replBar').classList.remove('on'); }   // libère un replay chargé avant la mesure
   S.micWanted=true;                                  // le micro n'est demandé QUE par ce geste (et reste dispo ensuite)
   const coldStart=!S.micReady;                       // micro déjà préchauffé ?
   try{
@@ -4462,8 +4479,9 @@ $('kStart').onclick=async function(){
   ui();
 };
 $('kPause').onclick=()=>{
+  if(REPL.on){ if(REPL.playing)replPause(); else replPlay(); ui(); return; }   // replay actif : lecture/pause par index
+  if(replFileLoaded()){ replayStart(REPL.lastId,REPL.i*(REPL.frames?REPL.frames.hopSec:0),false); return; }   // fichier chargé : (re)lance la lecture
   if(!S.running)return;
-  if(REPL.on){ if(REPL.playing)replPause(); else replPlay(); ui(); return; }   // replay : lecture/pause par index
   S.paused=!S.paused;
   setTransport();
   S.lastT=0;                               // repartir proprement sans compter le temps de pause
