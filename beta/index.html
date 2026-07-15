@@ -541,7 +541,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.44-beta</div>
+  <div class="splashver" id="splashVer">2.0.45-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1089,6 +1089,56 @@ function cFilterRun(bq,x){        // filtre en place (Direct Form II transposée
     const a=Math.abs(y); if(a>mx)mx=a;
   }
   return mx;
+}
+/* ===== pondération A dans le domaine TEMPOREL (IEC 61672) =====
+   A(s)=(2πf4)²·s⁴/((s+2πf1)²(s+2πf2)(s+2πf3)(s+2πf4)²), en 3 biquads bilinéaires
+   (pôle HF f4 pré-distordu), normalisée à 1 kHz. Écart ≤ ±0,65 dB de 16 Hz à 12,5 kHz
+   (validé vs IEC 61672-1 ; déviation croissante 16–20 kHz, limite bilinéaire à 48 kHz). */
+function designAWeight(fs){
+  const K=2*fs, w1=2*Math.PI*20.598997,w2=2*Math.PI*107.65265,w3=2*Math.PI*737.86223,w4=K*Math.tan(Math.PI*12194.217/fs);
+  const bq=(b,a)=>({b0:b[0]/a[0],b1:b[1]/a[0],b2:b[2]/a[0],a1:a[1]/a[0],a2:a[2]/a[0],z1:0,z2:0});
+  const bl=(b2,b1,b0,a2,a1,a0)=>bq([b2*K*K+b1*K+b0,-2*b2*K*K+2*b0,b2*K*K-b1*K+b0],[a2*K*K+a1*K+a0,-2*a2*K*K+2*a0,a2*K*K-a1*K+a0]);
+  const s1=bl(1,0,0,1,2*w1,w1*w1);       // s²/(s+w1)²
+  const s2=bl(1,0,0,1,w2+w3,w2*w3);      // s²/((s+w2)(s+w3))
+  const s3=bl(0,0,w4*w4,1,2*w4,w4*w4);   // w4²/(s+w4)²
+  const H=(secs,f)=>{const w=2*Math.PI*f/fs;let m=1;for(const s of secs){
+    const nR=s.b0+s.b1*Math.cos(w)+s.b2*Math.cos(2*w),nI=-s.b1*Math.sin(w)-s.b2*Math.sin(2*w);
+    const dR=1+s.a1*Math.cos(w)+s.a2*Math.cos(2*w),dI=-s.a1*Math.sin(w)-s.a2*Math.sin(2*w);
+    m*=Math.hypot(nR,nI)/Math.hypot(dR,dI);}return m;};
+  const g=1/H([s1,s2,s3],1000); s1.b0*=g;s1.b1*=g;s1.b2*=g;
+  return [s1,s2,s3];
+}
+/* ===== détecteur de niveau LARGE BANDE, pondération temporelle exacte (Option 2) =====
+   Filtre Z (aucun) / A / C sur chaque échantillon, carré, puis intégrateurs exponentiels
+   par échantillon aux constantes Fast/Slow/V-Slow. Réponse conforme IEC sans latence de
+   fenêtre FFT. Suit aussi la vraie crête pondérée C (LCpeak). */
+function buildLvlDet(fs){
+  return {fs, A:designAWeight(fs), C:designCWeight(fs),
+    aF:Math.exp(-1/(TAU.F*fs)), aS:Math.exp(-1/(TAU.S*fs)), aV:Math.exp(-1/(TAU.V*fs)),
+    cPeak:0, seeded:false, F:{A:0,C:0,Z:0}, S:{A:0,C:0,Z:0}, V:{A:0,C:0,Z:0}};
+}
+function runBq(secs,v){           // cascade de biquads (Direct Form II transposée), état en place
+  for(let j=0;j<secs.length;j++){ const s=secs[j];
+    const y=s.b0*v+s.z1; s.z1=s.b1*v+s.z2-s.a1*y; s.z2=s.b2*v-s.a2*y; v=y; }
+  return v;
+}
+function lvlDetRun(det,x){
+  const A=det.A,C=det.C,aF=det.aF,aS=det.aS,aV=det.aV,bF=1-aF,bS=1-aS,bV=1-aV;
+  const F=det.F,Sl=det.S,V=det.V; let cpk=det.cPeak; const n=x.length;
+  if(!det.seeded){                 // 1er bloc : cale les intégrateurs sur la moyenne (pas de rampe depuis 0)
+    let sz=0,sa=0,sc=0;
+    for(let i=0;i<n;i++){const v=x[i],a=runBq(A,v),c=runBq(C,v);sz+=v*v;sa+=a*a;sc+=c*c;const ac=c<0?-c:c;if(ac>cpk)cpk=ac;}
+    const mz=n?sz/n:0,ma=n?sa/n:0,mc=n?sc/n:0;
+    F.Z=Sl.Z=V.Z=mz; F.A=Sl.A=V.A=ma; F.C=Sl.C=V.C=mc; det.seeded=true; det.cPeak=cpk; return;
+  }
+  for(let i=0;i<n;i++){
+    const v=x[i], a=runBq(A,v), c=runBq(C,v), z2=v*v, a2=a*a, c2=c*c;
+    F.Z=aF*F.Z+bF*z2; Sl.Z=aS*Sl.Z+bS*z2; V.Z=aV*V.Z+bV*z2;
+    F.A=aF*F.A+bF*a2; Sl.A=aS*Sl.A+bS*a2; V.A=aV*V.A+bV*a2;
+    F.C=aF*F.C+bF*c2; Sl.C=aS*Sl.C+bS*c2; V.C=aV*V.C+bV*c2;
+    const ac=c<0?-c:c; if(ac>cpk)cpk=ac;
+  }
+  det.cPeak=cpk;
 }
 /* ===== banc de filtres TIERS D'OCTAVE IEC 61260 (option expert) =====
    Butterworth passe-bande ordre 6 (3 biquads) par bande : prototype passe-bas
@@ -2131,6 +2181,7 @@ function computeSpectrum(){
 
 function resetMeasure(){
   S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0}; S.pV={A:0,C:0,Z:0};
+  S.lvlDet=null;                       // détecteur temporel : reconstruit + re-calé au prochain bloc
   S.eq={A:0,C:0,Z:0}; S.eqT=0;
   S.lafMax=-Infinity; S.lafMin=Infinity;
   S.lcPeak=-Infinity; S.L10=-99; S.L50=-99; S.L90=-99; S.statT=0;
@@ -2235,19 +2286,10 @@ function loop(ts){
   }
 
   const aF=Math.exp(-dt/TAU.F), aS=Math.exp(-dt/TAU.S), aV=Math.exp(-dt/TAU.V);
-  /* pendant les toutes premières trames, on cale Fast=Slow=V-Slow sur la valeur courante
-     (sinon la montée depuis 0 crée un faux transitoire qui trompe le détecteur d'armement) */
-  const seed = warm && S.warmAge<0.25;
-  for(const k of ['A','C','Z']){
-    const p=k==='A'?pA:k==='C'?pC:pZ;
-    if(seed){S.pF[k]=p;S.pS[k]=p;S.pV[k]=p;}
-    else{
-      S.pF[k]=aF*S.pF[k]+(1-aF)*p;
-      S.pS[k]=aS*S.pS[k]+(1-aS)*p;
-      S.pV[k]=aV*S.pV[k]+(1-aV)*p;
-    }
-    if(!idle) S.eq[k]+=p*dt;                    // Leq : intègre seulement après le déclenchement effectif
-  }
+  /* Leq (énergie) : toujours dérivé du spectre FFT — moyenne longue, insensible à la latence
+     de fenêtre. Les niveaux INSTANTANÉS A/C/Z (S.pF/pS/pV) sont désormais calculés dans le
+     domaine temporel (voir bloc « NIVEAU LARGE BANDE » plus bas), pas ici. */
+  for(const k of ['A','C','Z']){ const p=k==='A'?pA:k==='C'?pC:pZ; if(!idle) S.eq[k]+=p*dt; }
   if(!idle) S.eqT+=dt;
   const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
   for(let b=0;b<nb;b++){
@@ -2295,31 +2337,30 @@ function loop(ts){
     if(!idle&&S.binEnergy)S.binEnergy[i]+=p*dt;   // énergie cumulée par bin → spectre Leq moyenné (rapport)
   }
 
-  const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
-  const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
-  /* ---- traitements temporels sur les échantillons NOUVEAUX (états continus) ---- */
-  {
-    if(!S.lcBq&&S.ctx)S.lcBq=designCWeight(S.ctx.sampleRate);
-    if(S.lcBq&&S.tap){
-      const ct=S.ctx.currentTime, fs=S.ctx.sampleRate;
-      let k=Math.round((ct-(S.lcLastCt||ct))*fs); S.lcLastCt=ct;
-      k=Math.max(0,Math.min(S.tap.length,k));
-      if(k>0){
-        const fresh=S.tap.subarray(S.tap.length-k);
-        /* LCpeak (filtre C) */
-        const mx=cFilterRun(S.lcBq,fresh);
-        if(!warm && S.delayT<=0 && !S.trigWait && mx>0){
-          const Lp=20*Math.log10(mx)+S.offset;
-          if(Lp>S.lcPeak)S.lcPeak=Lp;
-        }
-        /* banc de filtres IEC (option expert) */
-        if(S.toctSrc==='iir'){
-          if(!S.iirBank)S.iirBank=buildIirBank();
-          if(S.iirBank)iirBankRun(S.iirBank,fresh);
-        }
+  /* ===== NIVEAU LARGE BANDE — pondération temporelle exacte (Option 2) =====
+     Les niveaux instantanés A/C/Z (LAF/LAS/LV), le LCpeak et le banc IEC sont calculés
+     sur les échantillons NEUFS (continus), indépendamment de la fenêtre FFT : réponse
+     conforme aux constantes Fast/Slow/V-Slow sans latence de fenêtre. Leq/spectre = FFT. */
+  if(!REPL.on && S.ctx && S.tap){
+    if(!S.lvlDet) S.lvlDet=buildLvlDet(S.ctx.sampleRate);
+    const det=S.lvlDet, ct=S.ctx.currentTime, fs=S.ctx.sampleRate;
+    let k=Math.round((ct-(S.lcLastCt||ct))*fs); S.lcLastCt=ct;
+    k=Math.max(0,Math.min(S.tap.length,k));
+    if(k>0){
+      const fresh=S.tap.subarray(S.tap.length-k);
+      lvlDetRun(det,fresh);                       // A/C/Z Fast/Slow/V-Slow + crête C
+      S.pF.A=det.F.A; S.pF.C=det.F.C; S.pF.Z=det.F.Z;
+      S.pS.A=det.S.A; S.pS.C=det.S.C; S.pS.Z=det.S.Z;
+      S.pV.A=det.V.A; S.pV.C=det.V.C; S.pV.Z=det.V.Z;
+      if(!warm && S.delayT<=0 && !S.trigWait && det.cPeak>0){
+        const Lp=20*Math.log10(det.cPeak)+S.offset; if(Lp>S.lcPeak)S.lcPeak=Lp;
       }
+      det.cPeak=0;                                // crête ré-évaluée bloc par bloc
+      if(S.toctSrc==='iir'){ if(!S.iirBank)S.iirBank=buildIirBank(); if(S.iirBank)iirBankRun(S.iirBank,fresh); }
     }
   }
+  const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
+  const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
   if(warm){
     /* ARMEMENT : on jette les premières 1,5 s (transitoire de gain iOS + pop d'amorçage).
        Délai fixe = simple et fiable ; l'affichage tourne mais rien n'est intégré. */
