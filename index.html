@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.10-beta</div>
+  <div class="splashver" id="splashVer">2.0.11-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1113,8 +1113,11 @@ document.addEventListener('DOMContentLoaded',()=>{
    chaque côté). Le filtre SUIT le zoom en direct. Écouteurs fortement recommandés :
    sur haut-parleur, le micro réentend la sortie → larsen. */
 const LSN={on:false, nodes:null, lastF:'', warned:false, _raf:0};
+/* source d'entrée de l'écoute filtrée : le son EN COURS — replay si lecture, sinon micro */
+function lsnSrc(){ return (REPL.on&&REPL.src)?REPL.src:S.srcNode; }
 function lsnBuild(){
-  if(!S.ctx||!S.srcNode)return false;
+  const src=lsnSrc();
+  if(!S.ctx||!src)return false;
   const c=S.ctx;
   /* pente réglable (menu expert) : chaque biquad = 12 dB/oct → N = pente/12 par côté */
   const N=Math.max(1,Math.round((S.lsnSlope||24)/12));
@@ -1123,11 +1126,18 @@ function lsnBuild(){
   for(let i=0;i<N;i++){const f=c.createBiquadFilter();f.type='lowpass'; f.Q.value=0.707;lp.push(f);}
   const gn=c.createGain(); gn.gain.value=Math.pow(10,(S.lsnGain||0)/20);   // gain de rattrapage (dB)
   const chain=[...hp,...lp,gn];
-  S.srcNode.connect(chain[0]);
+  src.connect(chain[0]);
   for(let i=0;i<chain.length-1;i++)chain[i].connect(chain[i+1]);
   gn.connect(c.destination);
-  LSN.nodes={hp,lp,gn,first:chain[0]};
+  LSN.nodes={hp,lp,gn,first:chain[0],srcRef:src};
   return true;
+}
+/* rebranche l'écoute filtrée sur une nouvelle source (seek/relance du replay, retour micro) */
+function lsnRetarget(src){
+  if(!LSN.on||!LSN.nodes)return;
+  if(LSN.nodes.srcRef&&LSN.nodes.srcRef!==src){ try{LSN.nodes.srcRef.disconnect(LSN.nodes.first);}catch(_){} }
+  if(src){ try{src.connect(LSN.nodes.first);}catch(_){} LSN.nodes.srcRef=src; }
+  else lsnOff();
 }
 function lsnUpdate(){
   if(!LSN.on||!LSN.nodes||!S.ctx)return;
@@ -1142,7 +1152,7 @@ function lsnUpdate(){
 function lsnOff(){
   if(LSN._raf){cancelAnimationFrame(LSN._raf);LSN._raf=0;}
   if(LSN.nodes){
-    try{S.srcNode&&S.srcNode.disconnect(LSN.nodes.first);}catch(e){}
+    try{LSN.nodes.srcRef&&LSN.nodes.srcRef.disconnect(LSN.nodes.first);}catch(e){}
     try{LSN.nodes.gn.disconnect();}catch(e){}
     LSN.nodes=null;
   }
@@ -1165,7 +1175,21 @@ function lsnTick(){
 }
 async function lsnToggle(){
   if(LSN.on){lsnOff();ui();return;}
-  /* amorcer l'audio SANS démarrer de mesure : le clic est un geste utilisateur,
+  /* MODE REPLAY : on écoute le son REJOUÉ — aucun micro demandé */
+  if(REPL.on){
+    try{ if(S.ctx&&S.ctx.state==='suspended'&&!S.paused) await S.ctx.resume(); }catch(_){}
+    if(lsnBuild()){
+      LSN.on=true; LSN.lastF=''; lsnUpdate(); lsnTick(); ui();
+      toast('Écoute de l\'enregistrement rejoué — le filtre suit la bande zoomée.');
+    }
+    return;
+  }
+  /* barre replay affichée mais lecture finie : le son à écouter est l'enregistrement */
+  if(!S.running&&REPL.lastId&&$('replBar').classList.contains('on')){
+    toast('Lance la lecture (⟲ ou glisse la barre) pour écouter l\'enregistrement.');
+    return;
+  }
+  /* MODE MICRO : amorcer l'audio SANS démarrer de mesure : le clic est un geste utilisateur,
      donc l'autorisation micro passe. Écoute filtrée possible dès le micro autorisé. */
   try{
     S.micWanted=true;                      // geste volontaire : l'écoute filtrée nécessite le micro
@@ -1614,6 +1638,7 @@ function replaySeek(t){
   src.onended=()=>{ if(REPL.on&&REPL.src===src) stopMeasure(true); };
   REPL.src=src; REPL.startCt=S.ctx.currentTime; REPL.startOff=t;
   src.start(0,t);
+  lsnRetarget(src);                            // l'écoute filtrée suit la nouvelle source
   beginRun(); S.lcLastCt=S.ctx.currentTime;   // intégration et filtres temporels repartent ici
   replTickUi(t);
 }
@@ -1652,6 +1677,7 @@ async function replayStart(id,startAt){
   setTransport(); setLocks();
   src.onended=()=>{ if(REPL.on&&REPL.src===src) stopMeasure(true); };
   src.start(0,startAt);
+  lsnRetarget(src);                            // écoute filtrée déjà active : elle suit le replay
   REPL.startCt=S.ctx.currentTime;
   $('replBar').classList.add('on'); $('rbDur').textContent=rbFmt(REPL.dur); replTickUi(startAt);
   clearInterval(REPL.tick);
@@ -1676,6 +1702,7 @@ function replayTeardown(){
   if(REPL.savedOff!=null){ S.offset=REPL.savedOff; REPL.savedOff=null; }
   if(S.ctx&&S.ctx.state==='suspended'){ try{S.ctx.resume();}catch(_){} }
   if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} arecWire(); }  // retour micro
+  if(LSN.on) lsnRetarget(S.srcNode||null);     // écoute filtrée : retour micro, ou extinction s'il n'y en a pas
   ui();
 }
 async function acquireMic(){
