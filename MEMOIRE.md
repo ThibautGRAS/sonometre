@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.53-beta** : ajustements mise en page. Grand chiffre principal .numwrap clamp(44,13vw,64)->clamp(38,11vw,54) (plus petit). Clavier plus compact : .key min-height 52->45px, .keypad gap 7->6/padding 9-10->7-8/margin-top 10->8, .krow gap 7->6 -> le bezel (flex:1) gagne en hauteur, ecran graphique plus haut.
+
 - **2.0.52-beta** : preset Transitoire ramene a 2 moyennes (au lieu de 8) — peu de moyennage = reactif, coherent pour evenements brefs. Picker + aide MAJ (moyennage 2x). Tonal=2, Equilibre=4, Transitoire=2.
 
 - **2.0.51-beta** : les presets pilotent aussi le moyennage/lissage du spectre. SG_PRESETS : tonal specFrames=2, transient specFrames=8, balanced specFrames=4 ; specSmooth=0 (lissage frequentiel OFF) pour tous. applyPreset applique specFrames/specSmooth + reset Welch. Defauts de base : specFrames=4, specSmooth=0. Menu Expert : 'Optimiser le spectrogramme' renomme 'Type de spectre' (titre popover 'TYPE DE SPECTRE', traduction MAJ, aide MAJ). Fix mise en page : #mPresetV en white-space:nowrap (tick + nom sur une meme ligne). Descriptions picker completees (moyennage 2x/8x/4x).
