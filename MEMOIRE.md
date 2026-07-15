@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.23-beta** : **CORRECTIF 1er stop** — le bouton repassait en "record" et perdait le ▶ vert. Cause : `replayTeardown()` finit par `ui()` alors que `S.running` était encore vrai & `REPL.on` déjà faux → la ligne de nettoyage "mesure micro" libérait buf/frames, donc `replFileLoaded()` devenait faux. Correctif : `replExit` met `S.running=false` AVANT le teardown. Résultat 1er stop : slider à 0, **bouton principal reste STOP**, **touche lecture ▶ verte prête**, Pondération/Temps cliquables, fichier gardé.
+
 - **2.0.22-beta** : **stop en deux temps repensé**. **1er stop** : quitte le mode replay → retour à 0, **Pondération/Temps réactivés immédiatement**, fichier CONSERVÉ (barre visible, figure gelée au début, ▶ relance). **2e stop** : **décharge le fichier** (buf/frames/meta libérés), masque la barre, **réinitialise toutes les figures** (resetMeasure). Transport découplé de S.running : `replFileLoaded()` garde le bouton stop + la touche lecture actifs tant qu'un fichier est chargé ; `setLocks` ne verrouille que pendant mesure micro ou replay ACTIF. Démarrer une mesure micro décharge d'abord le fichier. `replExit`/`replUnload` ajoutés.
 
 - **2.0.21-beta** : **retrait du bouton ⟲** (rembobinage devenu inutile : stop rembobine déjà à 0 avec ▶ prêt) — HTML/CSS/handler supprimés. **Sortie du replay (2e stop) masque la barre** et déverrouille Pondération/Temps (via setLocks/S.running=false). La barre n'apparaît donc que pendant un replay actif.
