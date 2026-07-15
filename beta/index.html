@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.28-beta</div>
+  <div class="splashver" id="splashVer">2.0.29-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1728,6 +1728,39 @@ async function replBuildFrames(buf){
   }
   return F;
 }
+/* reconstruit le spectrogramme pour qu'il FINISSE à l'index i, depuis les spectres
+   fins réduits stockés (piste selon TEMPS). Appelé à chaque rendu → suit le curseur
+   (rembobinage inclus) et ne s'accumule jamais (reconstruit, pas empilé). */
+function replBuildSgram(i){
+  const F=REPL.frames; if(!F) return;
+  if(!CV.sgramCv)sizeCanvas('sgramCv');
+  if(!SG.init&&CV.sgramCv)sgSetup(CV.sgramCv);
+  if(!SG.init||!SG.map||!SG.flineHz)return;
+  const Hb=SG.bufH, Wp=SG.Wp, RES=F.finRES;
+  const lr0=Math.log(Math.max(20,F.binHz)), lr1=Math.log(F.fs/2), sp=lr1-lr0;
+  const key=Hb+'|'+SG.flineHz[0].toFixed(2)+'|'+SG.flineHz[Hb-1].toFixed(2)+'|'+S.weight+'|'+RES;
+  if(SG._rbKey!==key){
+    const rr=new Int16Array(Hb), rw=new Float32Array(Hb);
+    for(let r=0;r<Hb;r++){
+      const fr=Math.max(20,SG.flineHz[r]);
+      let ir=Math.floor(RES*(Math.log(fr)-lr0)/sp); if(ir<0)ir=0; if(ir>=RES)ir=RES-1; rr[r]=ir;
+      rw[r]=S.weight==='A'?Math.pow(10,aWeight(fr)/10):S.weight==='C'?Math.pow(10,cWeight(fr)/10):1;
+    }
+    SG._rbRed=rr; SG._rbW=rw; SG._rbKey=key;
+  }
+  const rr=SG._rbRed, rw=SG._rbW;
+  const track=S.time==='S'?F.tSfine:S.time==='V'?F.tVfine:F.tFfine;
+  if(!SG.cols||SG.cols.length!==Wp)SG.cols=new Array(Wp).fill(null);
+  const cols=SG.cols;
+  for(let x=0;x<Wp;x++){
+    const fi=i-(Wp-1-x);
+    if(fi<0){ cols[x]=null; continue; }
+    const base=fi*RES, col=new Float32Array(Hb);
+    for(let r=0;r<Hb;r++) col[r]=lvl(track[base+rr[r]]*rw[r]);
+    cols[x]=col;
+  }
+  SG.colSeq=Math.min(Wp,i+1); SG.vSeq=-1;   // force le re-blit couleur
+}
 /* affiche la trame d'index i : instantané au point + moyenne cumulée début→i */
 function renderReplayFrame(i){
   const F=REPL.frames; if(!F) return;
@@ -1768,7 +1801,7 @@ function renderReplayFrame(i){
   for(let f=0;f<=i;f+=step){ const lv=trk[f]>0?10*Math.log10(trk[f])+S.offset:-99; S.hist.push({t:f*F.hopSec, L:lv, Leq:lvl(F.cumA[f]/(f+1))}); }
   S.elapsed=T;
   replTickUi(i*F.hopSec);
-  if(REPL.playing) sgTick();   // spectrogramme défile pendant la lecture (figé pendant le scrub)
+  replBuildSgram(i);   // spectrogramme reconstruit jusqu'au curseur (suit/rembobine, sans accumulation)
   updateNumbers(L); drawActive();
 }
 function replSetIndex(i,{audio}={}){
