@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.31-beta</div>
+  <div class="splashver" id="splashVer">2.0.32-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1202,7 +1202,13 @@ async function lsnToggle(){
     toast('Lance la lecture (⟲ ou glisse la barre) pour écouter l\'enregistrement.');
     return;
   }
-  /* MODE MICRO : amorcer l'audio SANS démarrer de mesure : le clic est un geste utilisateur,
+  /* MODE MICRO : la sortie ne peut PAS être forcée sur les écouteurs depuis iOS. Pour éviter
+     le larsen sur haut-parleur, on demande une confirmation explicite (annulable). */
+  if(!LSN.warned){
+    const ok=window.confirm('Réécoute ♪ pendant la mesure : à écouter au CASQUE.\nSur haut-parleur, risque de LARSEN (le micro capte la sortie).\n\nÉcouteurs branchés — continuer ?');
+    if(!ok) return;
+  }
+  /* amorcer l'audio SANS démarrer de mesure : le clic est un geste utilisateur,
      donc l'autorisation micro passe. Écoute filtrée possible dès le micro autorisé. */
   try{
     S.micWanted=true;                      // geste volontaire : l'écoute filtrée nécessite le micro
@@ -1874,7 +1880,10 @@ async function replayStart(id,startAt,startPaused){
     buf=S.ctx.createBuffer(1,meta.len,meta.fs||S.ctx.sampleRate);
     const ch=buf.getChannelData(0); let o=0; for(const s of segs){ for(let i=0;i<s.length;i++)ch[o++]=s[i]/32768; }
   }
-  if(S.srcNode){ try{S.srcNode.disconnect();}catch(_){}}         // micro écarté
+  /* réécoute pure : on LIBÈRE le micro (sinon iOS reste en session enregistrement+lecture
+     et route mal la sortie — souvent haut-parleur au lieu des écouteurs). Réacquis au prochain REC. */
+  if(S.srcNode){ try{S.srcNode.disconnect();}catch(_){} S.srcNode=null; }
+  if(S.stream){ try{ for(const t of S.stream.getTracks())t.stop(); }catch(_){} S.stream=null; }
   REPL.savedOff=(REPL.savedOff!=null?REPL.savedOff:S.offset); if(typeof meta.offset==='number')S.offset=meta.offset;
   REPL.on=true; REPL.buf=buf; REPL.meta=meta; REPL.dur=buf.duration; REPL.lastId=meta.id; REPL.playing=false;
   resetMeasure();
