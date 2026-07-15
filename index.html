@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.13-beta</div>
+  <div class="splashver" id="splashVer">2.0.14-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1642,8 +1642,8 @@ function replaySeek(t){
   beginRun(); S.lcLastCt=S.ctx.currentTime;   // intégration et filtres temporels repartent ici
   replTickUi(t);
 }
-async function replayStart(id,startAt){
-  if(S.running){ toast('Arrête la mesure en cours avant de rejouer'); return; }
+async function replayStart(id,startAt,startPaused){
+  if(S.running&&!REPL.on){ toast('Arrête la mesure en cours avant de rejouer'); return; }
   startAt=Math.max(0,startAt||0);
   let meta=null, buf=null;
   if(REPL.buf&&REPL.meta&&REPL.meta.id===id){ meta=REPL.meta; buf=REPL.buf; }   // relance instantanée (buffer conservé)
@@ -1685,6 +1685,7 @@ async function replayStart(id,startAt){
   REPL.tick=setInterval(()=>{ if(REPL.scrub==null&&REPL.pendingSeek==null) replTickUi(replPos()); },200);
   try{S.wake=null;}catch(_){}
   cancelAnimationFrame(S.raf); S.raf=requestAnimationFrame(loop);
+  if(startPaused){ S.paused=true; try{S.ctx.suspend();}catch(_){} setTransport(); }   // démarrage gelé (scrub)
   $('expPop').classList.remove('on');
   toast('Replay : '+meta.name);
   ui();
@@ -4654,21 +4655,25 @@ function replPreviewFill(t){
   let lastTouch=0, starting=false;
   const xToT=e=>{ const r=tk.getBoundingClientRect(); const x=(e.touches&&e.touches.length?e.touches[0].clientX:(e.changedTouches&&e.changedTouches.length?e.changedTouches[0].clientX:e.clientX))-r.left; return Math.max(0,Math.min(1,x/r.width))*REPL.dur; };
   const canScrub=()=>REPL.on||(!S.running&&REPL.lastId&&REPL.dur>0&&$('replBar').classList.contains('on'));
-  /* SCRUB VISUEL : pendant le glissé, le tampon d'analyse est rempli avec le PCM du
-     point sous le doigt → les courbes suivent en direct (même en pause), sans toucher
-     à la lecture ni à l'intégration. Le saut audio réel se fait au relâcher. */
+  /* SCRUB VISUEL : toucher la barre MET EN PAUSE (on explore). Le tampon d'analyse
+     est rempli avec le PCM sous le doigt → courbes en direct, sans lecture audio.
+     Au relâcher on RESTE en pause au point visé ; ▶ reprend la lecture de là. */
+  const grab=()=>{
+    if(REPL.on){ if(!S.paused){ S.paused=true; try{S.ctx.suspend();}catch(_){} setTransport(); } }
+  };
   const preview=t=>{
-    if(!REPL.on&&!starting&&REPL.lastId){ starting=true; replayStart(REPL.lastId,t).finally(()=>{starting=false;}); return; }
+    if(!REPL.on){ if(!starting&&REPL.lastId){ starting=true; replayStart(REPL.lastId,t,true).finally(()=>{starting=false;}); } return; }  // replay fini : reprend gelé
     if(replPreviewFill(t))S._previewRing=true;
   };
   const commit=t=>{
     S._previewRing=false;
-    if(REPL.on){ if(S.paused){ REPL.pendingSeek=t; replTickUi(t); } else replaySeek(t); }
-    else if(!starting&&REPL.lastId) replayStart(REPL.lastId,t);
+    if(REPL.on){ REPL.pendingSeek=t; REPL.startOff=t; replTickUi(t);       // reste en pause ICI ; la reprise (▶) sautera à t
+      if(!S.paused){ S.paused=true; try{S.ctx.suspend();}catch(_){} setTransport(); } }
+    else if(!starting&&REPL.lastId) replayStart(REPL.lastId,t,true);
   };
-  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); REPL.scrub=xToT(e); replTickUi(REPL.scrub); preview(REPL.scrub); },{passive:false}));
+  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); if(ev==='touchstart')grab(); REPL.scrub=xToT(e); replTickUi(REPL.scrub); preview(REPL.scrub); },{passive:false}));
   ['touchend','touchcancel'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); if(REPL.scrub!=null){ commit(REPL.scrub); REPL.scrub=null; } else S._previewRing=false; },{passive:false}));
-  tk.addEventListener('mousedown',e=>{ if(!canScrub())return; if(Date.now()-lastTouch<700)return; commit(xToT(e)); });
+  tk.addEventListener('mousedown',e=>{ if(!canScrub())return; if(Date.now()-lastTouch<700)return; grab(); commit(xToT(e)); });
 })();
 $('rbReplay').onclick=()=>{ if(REPL.lastId&&!S.running) replayStart(REPL.lastId); };
 $('epCsvDl').onclick   =()=>dl(csvBlob(),'sonometre_'+stamp()+'.csv');
