@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.9-beta</div>
+  <div class="splashver" id="splashVer">2.0.10-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1168,6 +1168,7 @@ async function lsnToggle(){
   /* amorcer l'audio SANS démarrer de mesure : le clic est un geste utilisateur,
      donc l'autorisation micro passe. Écoute filtrée possible dès le micro autorisé. */
   try{
+    S.micWanted=true;                      // geste volontaire : l'écoute filtrée nécessite le micro
     if(!S.ctx) await initAudio();
     else if(!micAlive()) await reviveMic(true);
     if(S.ctx && S.ctx.state==='suspended') await S.ctx.resume();
@@ -1717,6 +1718,7 @@ function micLost(why){
 /* tente de tout remettre en route au retour au premier plan */
 async function reviveMic(fromGesture){
   if(!S.ctx)return false;
+  if(!S.micWanted)return false;   // jamais de prompt micro tant que l'utilisateur n'a pas fait REC (replays purs)
   try{ if(S.ctx.state!=='running') await S.ctx.resume(); }catch(e){}
   let tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
   if(!tr || tr.readyState!=='live' || tr.muted){
@@ -4271,6 +4273,7 @@ $('kStart').onclick=async function(){
   if(startLong){startLong=false;return;}       // l'appui long a ouvert le menu, pas de démarrage
 
   if(S.running){stopMeasure(false);return;}
+  S.micWanted=true;                                  // le micro n'est demandé QUE par ce geste (et reste dispo ensuite)
   const coldStart=!S.micReady;                       // micro déjà préchauffé ?
   try{
     if(!S.ctx)await initAudio();
@@ -4597,14 +4600,27 @@ $('arecSave').onclick    =()=>{ recSave().catch(()=>toast('Sauvegarde impossible
    qu'iOS émet après un toucher sont ignorés (anti double-saut). */
 (function(){
   const tk=$('rbTrack'); if(!tk)return;
-  let lastTouch=0;
+  let lastTouch=0, lastLive=0, starting=false;
   const xToT=e=>{ const r=tk.getBoundingClientRect(); const x=(e.touches&&e.touches.length?e.touches[0].clientX:(e.changedTouches&&e.changedTouches.length?e.changedTouches[0].clientX:e.clientX))-r.left; return Math.max(0,Math.min(1,x/r.width))*REPL.dur; };
   const canScrub=()=>REPL.on||(!S.running&&REPL.lastId&&REPL.dur>0&&$('replBar').classList.contains('on'));
+  /* SCRUB LIVE : pendant le glissé, sauts réels throttlés (~7/s) → la vraie chaîne
+     analyse le point sous le doigt, les courbes suivent (recherche visuelle d'un
+     moment). En pause : affichage seul, saut mémorisé. Après la fin : le premier
+     mouvement relance la lecture (buffer conservé → instantané). */
+  const live=t=>{
+    const now=Date.now();
+    if(!REPL.on){
+      if(!starting&&REPL.lastId){ starting=true; replayStart(REPL.lastId,t).finally(()=>{starting=false;}); }
+      return;
+    }
+    if(S.paused){ replTickUi(t); return; }               // en pause : pas de lecture pendant le drag
+    if(now-lastLive>140){ lastLive=now; replaySeek(t); }
+  };
   const commit=t=>{
     if(REPL.on){ if(S.paused){ REPL.pendingSeek=t; replTickUi(t); } else replaySeek(t); }
-    else replayStart(REPL.lastId,t);                       // lecture finie : glisser relance au point visé
+    else if(!starting&&REPL.lastId) replayStart(REPL.lastId,t);
   };
-  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); REPL.scrub=xToT(e); replTickUi(REPL.scrub); },{passive:false}));
+  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); REPL.scrub=xToT(e); replTickUi(REPL.scrub); live(REPL.scrub); },{passive:false}));
   ['touchend','touchcancel'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); if(REPL.scrub!=null){ commit(REPL.scrub); REPL.scrub=null; } },{passive:false}));
   tk.addEventListener('mousedown',e=>{ if(!canScrub())return; if(Date.now()-lastTouch<700)return; commit(xToT(e)); });
 })();
