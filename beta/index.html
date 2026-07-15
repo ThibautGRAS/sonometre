@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.29-beta</div>
+  <div class="splashver" id="splashVer">2.0.30-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1654,14 +1654,24 @@ async function replBuildFrames(buf){
   const nb=S.bands.length, bins=S.bandBins, wA=S.wA, wC=S.wC, corr=S.corr!=='off'?S.compGain:null;
   const hop=Math.max(Math.round(fs*0.05), Math.round(N/4));
   const count=Math.max(1,Math.floor((pcm.length-N)/hop)+1);
-  /* ===== grille bande fine RÉDUITE (log) pour le spectre suivant le curseur + MOY fine =====
-     l'écran n'affiche pas 4096 lignes ; on réduit à RES lignes log-fréquence, borné par un
-     budget mémoire (~40 Mo pour 4 pistes) → RES plus faible sur enregistrements très longs. */
-  const binHz=fs/N, f0=Math.max(20,binHz), f1=fs/2, lr0=Math.log(f0), lr1=Math.log(f1);
-  let RES=Math.max(48,Math.min(256,Math.floor(40e6/(16*Math.max(1,count)))));
-  const finMap=new Int16Array(n), finCnt=new Float32Array(RES);
-  for(let k=1;k<n;k++){ const f=k*binHz; let r=Math.floor(RES*(Math.log(f)-lr0)/(lr1-lr0)); if(r<0)r=0; if(r>=RES)r=RES-1; finMap[k]=r; finCnt[r]++; }
-  for(let r=0;r<RES;r++) if(finCnt[r]===0) finCnt[r]=1;
+  /* ===== grille bande fine ADAPTATIVE (anti raies fantômes) =====
+     Une grille log fixe a, en bas du spectre, PLUS de lignes que la FFT n'a de points →
+     lignes vides = raies fantômes (surtout en log). Ici : 1 point FFT par ligne tant que
+     le pas log est plus fin que la FFT (→ pleine résolution en bas, ex. autour de 100 Hz),
+     puis regroupement progressif en haut. Aucune ligne vide. */
+  const binHz=fs/N, f1=fs/2, lr1=Math.log(f1);
+  const RESmax=Math.max(48,Math.min(320,Math.floor(40e6/(16*Math.max(1,count)))));
+  const finMap=new Int16Array(n);
+  const lineSumF=[], lineCnt=[];
+  { let L=0, step=(lr1-Math.log(binHz))/RESmax, boundLog=Math.log(binHz)+step;
+    for(let k=1;k<n;k++){
+      const lf=Math.log(k*binHz);
+      if(lf>boundLog && lineCnt[L]>0 && L<RESmax-1){ L++; boundLog=Math.max(lf,boundLog)+step; }
+      finMap[k]=L; lineSumF[L]=(lineSumF[L]||0)+k*binHz; lineCnt[L]=(lineCnt[L]||0)+1;
+    }
+    var RES=L+1;
+  }
+  const finCnt=new Float32Array(RES); for(let r=0;r<RES;r++)finCnt[r]=lineCnt[r]||1;
   const F={ fs, hop, hopSec:hop/fs, N, nb, count, binHz,
     finRES:RES, finMap, finF:new Float32Array(RES),
     wAfc:new Float64Array(nb), wCfc:new Float64Array(nb),
@@ -1669,7 +1679,7 @@ async function replBuildFrames(buf){
     cumBand:new Array(count), cumA:new Float64Array(count), cumC:new Float64Array(count), cumZ:new Float64Array(count),
     LAF:new Float64Array(count), maxLAF:new Float64Array(count), minLAF:new Float64Array(count), maxC:new Float64Array(count),
     cumFine:new Float32Array(count*RES), tFfine:new Float32Array(count*RES), tSfine:new Float32Array(count*RES), tVfine:new Float32Array(count*RES) };
-  for(let r=0;r<RES;r++) F.finF[r]=Math.exp(lr0+(r+0.5)/RES*(lr1-lr0));
+  for(let r=0;r<RES;r++) F.finF[r]=(lineSumF[r]||(f1))/ (lineCnt[r]||1);
   for(let b=0;b<nb;b++){ const fc=S.bands[b]; F.wAfc[b]=Math.pow(10,aWeight(fc)/10); F.wCfc[b]=Math.pow(10,cWeight(fc)/10); }
   const re=new Float64Array(N), im=new Float64Array(N);
   const run=new Float64Array(nb);
@@ -1737,13 +1747,13 @@ function replBuildSgram(i){
   if(!SG.init&&CV.sgramCv)sgSetup(CV.sgramCv);
   if(!SG.init||!SG.map||!SG.flineHz)return;
   const Hb=SG.bufH, Wp=SG.Wp, RES=F.finRES;
-  const lr0=Math.log(Math.max(20,F.binHz)), lr1=Math.log(F.fs/2), sp=lr1-lr0;
-  const key=Hb+'|'+SG.flineHz[0].toFixed(2)+'|'+SG.flineHz[Hb-1].toFixed(2)+'|'+S.weight+'|'+RES;
+  const key=Hb+'|'+SG.flineHz[0].toFixed(2)+'|'+SG.flineHz[Hb-1].toFixed(2)+'|'+S.weight+'|'+RES+'|'+(SG.map[0]?SG.map[0][0]:0);
   if(SG._rbKey!==key){
     const rr=new Int16Array(Hb), rw=new Float32Array(Hb);
     for(let r=0;r<Hb;r++){
+      const mp=SG.map[r]||[1,1], mid=Math.max(1,Math.min(F.finMap.length-1,(mp[0]+mp[1])>>1));
+      rr[r]=F.finMap[mid]||0;                          // même grille que le stockage → aucune ligne vide
       const fr=Math.max(20,SG.flineHz[r]);
-      let ir=Math.floor(RES*(Math.log(fr)-lr0)/sp); if(ir<0)ir=0; if(ir>=RES)ir=RES-1; rr[r]=ir;
       rw[r]=S.weight==='A'?Math.pow(10,aWeight(fr)/10):S.weight==='C'?Math.pow(10,cWeight(fr)/10):1;
     }
     SG._rbRed=rr; SG._rbW=rw; SG._rbKey=key;
