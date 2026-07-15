@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.18-beta</div>
+  <div class="splashver" id="splashVer">2.0.19-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1448,6 +1448,7 @@ function configureAnalyser(){
   }
   S.iirBank=null;                      // le banc IIR dépend de fs/binHz/compGain : reconstruit
   SG.init=false;                       // recartographie bins→lignes (les données sgram sont préservées par sgSetup)
+  if(typeof REPL!=='undefined' && REPL.on && !REPL._building){ clearTimeout(REPL._reanaT); REPL._reanaT=setTimeout(replReanalyze,60); }
 }
 async function initAudio(){
   S.ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -1743,6 +1744,7 @@ function replPause(){
 }
 async function replayStart(id,startAt,startPaused){
   if(S.running&&!REPL.on){ toast('Arrête la mesure en cours avant de rejouer'); return; }
+  REPL._building=true;                                   // évite l'auto-ré-analyse pendant le setup (configureAnalyser)
   let meta=null, buf=null, reuse=(REPL.buf&&REPL.meta&&REPL.meta.id===id&&REPL.frames);
   if(reuse){ meta=REPL.meta; buf=REPL.buf; }
   else{
@@ -1770,12 +1772,21 @@ async function replayStart(id,startAt,startPaused){
   if(!reuse){ REPL.frames=await replBuildFrames(buf); }
   const i0=startAt? Math.round(startAt/REPL.frames.hopSec):0;
   renderReplayFrame(i0);
+  REPL._building=false;                                  // setup terminé : un changement de réglage déclenchera une ré-analyse
   setTransport(); setLocks();
   if(!startPaused) replPlay();                                    // par défaut : démarre en lecture
   ui();
 }
+/* changement de fenêtre / FFT / correction pendant un replay → ré-analyse depuis le début */
+function replReanalyze(){
+  if(!REPL.on||!REPL.lastId||REPL._building) return;
+  REPL.frames=null;                                      // force la reconstruction
+  toast('Réglage d\u2019analyse changé — ré-analyse depuis le début…');
+  replayStart(REPL.lastId,0,true);
+}
 function replayTeardown(){
   if(!REPL.on) return;
+  clearTimeout(REPL._reanaT);
   replPause();
   REPL.on=false; S._previewRing=false;
   $('replBar').classList.remove('on');
