@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.15-beta</div>
+  <div class="splashver" id="splashVer">2.0.16-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1864,7 +1864,7 @@ function loop(ts){
   const warm = S.warmT>0;
   const idle = warm || S.delayT>0 || S.trigWait || !!S._previewRing;   // preview scrub : affichage seul, zéro intégration
   S._idle=idle;                                     // miroir lu par la capture audio (V2)
-  S.elapsed+=dt;
+  if(!S._previewRing) S.elapsed+=dt;                // SCRUB : horloge gelée (le doigt ne fait pas avancer le temps)
 
   const mag=computeSpectrum();
   const n=mag.length;
@@ -2024,6 +2024,13 @@ function loop(ts){
     const b=$('modeBadge'); b.textContent='ATTENTE ≥ '+S.trigLevel+' dB'; b.className='badge';
     if(LAF>=S.trigLevel){ S.trigWait=false; beginRun(); }
     else { updateNumbers(L); drawActive(); return; }
+  }
+  if(S._previewRing){
+    /* SCRUB : le spectre reflète le PCM sous le doigt (déjà dans le ring), mais on
+       ne touche NI à l'horloge, NI à l'historique, NI au spectrogramme (pas de
+       défilement parasite). Seule la vue fréquentielle suit le doigt. */
+    updateNumbers(L); drawActive();
+    return;
   }
   if(S.eqT>0.5){ if(LAF>S.lafMax)S.lafMax=LAF; if(LAF<S.lafMin)S.lafMin=LAF; }
   if(L>S.peakHold)S.peakHold=L; else S.peakHold-=dt*2;
