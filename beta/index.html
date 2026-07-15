@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.25-beta</div>
+  <div class="splashver" id="splashVer">2.0.26-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2596,7 +2596,7 @@ function drawHistory(){
   for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const x=x2(pt.t),y=y2(pt.Leq,h,sc);if(!st){g.moveTo(x,y);st=true;}else g.lineTo(x,y);}
   g.stroke();
   g.textAlign='left';g.font='9px Arial';
-  g.fillStyle=THEME.line;g.fillText('L'+S.weight+(useAvg?'·Moy':S.time),padL+4,10);
+  g.fillStyle=THEME.line;g.fillText('L'+S.weight+S.time,padL+4,10);
   g.fillStyle=THEME.lineEq;g.fillText('L'+S.weight+'eq',padL+40,10);
   axisUnits(g,w,h,padL,'s');
   /* curseur mobile : trouve le point le plus proche en temps */
