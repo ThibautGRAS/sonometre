@@ -18,8 +18,20 @@ if('serviceWorker' in navigator){
     // réseau d'abord + cache:reload (voir sw.js) suffisent à servir la version fraîche à chaque ouverture.
     // PAS de reload automatique : il provoquait un double-chargement visible à chaque mise à jour.
     // Canal beta (main:/beta/) : pas de service worker, la page de test est toujours servie fraîche.
-    if(!location.pathname.includes('/beta/'))
+    if(!location.pathname.includes('/beta/')){
       navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ reg.update(); }).catch(()=>{});
+    } else {
+      /* BÊTA AUTO-NETTOYANT : un service worker résiduel (installé par l'app principale
+         avant l'exclusion de /beta/) peut resservir une VIEILLE copie du beta en ignorant
+         le ?v=. On purge tout SW + caches, et on recharge UNE fois pour repartir propre. */
+      try{
+        navigator.serviceWorker.getRegistrations().then(rs=>{
+          let had=false; rs.forEach(r=>{ had=true; try{r.unregister();}catch(_){} });
+          if(window.caches&&caches.keys) caches.keys().then(ks=>ks.forEach(k=>{try{caches.delete(k);}catch(_){}})).catch(()=>{});
+          if(had && !sessionStorage.getItem('betaPurged')){ sessionStorage.setItem('betaPurged','1'); location.reload(); }
+        }).catch(()=>{});
+      }catch(_){}
+    }
   });
 }
 </script>
@@ -478,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.23-beta</div>
+  <div class="splashver" id="splashVer">2.0.24-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
