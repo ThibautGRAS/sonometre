@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.33-beta</div>
+  <div class="splashver" id="splashVer">2.0.34-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1183,7 +1183,7 @@ function lsnSetGain(){                     // ajuste le gain sans reconstruire l
    En mesure, loop() appelle déjà lsnUpdate → ici on ne fait que reprogrammer la frame. */
 function lsnTick(){
   if(!LSN.on){LSN._raf=0;return;}
-  if(!S.running) lsnUpdate();
+  if(!S.running||REPL.on) lsnUpdate();   // live : loop() met à jour ; replay/idle : c'est ici (loop ne tourne pas)
   LSN._raf=requestAnimationFrame(lsnTick);
 }
 async function lsnToggle(){
