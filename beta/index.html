@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.19-beta</div>
+  <div class="splashver" id="splashVer">2.0.20-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4408,6 +4408,15 @@ $('kStart').addEventListener('pointerdown',()=>{
 $('kStart').onclick=async function(){
   if(startLong){startLong=false;return;}       // l'appui long a ouvert le menu, pas de démarrage
 
+  if(REPL.on){                                 // STOP en replay
+    if(REPL.playing || REPL.i>0){              // 1er stop : rembobine au début, bouton lecture prêt
+      replPause(); REPL.i=0; renderReplayFrame(0); setTransport();
+      const b=$('modeBadge'); if(b){b.textContent='REPLAY · PAUSE'; b.className='badge';}
+    } else {                                   // déjà au début : quitter le replay
+      stopMeasure(false);
+    }
+    return;
+  }
   if(S.running){stopMeasure(false);return;}
   S.micWanted=true;                                  // le micro n'est demandé QUE par ce geste (et reste dispo ensuite)
   const coldStart=!S.micReady;                       // micro déjà préchauffé ?
