@@ -317,6 +317,12 @@ if('serviceWorker' in navigator){
   .scell.sel{border-color:var(--ice);box-shadow:0 0 8px rgba(79,195,255,.5)}
 
   .bottomstrip{display:flex;justify-content:space-between;align-items:center;flex:0 0 auto;margin-top:6px;padding-top:5px;border-top:1px solid var(--lcd-grid);font-family:var(--mono);font-size:11px;color:var(--lcd-dim)}
+  .replbar{display:none;align-items:center;gap:9px;flex:0 0 auto;margin-top:6px;font-family:var(--mono);font-size:11px;color:#CFEBFF}
+  .replbar.on{display:flex}
+  .rb-track{position:relative;flex:1;height:26px;display:flex;align-items:center;touch-action:none}
+  .rb-track::before{content:"";position:absolute;left:0;right:0;height:4px;background:#0B2450;border-radius:2px}
+  .rb-fill{position:absolute;left:0;height:4px;background:#4FC3FF;border-radius:2px;width:0}
+  .rb-dot{position:absolute;width:15px;height:15px;border-radius:50%;background:#4FC3FF;box-shadow:0 0 9px rgba(79,195,255,.65);transform:translateX(-8px);left:0}
   .bottomstrip b{color:var(--lcd-ink);font-weight:700;text-shadow:0 0 6px rgba(79,195,255,.35)}
   .progress{height:3px;background:#0B2450;border-radius:2px;overflow:hidden;flex:1;margin:0 10px}
   .progress .p{height:100%;width:0%;background:var(--red);box-shadow:0 0 6px rgba(239,51,70,.7)}
@@ -472,7 +478,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.3-beta</div>
+  <div class="splashver" id="splashVer">2.0.4-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -620,6 +626,12 @@ if('serviceWorker' in navigator){
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="replbar" id="replBar">
+      <span id="rbCur">0:00</span>
+      <div class="rb-track" id="rbTrack"><div class="rb-fill" id="rbFill"></div><div class="rb-dot" id="rbDot"></div></div>
+      <span id="rbDur">0:00</span>
     </div>
 
     <div class="bottomstrip" id="bottomStrip">
@@ -1479,52 +1491,31 @@ function rdbTx(stores,mode,fn){ return rdbOpen().then(db=>new Promise((res,rej)=
   const tx=db.transaction(stores,mode); const out=fn(tx);
   tx.oncomplete=()=>res(out); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error);
 }));}
-async function recSave(){
-  if(!AREC.len) return;
+async function recPut(meta,segs){
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(_){}
-  /* consolide les blocs de capture (4096) en segments ~1 Mo */
-  const segs=[]; let cur=new Int16Array(RDB.CH), fill=0;
-  for(const c of AREC.chunks){ let o=0;
-    while(o<c.length){ const n=Math.min(c.length-o,RDB.CH-fill); cur.set(c.subarray(o,o+n),fill); fill+=n; o+=n;
-      if(fill===RDB.CH){ segs.push(cur); cur=new Int16Array(RDB.CH); fill=0; } } }
-  if(fill)segs.push(cur.subarray(0,fill).slice());
-  const t0=AREC.t0||new Date();
-  const meta={ id:Date.now().toString(36), name:'Mesure du '+t0.toLocaleString('fr-FR'),
-    date:t0.toISOString(), fs:AREC.fs, len:AREC.len, dur:AREC.len/(AREC.fs||1),
-    offset:S.offset, corr:S.corr, corrName:S.corrName||'', nseg:segs.length, app:APP_VERSION };
   await rdbTx(['recs','chunks'],'readwrite',tx=>{
     tx.objectStore('recs').put(meta);
     segs.forEach((s,i)=>tx.objectStore('chunks').put({id:meta.id,seq:i,pcm:s}));
   });
+}
+function buildSegs(chunks){
+  const segs=[]; let cur=new Int16Array(RDB.CH), fill=0;
+  for(const c of chunks){ let o=0;
+    while(o<c.length){ const n=Math.min(c.length-o,RDB.CH-fill); cur.set(c.subarray(o,o+n),fill); fill+=n; o+=n;
+      if(fill===RDB.CH){ segs.push(cur); cur=new Int16Array(RDB.CH); fill=0; } } }
+  if(fill)segs.push(cur.subarray(0,fill).slice());
+  return segs;
+}
+async function recSave(){
+  if(!AREC.len) return;
+  const segs=buildSegs(AREC.chunks);
+  const t0=AREC.t0||new Date();
+  const meta={ id:Date.now().toString(36), name:'Mesure du '+t0.toLocaleString('fr-FR'),
+    date:t0.toISOString(), fs:AREC.fs, len:AREC.len, dur:AREC.len/(AREC.fs||1),
+    offset:S.offset, corr:S.corr, corrName:S.corrName||'', nseg:segs.length, app:APP_VERSION };
+  await recPut(meta,segs);
   toast('Enregistrement sauvegardé ('+meta.dur.toFixed(1)+' s)');
   renderRecList();
-}
-function recList(){ return rdbTx(['recs'],'readonly',tx=>{
-  const out=[]; tx.objectStore('recs').openCursor().onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value);c.continue();}};
-  return out;
-});}
-function recDelete(id){ return rdbTx(['recs','chunks'],'readwrite',tx=>{
-  tx.objectStore('recs').delete(id);
-  tx.objectStore('chunks').delete(IDBKeyRange.bound([id,0],[id,1e9]));
-});}
-function recRename(id,name){ return rdbTx(['recs'],'readwrite',tx=>{
-  const st=tx.objectStore('recs'); st.get(id).onsuccess=e=>{const m=e.target.result;if(m){m.name=name;st.put(m);}};
-});}
-function recSegs(id){ return rdbTx(['chunks'],'readonly',tx=>{
-  const out=[]; tx.objectStore('chunks').openCursor(IDBKeyRange.bound([id,0],[id,1e9])).onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value.pcm);c.continue();}};
-  return out;
-});}
-async function recWavBlob(id,meta){
-  const segs=await recSegs(id);
-  const n=segs.reduce((a,s)=>a+s.length,0), fs=meta.fs||44100;
-  const b=new ArrayBuffer(44+n*2), v=new DataView(b);
-  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
-  ws(0,'RIFF'); v.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt ');
-  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
-  v.setUint32(24,fs,true); v.setUint32(28,fs*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
-  ws(36,'data'); v.setUint32(40,n*2,true);
-  let o=44; for(const s of segs){ new Int16Array(b,o,s.length).set(s); o+=s.length*2; }
-  return new Blob([b],{type:'audio/wav'});
 }
 async function renderRecList(){
   const box=$('recList'); if(!box)return;
@@ -1555,7 +1546,31 @@ function toast(msg){ const el=$('err'); if(!el)return; el.style.display='block';
    Calibration : l'offset DE L'ENREGISTREMENT est appliqué le temps du replay
    (dB SPL du jour de la mesure), puis restauré. Pas d'armement (signal propre).
    Pause = suspend/resume du contexte. Fin (naturelle ou stop) → retour micro. */
-const REPL={on:false, src:null, meta:null, savedOff:null};
+const REPL={on:false, src:null, buf:null, meta:null, savedOff:null, startCt:0, startOff:0, dur:0, tick:null, scrub:null};
+/* position courante dans l'enregistrement (s) — le suspend fige currentTime, donc la pause fige la position */
+function replPos(){ return Math.max(0,Math.min(REPL.dur, REPL.startOff+(S.ctx?S.ctx.currentTime-REPL.startCt:0))); }
+function rbFmt(t){ const m=Math.floor(t/60), s=Math.floor(t%60); return m+':'+(s<10?'0':'')+s; }
+function replTickUi(t){
+  const u=REPL.dur>0?t/REPL.dur:0;
+  $('rbCur').textContent=rbFmt(t);
+  $('rbFill').style.width=(u*100)+'%';
+  $('rbDot').style.left=(u*100)+'%';
+}
+/* saut dans l'enregistrement : nouvelle source au point choisi.
+   Les intégrateurs REPARTENT au point de saut (beginRun) : les indices affichés
+   couvrent « depuis le dernier saut », jamais un patchwork de morceaux. */
+function replaySeek(t){
+  if(!REPL.on||!REPL.buf) return;
+  t=Math.max(0,Math.min(Math.max(0,REPL.dur-0.05),t));
+  const old=REPL.src;
+  if(old){ old.onended=null; try{old.stop();}catch(_){} try{old.disconnect();}catch(_){} }
+  const src=S.ctx.createBufferSource(); src.buffer=REPL.buf; src.connect(S.analyser);
+  src.onended=()=>{ if(REPL.on&&REPL.src===src) stopMeasure(true); };
+  REPL.src=src; REPL.startCt=S.ctx.currentTime; REPL.startOff=t;
+  src.start(0,t);
+  beginRun(); S.lcLastCt=S.ctx.currentTime;   // intégration et filtres temporels repartent ici
+  replTickUi(t);
+}
 async function replayStart(id){
   if(S.running){ toast('Arrête la mesure en cours avant de rejouer'); return; }
   let meta=null, segs=[];
@@ -1572,15 +1587,20 @@ async function replayStart(id){
   if(S.srcNode){ try{S.srcNode.disconnect();}catch(_){}}   // micro écarté (rebranché à la fin)
   REPL.savedOff=S.offset; if(typeof meta.offset==='number')S.offset=meta.offset;
   const src=S.ctx.createBufferSource(); src.buffer=buf; src.connect(S.analyser);
-  REPL.on=true; REPL.src=src; REPL.meta=meta;
+  REPL.on=true; REPL.src=src; REPL.buf=buf; REPL.meta=meta;
+  REPL.dur=buf.duration; REPL.startOff=0; REPL.scrub=null;
   resetMeasure();
   S.running=true; S.paused=false; S.lastT=0;
   S.warmT=0; S.warmAge=0; S.delayT=0; S.trigWait=false;    // pas d'armement ni de déclenchement
   S.K=0; S.lcBq=null; S.lcLastCt=S.ctx.currentTime;        // filtres temporels réamorcés
   beginRun();
   setTransport(); setLocks();
-  src.onended=()=>{ if(REPL.on) stopMeasure(true); };
+  src.onended=()=>{ if(REPL.on&&REPL.src===src) stopMeasure(true); };
   src.start();
+  REPL.startCt=S.ctx.currentTime;
+  $('replBar').classList.add('on'); $('rbDur').textContent=rbFmt(REPL.dur); replTickUi(0);
+  clearInterval(REPL.tick);
+  REPL.tick=setInterval(()=>{ if(REPL.scrub==null) replTickUi(replPos()); },200);
   try{S.wake=null;}catch(_){}
   cancelAnimationFrame(S.raf); S.raf=requestAnimationFrame(loop);
   $('expPop').classList.remove('on');
@@ -1590,9 +1610,11 @@ async function replayStart(id){
 function replayTeardown(){
   if(!REPL.on) return;
   REPL.on=false;
-  try{ REPL.src&&REPL.src.stop(); }catch(_){}
+  clearInterval(REPL.tick); REPL.tick=null;
+  $('replBar').classList.remove('on');
+  try{ REPL.src&&(REPL.src.onended=null); REPL.src&&REPL.src.stop(); }catch(_){}
   try{ REPL.src&&REPL.src.disconnect(); }catch(_){}
-  REPL.src=null;
+  REPL.src=null; REPL.buf=null; REPL.scrub=null;
   if(REPL.savedOff!=null){ S.offset=REPL.savedOff; REPL.savedOff=null; }
   if(S.ctx&&S.ctx.state==='suspended'){ try{S.ctx.resume();}catch(_){} }
   if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} arecWire(); }  // retour micro
@@ -4488,6 +4510,14 @@ $('arecTgl').onchange=e=>{
 $('arecWavShare').onclick=()=>{ if(AREC.len)shareOrDownload(arecWavBlob(),'sonometre_audio_'+stamp()+'.wav','Audio sonomètre CETIM'); };
 $('arecWavDl').onclick   =()=>{ if(AREC.len)dl(arecWavBlob(),'sonometre_audio_'+stamp()+'.wav'); };
 $('arecSave').onclick    =()=>{ recSave().catch(()=>toast('Sauvegarde impossible (stockage local indisponible)')); };
+/* timeline replay : drag = viser (affichage seul), relâcher = saut effectif */
+(function(){
+  const tk=$('rbTrack'); if(!tk)return;
+  const xToT=e=>{ const r=tk.getBoundingClientRect(); const x=(e.touches&&e.touches.length?e.touches[0].clientX:e.clientX)-r.left; return Math.max(0,Math.min(1,x/r.width))*REPL.dur; };
+  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!REPL.on)return; e.preventDefault(); REPL.scrub=xToT(e); replTickUi(REPL.scrub); },{passive:false}));
+  ['touchend','touchcancel'].forEach(ev=>tk.addEventListener(ev,()=>{ if(!REPL.on)return; if(REPL.scrub!=null){ replaySeek(REPL.scrub); REPL.scrub=null; } }));
+  tk.addEventListener('mousedown',e=>{ if(!REPL.on)return; replaySeek(xToT(e)); });
+})();
 $('epCsvDl').onclick   =()=>dl(csvBlob(),'sonometre_'+stamp()+'.csv');
 $('epPngShare').onclick=()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>shareOrDownload(b,'sonometre_'+stamp()+'.png','Graphe sonomètre CETIM'),'image/png'); };
 $('epPngDl').onclick   =()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>dl(b,'sonometre_'+stamp()+'.png'),'image/png'); };
