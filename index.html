@@ -35,7 +35,7 @@ if('serviceWorker' in navigator){
     --mono:"SF Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
-  html,body{height:100%}
+  html,body{height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
   html{
     background:
       repeating-linear-gradient(90deg, rgba(255,255,255,.028) 0 1px, transparent 1px 3px),
@@ -232,9 +232,9 @@ if('serviceWorker' in navigator){
   /* écran VALEURS */
   #paneVal{overflow:hidden}
   .valtable{display:grid;grid-template-columns:1fr 1fr;gap:5px;height:calc(100% - 16px);align-content:start}
-  .valtable .cell{background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:6px 6px 7px;text-align:center;min-height:0}
+  .valtable .cell{background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:6px 6px 7px;text-align:center;min-height:0;overflow:hidden}
   .valtable .cell.hero{grid-column:span 2;padding:8px}
-  .valtable .cell.hero .v{font-size:38px}
+  .valtable .cell.hero .v{font-size:38px;line-height:1}
   .valtable .cell.hero .k{font-size:11px;letter-spacing:.2em}
   .valsec{grid-column:span 2;display:flex;justify-content:space-around;gap:6px;flex-wrap:wrap;
     font-size:11px;color:#5F7FB8;padding:6px 4px;border-top:1px solid rgba(79,195,255,.10);margin-top:2px}
@@ -255,7 +255,7 @@ if('serviceWorker' in navigator){
   .ep-figs label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#cfe3ff;cursor:pointer}
   .ep-figs input{width:18px;height:18px;accent-color:#4FC3FF}
   .valtable .k{font-size:10px;letter-spacing:.06em;color:var(--lcd-dim);font-weight:700}
-  .valtable .v{font-family:var(--mono);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lcd-ink);text-shadow:0 0 8px rgba(79,195,255,.3)}
+  .valtable .v{font-family:var(--mono);font-size:20px;line-height:1.05;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lcd-ink);text-shadow:0 0 8px rgba(79,195,255,.3)}
   .valtable .v.red{color:#FF6B7A;text-shadow:0 0 8px rgba(239,51,70,.5)}
   .valtable .v.small{font-size:13px;line-height:1.3}
 
@@ -461,7 +461,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">1.35.47</div>
+  <div class="splashver" id="splashVer">1.35.48</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
