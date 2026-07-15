@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.37-beta</div>
+  <div class="splashver" id="splashVer">2.0.38-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1413,6 +1413,13 @@ function applyInputHints(){
   if(g2)g2.innerHTML='<b>Clic-glisser</b> : déplacer la vue (ou le curseur).';
   if(g3)g3.innerHTML='<b>Clic</b> : poser un curseur de lecture. <b>Double-clic</b> : réinitialiser la vue (double-clic sur le curseur = le refermer).';
   if(dn)dn.textContent='Affichage uniquement — réglable pendant la mesure · molette de zoom reste active';
+  const gl=$('gestList');
+  if(gl && !$('liGestPC')){
+    gl.insertAdjacentHTML('beforeend',
+      '<li id="liGestPC"><b>Maj+clic</b> : curseur de suivi du maximum (équivalent « deux doigts »).</li>'+
+      '<li><b>Tableau Valeurs</b> : molette, flèches ← →, ou clic sur les points pour changer de page.</li>'+
+      '<li><b>Raccourcis clavier</b> : <b>Espace</b> = démarrer/arrêter · <b>R</b> = réinitialiser la vue · <b>M</b> = curseur max.</li>');
+  }
 }
 
 /* ============ Pondérations IEC 61672 ============ */
@@ -3719,6 +3726,7 @@ function attachZoomPan(id,axis,opts){
   cv.addEventListener('click',e=>{
     if(_supClick){_supClick=false;return;}                     // fin de glissé : pas un tap
     if(overOverlayBtn(e,cv))return;   // tap visant une icône superposée : ignoré
+    if(e.shiftKey&&opts.onTap2){ opts.onTap2(); return; }      // PC : Maj+clic = curseur de suivi du max (équiv. deux doigts)
     if(!opts.onTap)return;
     const r=cv.getBoundingClientRect(), u=uOf(e,r);
     if(u>=0&&u<=1)opts.onTap(TFi(Vof(u)),u);
@@ -5101,7 +5109,31 @@ function showValPage(p){
     const dx=t.clientX-x0, dy=t.clientY-y0;
     if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) showValPage(dx<0?1:0);   // gauche = page 2
   },{passive:true});
+  /* PC : points cliquables + molette pour changer de page */
+  const vd0=$('vd0'), vd1=$('vd1');
+  if(vd0&&vd1){ [vd0,vd1].forEach(d=>{d.style.pointerEvents='auto';d.style.cursor='pointer';});
+    vd0.addEventListener('click',()=>showValPage(0)); vd1.addEventListener('click',()=>showValPage(1)); }
+  pane.addEventListener('wheel',e=>{ if(!IS_PC)return; e.preventDefault(); showValPage(e.deltaY>0?1:0); },{passive:false});
 })();
+/* ===== raccourcis clavier PC ===== */
+document.addEventListener('keydown',e=>{
+  if(!IS_PC)return;
+  const tag=(document.activeElement&&document.activeElement.tagName)||'';
+  if(/INPUT|SELECT|TEXTAREA/.test(tag))return;
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const k=e.key;
+  if(k==='ArrowLeft'&&S.screen==='val'){ e.preventDefault(); showValPage(0); }
+  else if(k==='ArrowRight'&&S.screen==='val'){ e.preventDefault(); showValPage(1); }
+  else if(k===' '){ e.preventDefault(); $('kStart').click(); }                     // Espace = démarrer/arrêter
+  else if(k==='r'||k==='R'){                                                        // R = réinitialiser la vue
+    if(S.screen==='spec'||S.screen==='sgram')resetView();
+    else if(S.screen==='hist'){ S.histView=null; S.histCursor=null; drawHistory(); }
+  }
+  else if(k==='m'||k==='M'){                                                        // M = curseur max (auto)
+    if(S.screen==='spec'){ S.maxCur=!S.maxCur; if(!S.running||S.paused)drawSpectrum(); }
+    else if(S.screen==='sgram'){ S.sgCursor=(S.sgCursor&&S.sgCursor.mode==='auto')?null:{mode:'auto',f:0,L:-99,col:null}; if(!S.running||S.paused)drawSgram(); }
+  }
+});
 
 /* ===== retour haptique sur les boutons =====
    navigator.vibrate fonctionne sur Android/Chrome ; iOS Safari ne le supporte pas
