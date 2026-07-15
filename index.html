@@ -395,7 +395,7 @@ if('serviceWorker' in navigator){
     box-shadow:0 1px 0 #5E3C08, inset 0 2px 6px rgba(94,60,8,.55), 0 0 10px rgba(255,194,75,.5);
     transform:translateY(1px);
   }
-  .key-pause.paused .tico{animation:pauseBlink 1.1s ease-in-out infinite}
+  .key-pause.paused .tico{fill:#1E7A46;filter:drop-shadow(0 0 4px rgba(47,191,131,.8));animation:pauseBlink 1.1s ease-in-out infinite}
   @keyframes pauseBlink{0%,100%{opacity:1}50%{opacity:.45}}
   /* touche désactivée (réglage bloqué pendant la mesure) */
   .key[disabled],.key.locked{opacity:.4;pointer-events:none;filter:saturate(.4)}
@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.6-beta</div>
+  <div class="splashver" id="splashVer">2.0.7-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4193,7 +4193,8 @@ function setLocks(){
 const ICO={
   record:'<svg class="tico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/></svg>',   // START = point d'enregistrement (métaphore enregistreur, pas « lecture »)
   stop:'<svg class="tico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
-  pause:'<svg class="tico" viewBox="0 0 24 24"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>'
+  pause:'<svg class="tico" viewBox="0 0 24 24"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>',
+  play:'<svg class="tico" viewBox="0 0 24 24"><path d="M8 5.6c0-1.2 1.3-1.9 2.3-1.3l9.2 6.4c.9.6.9 1.9 0 2.5l-9.2 6.4c-1 .7-2.3-.1-2.3-1.3V5.6z"/></svg>'
 };
 function setTransport(){
   const key=(S.running?'R':'r')+(S.paused?'P':'p');
@@ -4203,8 +4204,8 @@ function setTransport(){
   $('kStart').classList.toggle('running',S.running);
   $('kStart').setAttribute('aria-label',S.running?'Arrêter':'Démarrer');
   const p=$('kPause');
-  p.querySelector('.kv').innerHTML=ICO.pause;              // ⏸ reste ⏸ (jamais de triangle « lecture »)
-  p.classList.toggle('paused',S.paused);                   // état verrouillé = ambre vif enfoncé
+  p.querySelector('.kv').innerHTML=S.paused?ICO.play:ICO.pause;   // le bouton montre l'ACTION à venir : ▶ vert en pause, ⏸ en lecture
+  p.classList.toggle('paused',S.paused);
   p.setAttribute('aria-label',S.paused?'Reprendre':'Pause');
   p.disabled=!S.running;
 }
