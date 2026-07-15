@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.33-beta** : section SORTIE affiche le **nom de sortie détecté** s'il est exposé (lecture seule sur iOS), sinon message clair "iOS n'expose pas le périphérique de sortie". enumerateDevices ne renvoie en général que les entrées sur iOS → le nom de sortie est le plus souvent indisponible ; l'app le dit honnêtement plutôt que d'afficher un faux "Automatique".
+
 - **2.0.32-beta** : **anti-larsen réécoute ♪ en mode micro + routage replay**. (1) En mode MICRO, activer ♪ demande une **confirmation explicite** (annulable) rappelant d'écouter au CASQUE — iOS/Safari ne permet ni de forcer la sortie casque ni de détecter les écouteurs (setSinkId non supporté), donc la confirmation est le seul garde-fou fiable côté web. En RELECTURE, aucune confirmation (pas de micro → pas de larsen, haut-parleur OK). (2) Au démarrage d'un replay, le **micro est libéré** (tracks stoppés) pour qu'iOS quitte la session enregistrement+lecture et route correctement la réécoute (souvent forcée sur HP quand le micro reste actif) ; réacquis au prochain REC.
 
 - **2.0.31-beta** : **sélecteur de SORTIE (réécoute)** ajouté sous le sélecteur micro dans le menu CALIBRATION. Peuplé via enumerateDevices (audiooutput) ; appliqué au contexte via `AudioContext.setSinkId` si supporté (Chrome/Edge desktop) → `applyOutChoice`, persistant (`S.outId`), réappliqué à la création du contexte. **iOS/Safari ne supporte pas setSinkId** → sélecteur désactivé + note "la sortie est gérée par le système (écouteurs si branchés, sinon haut-parleur)". Honnête sur la limite iPhone.
