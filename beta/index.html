@@ -541,7 +541,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.49-beta</div>
+  <div class="splashver" id="splashVer">2.0.50-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -894,7 +894,7 @@ if('serviceWorker' in navigator){
         <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
         <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
-        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>live</b> et <b>moyenné (Leq)</b> sur toute la durée — libellé « L<i>x</i>·Moy ». Deux débruitages du spectre <b>fin</b> (menu Expert), indépendants du bouton TEMPS : <b>Moyennage (trames)</b> = moyenne de N trames FFT (réduit le bruit, en nombre de trames donc cohérent quel que soit Δf), et <b>Lissage fréquentiel</b> = moyenne 1/n octave sur les raies (nettoie sans latence, n'affecte que la courbe pas les mesures au curseur). Le rapport PDF utilise toujours le spectre moyenné.</li>
+        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>live</b> et <b>moyenné (Leq)</b> sur toute la durée — libellé « L<i>x</i>·Moy ». Deux débruitages du spectre <b>fin</b> (menu Expert), indépendants du bouton TEMPS : <b>Moyennage (trames)</b> = moyenne des N derniers périodogrammes (méthode de Welch, agrégés à pas fixe = fenêtre·(1−overlap), donc « N moyennes » est une vraie grandeur, identique en direct et en replay), et <b>Lissage fréquentiel</b> = moyenne 1/n octave sur les raies (nettoie sans latence, n'affecte que la courbe pas les mesures au curseur). Le rapport PDF utilise toujours le spectre moyenné.</li>
       </ul>
 
       <h3>Indices</h3>
@@ -1600,15 +1600,19 @@ function configureAnalyser(){
     S.bandPowS=new Float32Array(nb);
     S.bandPowV=new Float32Array(nb);
     S.bandPowD=new Float32Array(nb);
+    S.curBnd=new Float32Array(nb);
     S.bandEnergy=new Float64Array(nb);
     S.bandPeak=new Float32Array(nb).fill(-99);
+    S.welch=null;
   }
   if(!S.binPowF||S.binPowF.length!==n){
     S.binPowF=new Float32Array(n);
     S.binPowS=new Float32Array(n);
     S.binPowV=new Float32Array(n);
     S.binPowD=new Float32Array(n);
+    S.curFin=new Float32Array(n);
     S.binEnergy=new Float64Array(n);
+    S.welch=null;
   }
   S.iirBank=null;                      // le banc IIR dépend de fs/binHz/compGain : reconstruit
   SG.init=false;                       // recartographie bins→lignes (les données sgram sont préservées par sgSetup)
@@ -2182,6 +2186,7 @@ function computeSpectrum(){
 function resetMeasure(){
   S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0}; S.pV={A:0,C:0,Z:0};
   S.lvlDet=null;                       // détecteur temporel : reconstruit + re-calé au prochain bloc
+  S.welch=null;                        // moyennage spectre (Welch) : repart propre
   S.eq={A:0,C:0,Z:0}; S.eqT=0;
   S.lafMax=-Infinity; S.lafMin=Infinity;
   S.lcPeak=-Infinity; S.L10=-99; S.L50=-99; S.L90=-99; S.statT=0;
@@ -2215,6 +2220,34 @@ function clearPeak(){ S.lafMax=-Infinity; S.lafMin=Infinity; S.peakHold=0; if(S.
 
 /* ================= Boucle ================= */
 const lvl=p=>p>0?10*Math.log10(p)+S.offset:-99;
+/* Moyennage temporel du spectre façon WELCH : moyenne des N derniers périodogrammes,
+   agrégés à PAS FIXE = fenêtre·(1−overlap) (donc « N moyennes » est une vraie grandeur,
+   avec un recouvrement défini, identique en direct et — via renderReplayFrame — en replay).
+   N=1 → live pur (chaque trame). L'affichage reste rafraîchi à chaque frame ; on n'agrège
+   une nouvelle FFT que lorsqu'un pas s'est écoulé (sinon le spectre affiché reste stable). */
+function welchUpdate(ts){
+  const N=Math.max(1,S.specFrames|0), n=S.curFin?S.curFin.length:0, nb=S.curBnd?S.curBnd.length:0;
+  if(!n){ return; }
+  if(N<=1){ S.binPowD.set(S.curFin); S.bandPowD.set(S.curBnd); return; }
+  let W=S.welch;
+  if(!W||W.N!==N||W.n!==n||W.nb!==nb){
+    W={N,n,nb,fin:[],bnd:[],sumFin:new Float32Array(n),sumBnd:new Float32Array(nb),pos:0,count:0,foldT:ts};
+    for(let j=0;j<N;j++){ W.fin.push(new Float32Array(n)); W.bnd.push(new Float32Array(nb)); }
+    S.welch=W;
+  }
+  const fs=S.ctx?S.ctx.sampleRate:48000;
+  const hopMs=1000*(S.fftN*(1-S.overlap))/fs;          // pas d'analyse (Welch)
+  if(W.count===0 || (ts-W.foldT)>=hopMs){
+    W.foldT=ts;
+    const sf=W.fin[W.pos], sb=W.bnd[W.pos], SF=W.sumFin, SB=W.sumBnd, cf=S.curFin, cb=S.curBnd;
+    for(let i=0;i<n;i++){ SF[i]+=cf[i]-sf[i]; sf[i]=cf[i]; }      // somme glissante : retire l'ancien, ajoute le nouveau
+    for(let b=0;b<nb;b++){ SB[b]+=cb[b]-sb[b]; sb[b]=cb[b]; }
+    W.pos=(W.pos+1)%N; if(W.count<N)W.count++;
+    const inv=1/W.count;
+    for(let i=0;i<n;i++)S.binPowD[i]=SF[i]*inv;
+    for(let b=0;b<nb;b++)S.bandPowD[b]=SB[b]*inv;
+  }
+}
 function loop(ts){
   S.raf=requestAnimationFrame(loop);
   if(!S.lastT){S.lastT=ts;return;}
@@ -2294,12 +2327,11 @@ function loop(ts){
   for(const k of ['A','C','Z']){ const p=k==='A'?pA:k==='C'?pC:pZ; if(!idle) S.eq[k]+=p*dt; }
   if(!idle) S.eqT+=dt;
   const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
-  /* Spectre : moyennage temporel exprimé en NOMBRE DE TRAMES (cohérent quel que soit Δf).
-     specFrames=1 → live pur ; N>1 → moyenne exponentielle équivalente à N trames (a=(N-1)/N).
-     Le lissage fréquentiel (1/n oct) est appliqué à l'affichage. MOY (Leq) = vue séparée. */
-  const aN = S.specFrames>1 ? (S.specFrames-1)/S.specFrames : 0;
+  /* Spectre : moyennage temporel de type WELCH — on empile la trame FFT courante dans un tampon
+     puis on l'agrège (moyenne des N derniers périodogrammes) à PAS FIXE = fenêtre·(1−overlap).
+     Ici on ne fait que capturer la trame courante ; l'agrégation se fait dans welchUpdate(). */
   for(let b=0;b<nb;b++){
-    S.bandPowD[b]=aN*S.bandPowD[b]+(1-aN)*bp[b];
+    S.curBnd[b]=bp[b];
     if(!idle) S.bandEnergy[b]+=bp[b]*dt;
   }
   /* corrélation vibro-acoustique : instantané à ~20 Hz quand VIB est actif.
@@ -2326,14 +2358,15 @@ function loop(ts){
       }
     }
   }
-  /* spectre fin : moyennage temporel (trames) + cumul d'énergie pour la MOY */
+  /* spectre fin : trame courante dans curFin + cumul d'énergie pour la MOY */
   for(let i=1;i<n;i++){
     let p=mag[i]; if(!isFinite(p))p=0;
     if(S.corr!=='off')p*=S.compGain[i];
     p*=K;
-    S.binPowD[i]=aN*S.binPowD[i]+(1-aN)*p;
+    S.curFin[i]=p;
     if(!idle&&S.binEnergy)S.binEnergy[i]+=p*dt;   // énergie cumulée par bin → spectre Leq moyenné (rapport)
   }
+  welchUpdate(ts);                                 // agrège les N derniers périodogrammes (pas fixe + overlap) → binPowD/bandPowD
 
   /* ===== NIVEAU LARGE BANDE — pondération temporelle exacte (Option 2) =====
      Les niveaux instantanés A/C/Z (LAF/LAS/LV), le LCpeak et le banc IEC sont calculés
