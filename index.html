@@ -244,7 +244,7 @@ if('serviceWorker' in navigator){
   @keyframes blink{50%{opacity:.2}}
 
   .mainrow{display:flex;align-items:baseline;justify-content:center;gap:8px;flex:0 0 auto;margin-top:2px}
-  .numwrap{font-family:var(--mono);font-size:clamp(44px,13vw,64px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;white-space:pre}
+  .numwrap{font-family:var(--mono);font-size:clamp(38px,11vw,54px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;white-space:pre}
   .numwrap .num{color:#F2FAFF;text-shadow:0 0 14px rgba(79,195,255,.45),0 0 3px rgba(79,195,255,.6)}
   .mainrow .unit{font-size:14px;font-weight:700;color:var(--lcd-dim)}
   .mainrow .lbl{font-size:12px;font-weight:700;color:var(--ice);letter-spacing:.1em;text-shadow:0 0 8px rgba(79,195,255,.5)}
@@ -377,13 +377,13 @@ if('serviceWorker' in navigator){
   .progress .p{height:100%;width:0%;background:var(--red);box-shadow:0 0 6px rgba(239,51,70,.7)}
 
   /* ---------- CLAVIER PHYSIQUE ---------- */
-  .keypad{flex:0 0 auto;display:flex;flex-direction:column;gap:7px;
-    margin-top:10px;padding:9px 8px 10px;border-radius:16px;
+  .keypad{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;
+    margin-top:8px;padding:7px 8px 8px;border-radius:16px;
     background:linear-gradient(180deg,var(--plate0),var(--plate1));
     box-shadow:inset 0 2px 6px rgba(0,0,0,.55), inset 0 -1px 0 rgba(255,255,255,.05), 0 1px 0 rgba(255,255,255,.06)}
-  .krow{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .krow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
   .key{
-    border:0;border-radius:12px;min-height:52px;cursor:pointer;color:#fff;
+    border:0;border-radius:12px;min-height:45px;cursor:pointer;color:#fff;
     background:
       radial-gradient(130% 100% at 50% -10%, rgba(255,255,255,.13), transparent 48%),
       linear-gradient(180deg,var(--key-top) 0%,var(--key-mid) 45%,var(--key-bot) 100%);
@@ -541,7 +541,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.52-beta</div>
+  <div class="splashver" id="splashVer">2.0.53-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
