@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.7-beta</div>
+  <div class="splashver" id="splashVer">2.0.8-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1616,24 +1616,32 @@ function replaySeek(t){
   beginRun(); S.lcLastCt=S.ctx.currentTime;   // intégration et filtres temporels repartent ici
   replTickUi(t);
 }
-async function replayStart(id){
+async function replayStart(id,startAt){
   if(S.running){ toast('Arrête la mesure en cours avant de rejouer'); return; }
-  let meta=null, segs=[];
-  try{ meta=(await recList()).find(r=>r.id===id); segs=meta?await recSegs(id):[]; }catch(_){}
-  if(!meta||!segs.length){ toast('Enregistrement introuvable'); return; }
-  if(!S.ctx){ try{ S.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ toast('Audio indisponible'); return; } }
+  startAt=Math.max(0,startAt||0);
+  let meta=null, buf=null;
+  if(REPL.buf&&REPL.meta&&REPL.meta.id===id){ meta=REPL.meta; buf=REPL.buf; }   // relance instantanée (buffer conservé)
+  else{
+    let segs=[];
+    try{ meta=(await recList()).find(r=>r.id===id); segs=meta?await recSegs(id):[]; }catch(_){}
+    if(!meta||!segs.length){ toast('Enregistrement introuvable'); return; }
+    if(!S.ctx){ try{ S.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ toast('Audio indisponible'); return; } }
+    if(S.ctx.state!=='running'){ try{ await S.ctx.resume(); }catch(_){} }
+    if(!S.analyser){ S.analyser=S.ctx.createAnalyser(); }
+    configureAnalyser();
+    /* PCM int16 → AudioBuffer à la fs d'origine (resamplé à la lecture si besoin) */
+    buf=S.ctx.createBuffer(1,meta.len,meta.fs||S.ctx.sampleRate);
+    const ch=buf.getChannelData(0); let o=0;
+    for(const s of segs){ for(let i=0;i<s.length;i++)ch[o++]=s[i]/32768; }
+  }
+  if(!S.ctx){ toast('Audio indisponible'); return; }
   if(S.ctx.state!=='running'){ try{ await S.ctx.resume(); }catch(_){} }
-  if(!S.analyser){ S.analyser=S.ctx.createAnalyser(); }
-  configureAnalyser();
-  /* PCM int16 → AudioBuffer à la fs d'origine (resamplé à la lecture si besoin) */
-  const buf=S.ctx.createBuffer(1,meta.len,meta.fs||S.ctx.sampleRate);
-  const ch=buf.getChannelData(0); let o=0;
-  for(const s of segs){ for(let i=0;i<s.length;i++)ch[o++]=s[i]/32768; }
+  startAt=Math.min(startAt,Math.max(0,buf.duration-0.05));
   if(S.srcNode){ try{S.srcNode.disconnect();}catch(_){}}   // micro écarté (rebranché à la fin)
   REPL.savedOff=S.offset; if(typeof meta.offset==='number')S.offset=meta.offset;
   const src=S.ctx.createBufferSource(); src.buffer=buf; src.connect(S.analyser);
   REPL.on=true; REPL.src=src; REPL.buf=buf; REPL.meta=meta;
-  REPL.dur=buf.duration; REPL.startOff=0; REPL.scrub=null; REPL.pendingSeek=null; REPL.lastId=meta.id;
+  REPL.dur=buf.duration; REPL.startOff=startAt; REPL.scrub=null; REPL.pendingSeek=null; REPL.lastId=meta.id;
   $('rbReplay').style.display='none';
   resetMeasure();
   S.running=true; S.paused=false; S.lastT=0;
@@ -1642,9 +1650,9 @@ async function replayStart(id){
   beginRun();
   setTransport(); setLocks();
   src.onended=()=>{ if(REPL.on&&REPL.src===src) stopMeasure(true); };
-  src.start();
+  src.start(0,startAt);
   REPL.startCt=S.ctx.currentTime;
-  $('replBar').classList.add('on'); $('rbDur').textContent=rbFmt(REPL.dur); replTickUi(0);
+  $('replBar').classList.add('on'); $('rbDur').textContent=rbFmt(REPL.dur); replTickUi(startAt);
   clearInterval(REPL.tick);
   REPL.tick=setInterval(()=>{ if(REPL.scrub==null&&REPL.pendingSeek==null) replTickUi(replPos()); },200);
   try{S.wake=null;}catch(_){}
@@ -1660,7 +1668,10 @@ function replayTeardown(){
   $('replBar').classList.remove('on');
   try{ REPL.src&&(REPL.src.onended=null); REPL.src&&REPL.src.stop(); }catch(_){}
   try{ REPL.src&&REPL.src.disconnect(); }catch(_){}
-  REPL.src=null; REPL.buf=null; REPL.scrub=null;
+  REPL.src=null; REPL.scrub=null;
+  /* buffer et meta CONSERVÉS tant que la barre est affichée : glisser après la fin
+     relance instantanément au point visé, sans relire la base. Libérés dès qu'une
+     mesure micro démarre (voir ui()). */
   if(REPL.savedOff!=null){ S.offset=REPL.savedOff; REPL.savedOff=null; }
   if(S.ctx&&S.ctx.state==='suspended'){ try{S.ctx.resume();}catch(_){} }
   if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} arecWire(); }  // retour micro
@@ -3552,7 +3563,7 @@ function ui(){
   if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
   else if(S.running&&!S.paused){ if(REPL.on){badge.textContent='REPLAY';badge.className='badge replay';} else {badge.textContent='MESURE';badge.className='badge rec';} }
   else if(S.paused){badge.textContent=REPL.on?'REPLAY · PAUSE':'PAUSE';badge.className='badge';}
-  if(S.running&&!REPL.on)$('replBar').classList.remove('on');   // mesure micro : la barre replay disparaît
+  if(S.running&&!REPL.on){$('replBar').classList.remove('on'); REPL.buf=null; REPL.meta=null;}   // mesure micro : barre masquée, buffer libéré
   ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
   $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
   $('bottomStrip').style.visibility = S.screen==='val' ? 'hidden' : 'visible';   // redondant sur Valeurs
@@ -4570,10 +4581,14 @@ $('arecSave').onclick    =()=>{ recSave().catch(()=>toast('Sauvegarde impossible
   const tk=$('rbTrack'); if(!tk)return;
   let lastTouch=0;
   const xToT=e=>{ const r=tk.getBoundingClientRect(); const x=(e.touches&&e.touches.length?e.touches[0].clientX:(e.changedTouches&&e.changedTouches.length?e.changedTouches[0].clientX:e.clientX))-r.left; return Math.max(0,Math.min(1,x/r.width))*REPL.dur; };
-  const commit=t=>{ if(S.paused){ REPL.pendingSeek=t; replTickUi(t); } else { replaySeek(t); } };
-  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!REPL.on)return; e.preventDefault(); lastTouch=Date.now(); REPL.scrub=xToT(e); replTickUi(REPL.scrub); },{passive:false}));
-  ['touchend','touchcancel'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!REPL.on)return; e.preventDefault(); lastTouch=Date.now(); if(REPL.scrub!=null){ commit(REPL.scrub); REPL.scrub=null; } },{passive:false}));
-  tk.addEventListener('mousedown',e=>{ if(!REPL.on)return; if(Date.now()-lastTouch<700)return; commit(xToT(e)); });
+  const canScrub=()=>REPL.on||(!S.running&&REPL.lastId&&REPL.dur>0&&$('replBar').classList.contains('on'));
+  const commit=t=>{
+    if(REPL.on){ if(S.paused){ REPL.pendingSeek=t; replTickUi(t); } else replaySeek(t); }
+    else replayStart(REPL.lastId,t);                       // lecture finie : glisser relance au point visé
+  };
+  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); REPL.scrub=xToT(e); replTickUi(REPL.scrub); },{passive:false}));
+  ['touchend','touchcancel'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); if(REPL.scrub!=null){ commit(REPL.scrub); REPL.scrub=null; } },{passive:false}));
+  tk.addEventListener('mousedown',e=>{ if(!canScrub())return; if(Date.now()-lastTouch<700)return; commit(xToT(e)); });
 })();
 $('rbReplay').onclick=()=>{ if(REPL.lastId&&!S.running) replayStart(REPL.lastId); };
 $('epCsvDl').onclick   =()=>dl(csvBlob(),'sonometre_'+stamp()+'.csv');
