@@ -437,6 +437,20 @@ if('serviceWorker' in navigator){
   }
   .key-pause.paused .tico{fill:#1E7A46;filter:drop-shadow(0 0 4px rgba(47,191,131,.8));animation:pauseBlink 1.1s ease-in-out infinite}
   @keyframes pauseBlink{0%,100%{opacity:1}50%{opacity:.45}}
+  /* LECTURE : bouton VERT, triangle BLANC (réécoute / relance d'un enregistrement) */
+  .key-pause.playgreen{
+    background:linear-gradient(180deg,#3FD37E 0%,#22A55B 45%,#12703D 100%);
+    box-shadow:0 3px 0 #0A4022, inset 0 1px 0 rgba(255,255,255,.30);
+  }
+  .key-pause.playgreen:active{transform:translateY(2px);box-shadow:0 1px 0 #0A4022, inset 0 1px 0 rgba(255,255,255,.30)}
+  .key-pause.playgreen .tico{fill:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  /* ENREGISTREMENT EN PAUSE : icône pause conservée + halo pulsé (pas de triangle vert) */
+  .key-pause.pausedrec{ animation:pauseGlow 1.6s ease-in-out infinite; }
+  .key-pause.pausedrec .tico{ animation:pauseBlink 1.2s ease-in-out infinite; }
+  @keyframes pauseGlow{
+    0%,100%{ box-shadow:0 3px 0 #5E3C08, inset 0 1px 0 rgba(255,255,255,.30), 0 0 0 0 rgba(255,194,75,.5) }
+    50%{ box-shadow:0 3px 0 #5E3C08, inset 0 1px 0 rgba(255,255,255,.30), 0 0 13px 2px rgba(255,194,75,.65) }
+  }
   /* touche désactivée (réglage bloqué pendant la mesure) */
   .key[disabled],.key.locked{opacity:.4;pointer-events:none;filter:saturate(.4)}
   .key.locked::after{content:"🔒";position:absolute;top:5px;right:7px;font-size:9px;opacity:.7}
@@ -519,7 +533,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.41-beta</div>
+  <div class="splashver" id="splashVer">2.0.42-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4733,17 +4747,29 @@ const ICO={
 function setTransport(){
   const loaded=replFileLoaded();
   const showStop = S.running || REPL.on || loaded;                 // stop tant qu'une mesure/replay tourne OU qu'un fichier est chargé
-  const paused = REPL.on ? !REPL.playing : (loaded ? true : S.paused);
-  const key=(showStop?'R':'r')+(paused?'P':'p');
+  const replayCtx = REPL.on || loaded;                             // contexte LECTURE (replay ou fichier chargé)
+  const replayPaused = REPL.on ? !REPL.playing : (loaded ? true : false);
+  const recPaused = !replayCtx && S.running && S.paused;           // ENREGISTREMENT en pause
+  const key=(showStop?'R':'r')+'|'+(replayCtx?(replayPaused?'gp':'gl'):(recPaused?'rp':'rr'));
   if(S._transport===key)return;                 // rien n'a changé : ne pas re-rendre les SVG
   S._transport=key;
   $('kStart').querySelector('.kv').innerHTML=showStop?ICO.stop:ICO.record;
   $('kStart').classList.toggle('running',showStop);
   $('kStart').setAttribute('aria-label',showStop?'Arrêter':'Démarrer');
   const p=$('kPause');
-  p.querySelector('.kv').innerHTML=paused?ICO.play:ICO.pause;   // ▶ vert quand la lecture est en pause, ⏸ en lecture
-  p.classList.toggle('paused',paused);
-  p.setAttribute('aria-label',paused?'Reprendre':'Pause');
+  if(replayCtx){
+    /* LECTURE : play/pause — bouton VERT à triangle BLANC quand on peut lire */
+    p.querySelector('.kv').innerHTML = replayPaused ? ICO.play : ICO.pause;
+    p.classList.remove('pausedrec','paused');
+    p.classList.toggle('playgreen', replayPaused);
+    p.setAttribute('aria-label', replayPaused?'Lire':'Pause');
+  }else{
+    /* ENREGISTREMENT : TOUJOURS l'icône pause ; en pause = effet lumineux (jamais de triangle vert) */
+    p.querySelector('.kv').innerHTML = ICO.pause;
+    p.classList.remove('playgreen','paused');
+    p.classList.toggle('pausedrec', recPaused);
+    p.setAttribute('aria-label', recPaused?'Reprendre':'Pause');
+  }
   p.disabled=!(S.running||REPL.on||loaded);
 }
 /* ===== menu DÉCLENCHEMENT (appui long sur Démarrer) ===== */
