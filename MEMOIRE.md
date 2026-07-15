@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.9-beta** : **zones mortes autour des icônes superposées**. Un tap qui vise (ou frôle à < 10 px) un bouton posé sur un graphe (3D, LSN, MOY, ÉMG…) ne déclenche plus le canvas en dessous (curseur/zoom intempestifs, surtout spectrogramme 3D). Helper `overOverlayBtn(e,cv)` (rect élargi M=10 px des boutons **visibles** du même panneau) inséré en garde en tête des **4 gestionnaires** de gestes canvas (`attachZoomPan` touchstart+click, rotation 3D, 4e canvas) — return AVANT `preventDefault`, le bouton reçoit son tap normalement. **Correctif porté sur main (1.35.46)** : bug présent en V1 aussi.
+
 - **2.0.8-beta** : **barre vivante après la fin**. Lecture finie (ou stoppée), glisser la barre **relance le replay au point visé** et les graphes repartent — équivalent lecteur audio. Pour ça : `replayStart(id, startAt)` (démarrage à un offset, `src.start(0,startAt)`), le **buffer et les meta sont CONSERVÉS au teardown** tant que la barre est affichée → relance **instantanée** sans relire IndexedDB ni redécoder ; libérés dès qu'une mesure micro démarre (`ui()`). Gestes de la piste : `canScrub()` = replay actif OU (fini + barre visible + `lastId`) ; commit → seek (lecture), pendingSeek (pause) ou `replayStart(lastId,t)` (fini).
 
 - **2.0.7-beta** : **bouton pause ⇄ lecture**. En pause, la touche affiche **▶ vert** (triangle `ICO.play`, fill `#1E7A46` + halo vert, pulse conservé) sur le fond ambre enfoncé ; en lecture, **⏸**. Le bouton montre l'**action à venir**, pas l'état — inverse le choix historique « ⏸ reste ⏸ » (commentaire retiré) sur demande. Vaut pour mesure ET replay (même touche).
@@ -123,6 +125,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 - **2.0.1-beta** : **chantier 1 — capture audio + export WAV**. Captage **continu** par `ScriptProcessorNode(4096)` dédié (`AREC`, l'AnalyserNode d'affichage perd des échantillons entre frames), raccordé à un gain muet vers destination (obligatoire iOS), recâblé à chaque `acquireMic()`. Blocs **Int16** empilés uniquement pendant la mesure effective — mêmes règles que le Leq : rien si `!running`, `paused` ou `S._idle` (miroir du drapeau d'armement posé dans updateNumbers). Reset à chaque `beginRun` si actif. **Garde-fou 20 min** (~115 Mo, arrêt propre + état « plein »). UI : popover export, section **AUDIO · V2 BÊTA** (toggle persisté `recAudio`, état durée/taille/fs, boutons Partager/Télécharger WAV). Encodeur **WAV PCM16 mono** (en-tête RIFF 44 o, fs réelle du contexte). Splash `2.0.1-beta` ; pas de SW sur /beta/.
 
 ## 8ter. Journal des versions (V1 / main)
+
+- **1.35.46** : **zones mortes autour des icônes superposées** (portage du correctif 2.0.9-beta) : un tap visant un bouton posé sur un graphe ne pose plus de curseur ni ne déclenche le zoom du canvas en dessous (garde `overOverlayBtn`, marge 10 px, 4 gestionnaires).
 
 - **1.35.45** : **infra canal beta V2**. Le service worker de main **exclut les chemins `/beta/`** de son interception (sinon il écrasait le cache `./index.html` de la V1 avec la page beta en ligne, et servait la V1 sur /beta/ hors-ligne). Aucun changement fonctionnel de l'app V1 (bump de version pour la traçabilité et la diffusion du SW).
 
