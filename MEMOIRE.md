@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.41-beta** : lisere LED rotatif autour du bezel comme indicateur d'enregistrement (leger). Comete rouge parcourant le contour via `.bezel::before` (anneau conic-gradient masque padding + mask-composite exclude, angle anime par @property --ledA, keyframes ledSpin 2.6s). Active par `body.rec-on` (toggle dans ui() : S.running && !paused && !REPL.on && !warm ; retire dans stopMeasure). Repli prefers-reduced-motion : pulsation douce. Pas en INIT/pause/replay.
+
 - **2.0.40-beta** : lisibilite PC des listes deroulantes micro/sortie/gain (.micsel). La liste native ouverte s'affichait sur fond blanc avec texte clair herite (var(--lcd-ink)) = illisible. Ajout `.micsel option{color:#0A1F42;background:#fff}` + `.micsel{color-scheme:light}`. Correctif CSS seul.
 
 - **2.0.39-beta** : (1) MESURE Réinit efface desormais AUSSI le curseur du spectre (S.cursor) et le suivi de max (S.maxCur) — ajoutes dans resetMeasure (les curseurs spectro/evolution etaient deja effaces). (2) Appui LONG sur DUREE ouvre un sous-menu (popover durPop) : presets ∞/10s/30s/1min/5min/15min + champ duree PERSONNALISEE en secondes (borne 24 h ; 0/vide = ∞). Appui COURT sur DUREE = cycle rapide inchange. Nouveau formateur durLabel() gere l'affichage des durees perso hors liste (kDurV + tLine). Popover verrouille si mesure/replay en cours.
