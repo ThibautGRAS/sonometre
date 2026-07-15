@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.27-beta</div>
+  <div class="splashver" id="splashVer">2.0.28-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1654,21 +1654,35 @@ async function replBuildFrames(buf){
   const nb=S.bands.length, bins=S.bandBins, wA=S.wA, wC=S.wC, corr=S.corr!=='off'?S.compGain:null;
   const hop=Math.max(Math.round(fs*0.05), Math.round(N/4));
   const count=Math.max(1,Math.floor((pcm.length-N)/hop)+1);
-  const F={ fs, hop, hopSec:hop/fs, N, nb, count,
+  /* ===== grille bande fine RÉDUITE (log) pour le spectre suivant le curseur + MOY fine =====
+     l'écran n'affiche pas 4096 lignes ; on réduit à RES lignes log-fréquence, borné par un
+     budget mémoire (~40 Mo pour 4 pistes) → RES plus faible sur enregistrements très longs. */
+  const binHz=fs/N, f0=Math.max(20,binHz), f1=fs/2, lr0=Math.log(f0), lr1=Math.log(f1);
+  let RES=Math.max(48,Math.min(256,Math.floor(40e6/(16*Math.max(1,count)))));
+  const finMap=new Int16Array(n), finCnt=new Float32Array(RES);
+  for(let k=1;k<n;k++){ const f=k*binHz; let r=Math.floor(RES*(Math.log(f)-lr0)/(lr1-lr0)); if(r<0)r=0; if(r>=RES)r=RES-1; finMap[k]=r; finCnt[r]++; }
+  for(let r=0;r<RES;r++) if(finCnt[r]===0) finCnt[r]=1;
+  const F={ fs, hop, hopSec:hop/fs, N, nb, count, binHz,
+    finRES:RES, finMap, finF:new Float32Array(RES),
     wAfc:new Float64Array(nb), wCfc:new Float64Array(nb),
     band:new Array(count), A:new Float64Array(count), C:new Float64Array(count), Z:new Float64Array(count),
     cumBand:new Array(count), cumA:new Float64Array(count), cumC:new Float64Array(count), cumZ:new Float64Array(count),
-    LAF:new Float64Array(count), maxLAF:new Float64Array(count), minLAF:new Float64Array(count), maxC:new Float64Array(count) };
+    LAF:new Float64Array(count), maxLAF:new Float64Array(count), minLAF:new Float64Array(count), maxC:new Float64Array(count),
+    cumFine:new Float32Array(count*RES), tFfine:new Float32Array(count*RES), tSfine:new Float32Array(count*RES), tVfine:new Float32Array(count*RES) };
+  for(let r=0;r<RES;r++) F.finF[r]=Math.exp(lr0+(r+0.5)/RES*(lr1-lr0));
   for(let b=0;b<nb;b++){ const fc=S.bands[b]; F.wAfc[b]=Math.pow(10,aWeight(fc)/10); F.wCfc[b]=Math.pow(10,cWeight(fc)/10); }
   const re=new Float64Array(N), im=new Float64Array(N);
   const run=new Float64Array(nb);
+  const dtS=F.hopSec, aF=Math.exp(-dtS/0.125), aS=Math.exp(-dtS/1.0), aV=Math.exp(-dtS/10.0);
+  const finSum=new Float32Array(RES), runFine=new Float32Array(RES), fFine=new Float32Array(RES), sFine=new Float32Array(RES), vFine=new Float32Array(RES);
   let runA=0,runC=0,runZ=0,mxL=-Infinity,mnL=Infinity,mxC=-Infinity;
   for(let f=0;f<count;f++){
     const off=f*hop;
     let Pt=0; for(let i=0;i<N;i++){ const s=pcm[off+i]||0; re[i]=s*w[i]; im[i]=0; Pt+=s*s; } Pt/=N;
     fft(re,im);
     let pA=0,pC=0,pZ=0; const norm=2/ws2;
-    for(let i=1;i<n;i++){ let p=(re[i]*re[i]+im[i]*im[i])*norm; if(corr)p*=corr[i]; pZ+=p; pA+=p*wA[i]; pC+=p*wC[i]; }
+    finSum.fill(0);
+    for(let i=1;i<n;i++){ let p=(re[i]*re[i]+im[i]*im[i])*norm; if(corr)p*=corr[i]; pZ+=p; pA+=p*wA[i]; pC+=p*wC[i]; finSum[finMap[i]]+=p; }
     const bd=new Float32Array(nb);
     for(let b=0;b<nb;b++){ const i0=bins[b][0],i1=bins[b][1]; let s=0; for(let i=i0;i<=i1;i++){ let p=(re[i]*re[i]+im[i]*im[i])*norm; if(corr)p*=corr[i]; s+=p; } bd[b]=s; }
     const K=(pZ>0&&Pt>0&&isFinite(Pt))?Pt/pZ:1;   // recalage Parseval par trame
@@ -1679,12 +1693,18 @@ async function replBuildFrames(buf){
     const laf=pA>0?10*Math.log10(pA)+S.offset:-99, lcf=pC>0?10*Math.log10(pC)+S.offset:-99;
     F.LAF[f]=laf; if(laf>mxL)mxL=laf; if(laf<mnL)mnL=laf; if(lcf>mxC)mxC=lcf;
     F.maxLAF[f]=mxL; F.minLAF[f]=mnL; F.maxC[f]=mxC;
-    if((f&255)===0){ $('rbCur').textContent='…'+Math.round(100*f/count)+'%'; await new Promise(r=>setTimeout(r,0)); }
+    /* spectre fin réduit : moyenne de puissance par ligne, recalée Parseval ; cumul + lissage F/S/V */
+    const base=f*RES;
+    for(let r=0;r<RES;r++){
+      const inst=finSum[r]/finCnt[r]*K;
+      runFine[r]+=inst; F.cumFine[base+r]=runFine[r];
+      if(f===0){ fFine[r]=sFine[r]=vFine[r]=inst; }
+      else{ fFine[r]=aF*fFine[r]+(1-aF)*inst; sFine[r]=aS*sFine[r]+(1-aS)*inst; vFine[r]=aV*vFine[r]+(1-aV)*inst; }
+      F.tFfine[base+r]=fFine[r]; F.tSfine[base+r]=sFine[r]; F.tVfine[base+r]=vFine[r];
+    }
+    if((f&127)===0){ $('rbCur').textContent='…'+Math.round(100*f/count)+'%'; await new Promise(r=>setTimeout(r,0)); }
   }
-  /* ===== pistes temporelles Fast/Slow/V-Slow (mêmes constantes que le direct) =====
-     filtre exponentiel déroulé sur les trames : niveau[i]=α·niveau[i-1]+(1-α)·inst[i].
-     Le slider lira l'index → changer TEMPS en replay = changer de piste (instantané). */
-  const dtS=F.hopSec, aF=Math.exp(-dtS/0.125), aS=Math.exp(-dtS/1.0), aV=Math.exp(-dtS/10.0);
+  /* ===== pistes temporelles Fast/Slow/V-Slow large-bande + tiers d'octave ===== */
   for(const k of ['A','C','Z']){ F['tF'+k]=new Float64Array(count); F['tS'+k]=new Float64Array(count); F['tV'+k]=new Float64Array(count); }
   F.tFband=new Array(count); F.tSband=new Array(count); F.tVband=new Array(count);
   let fA=F.A[0],fC=F.C[0],fZ=F.Z[0], sA=fA,sC=fC,sZ=fZ, vA=fA,vC=fC,vZ=fZ;
@@ -1725,12 +1745,16 @@ function renderReplayFrame(i){
   const bF=F.tFband[i], bS=F.tSband[i], bV=F.tVband[i];
   for(let b=0;b<F.nb;b++){ const g=wfc?wfc[b]:1; S.bandPowF[b]=bF[b]*g; S.bandPowS[b]=bS[b]*g; S.bandPowV[b]=bV[b]*g; }
   S.lafMax=F.maxLAF[i]; S.lafMin=F.minLAF[i]; S.lcPeak=F.maxC[i];
-  /* spectre bande fine INSTANTANÉ : une FFT du PCM au point (via le ring) */
-  const tEnd=(i*F.hop+F.N)/F.fs;
-  if(replPreviewFill(tEnd)){ S._previewRing=true; const mag=computeSpectrum(); S._previewRing=false;
-    const nn=mag.length; for(let k=0;k<nn;k++){ S.fftDb[k]=mag[k]>0?10*Math.log10(mag[k]):-180; S.binPowF[k]=S.binPowS[k]=S.binPowV[k]=mag[k]; } }
-  /* MOY bande fine indisponible en scrub (binEnergy neutralisé au start) → repli instantané ;
-     les tiers d'octave, eux, sont moyennés exacts début→curseur. */
+  /* spectre bande fine : pistes réduites pré-calculées (F/S/V + MOY cumulative), étendues
+     à la résolution FFT via la table finMap. Le spectre suit donc le curseur, avec MOY exacte. */
+  const RES=F.finRES, base=i*RES, invT=1/cnt;   // MOY = cumFine/(i+1)
+  if(replPreviewFill((i*F.hop+F.N)/F.fs)){ S._previewRing=true; const mag=computeSpectrum(); S._previewRing=false;
+    const nn=mag.length; for(let k=0;k<nn;k++) S.fftDb[k]=mag[k]>0?10*Math.log10(mag[k]):-180; }   // fftDb net (émergence/pics)
+  const nn=S.binPowF.length;
+  for(let k=0;k<nn;k++){ const r=F.finMap[k]||0;
+    S.binPowF[k]=F.tFfine[base+r]; S.binPowS[k]=F.tSfine[base+r]; S.binPowV[k]=F.tVfine[base+r];
+    if(S.binEnergy) S.binEnergy[k]=F.cumFine[base+r]*invT*T;   // MOY fine : /eqT (=T) → moyenne début→curseur
+  }
   /* valeur principale = piste temporelle sélectionnée, pondération courante */
   const tr=S.time==='S'?S.pS:S.time==='V'?S.pV:S.pF;
   const pw=S.weight==='C'?tr.C:S.weight==='Z'?tr.Z:tr.A;
@@ -1809,7 +1833,6 @@ async function replayStart(id,startAt,startPaused){
   resetMeasure();
   S.running=true; S.paused=true; S.lastT=0; S.warmT=0; S.warmAge=0; S.delayT=0; S.trigWait=false; S.K=0;
   clearRunVisuals();
-  if(S.binEnergy&&!REPL._binEn){ REPL._binEn=S.binEnergy; S.binEnergy=null; }   // fine MOY off en replay (restauré au teardown)
   $('replBar').classList.add('on'); $('rbDur').textContent=rbFmt(REPL.dur);
   cancelAnimationFrame(S.raf);                                    // la boucle live NE tourne PAS en replay
   $('expPop').classList.remove('on');
@@ -1856,7 +1879,6 @@ function replayTeardown(){
   replPause();
   REPL.on=false; S._previewRing=false;
   if(REPL.savedOff!=null){ S.offset=REPL.savedOff; REPL.savedOff=null; }
-  if(REPL._binEn){ S.binEnergy=REPL._binEn; REPL._binEn=null; }   // restaure l'accumulateur MOY fine pour la mesure micro
   if(S.ctx&&S.ctx.state==='suspended'){ try{S.ctx.resume();}catch(_){} }
   if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} arecWire(); }
   if(LSN.on) lsnRetarget(S.srcNode||null);
