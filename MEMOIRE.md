@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.44-beta** : ecran Valeurs, chiffres rognes corriges. Cellules passees en flex centre (align/justify center) + tailles RESPONSIVES clamp() au lieu de px fixes : hero .v clamp(26px,8vw,40px) ; .v clamp(15px,4.8vw,20px) ; .v.small clamp(11px,3.4vw,13px). line-height ajuste (1.08/1.1/1.25). Plus de rognage haut/bas quel que soit l'ecran.
+
 - **2.0.43-beta** : en PAUSE d'enregistrement, le lisere LED cesse de tourner et clignote legerement. Nouvel etat `body.rec-paused` (toggle dans ui() : S.running && S.paused && !REPL.on ; retire dans stopMeasure). CSS : anneau rouge uniforme (conic-gradient statique) + keyframes ledBlink (opacite .22->.7, 1.5s). rec-on et rec-paused mutuellement exclusifs. Reduced-motion : anneau statique en pause.
 
 - **2.0.42-beta** : differenciation du bouton PAUSE selon le contexte (setTransport). ENREGISTREMENT en pause : garde l'icone pause (plus de triangle vert), effet halo pulse `.pausedrec` (pauseGlow + bars clignotantes). LECTURE (replay/fichier charge) : bouton VERT a triangle BLANC `.playgreen`. L'ancien style `.paused` (ambre + triangle vert) n'est plus applique. Cle de cache _transport enrichie (gp/gl/rp/rr).
