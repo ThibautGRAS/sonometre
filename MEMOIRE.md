@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.36-beta** : **support souris PC** sur les 3 graphes. Convention orientation-écran : **molette = axe Y (vertical)**, **Ctrl(ou ⌘)+molette = axe X (horizontal)**, **clic-glisser = comme un doigt** (pan/curseur). Mapping : spectre → Y=dB (zoom, amorcé depuis l'auto), X=fréquence ; spectrogramme → Y=fréquence, X=temps ; évolution → Y=dB, X=temps, glissé=déplace le curseur. Souris synthétique post-tactile (iOS) ignorée (fenêtre 700 ms) ; clic supprimé après un glissé. Ancienne molette (Shift=temps) remplacée.
+
 - **2.0.35-beta** : **CORRECTIF débordement LAeq (écran Valeurs)**. Sur iPhone le grand nombre LAeq débordait de sa case et chevauchait LCpeak/LAFmax. Cause : auto-agrandissement de police iOS (`text-size-adjust` non défini) qui gonflait le nombre héro. Correctif : `-webkit-text-size-adjust:100%` sur html/body + `line-height:1` sur la valeur héro, `line-height:1.05` sur les valeurs, `overflow:hidden` sur les cellules (anti-débordement). **Porté aussi en V1 (1.35.48)** — même bug en production.
 
 - **2.0.34-beta** : **CORRECTIF filtre d'écoute ♪ en replay**. `lsnTick` ne rafraîchissait le filtre que si `!S.running` ; or en replay `S.running` est vrai et `loop()` (qui met à jour le filtre en live) NE tourne pas → le filtre ne suivait plus le zoom fréquentiel du spectrogramme. Corrigé : `lsnTick` appelle `lsnUpdate` aussi quand `REPL.on`. La bande passante de l'écoute suit de nouveau la fenêtre zoomée en réécoute.
