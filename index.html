@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.32-beta</div>
+  <div class="splashver" id="splashVer">2.0.33-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4256,8 +4256,15 @@ async function populateMicList(){
         if(note)note.textContent='';
       } else {
         outSel.disabled=true;
-        outSel.innerHTML='<option value="">Automatique (système)</option>';
-        if(note)note.textContent='Sur iPhone, la sortie est gérée par le système : branche des écouteurs pour la réécoute, sinon haut-parleur.';
+        if(outs.length){
+          /* iOS n'autorise pas la sélection, mais expose parfois un nom : on l'AFFICHE (lecture seule) */
+          outSel.innerHTML='';
+          outs.forEach((d,i)=>{ const o=document.createElement('option'); o.textContent=d.label||('Sortie '+(i+1)+' (nom masqué)'); outSel.appendChild(o); });
+          if(note)note.textContent='Sortie détectée (nom ci-dessus) mais non sélectionnable sur iPhone : le système route (écouteurs si branchés, sinon haut-parleur).';
+        } else {
+          outSel.innerHTML='<option value="">Automatique (système)</option>';
+          if(note)note.textContent='iOS n’expose pas le périphérique de sortie au navigateur — impossible d’afficher son nom ni de le choisir. Le système route seul (écouteurs si branchés).';
+        }
       }
     }
   }catch(e){}
