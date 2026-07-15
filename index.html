@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.8-beta</div>
+  <div class="splashver" id="splashVer">2.0.9-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -3158,6 +3158,20 @@ function resetView(){
   S.tview=sgDefaultView();
   S.cursor=null; drawActive();
 }
+/* vrai si le contact tombe sur — ou à moins de 10 px de — un bouton superposé au
+   graphe (3D, LSN, MOY, ÉMG…) : les gestionnaires de gestes du canvas doivent
+   alors s'abstenir (pas de curseur ni de zoom déclenché en visant une icône). */
+function overOverlayBtn(e,cv){
+  const t=(e.touches&&e.touches[0])||(e.changedTouches&&e.changedTouches[0])||e;
+  if(t.clientX==null)return false;
+  const M=10, btns=cv.parentNode?cv.parentNode.querySelectorAll('button'):[];
+  for(const b of btns){
+    if(!b.offsetParent&&getComputedStyle(b).position!=='fixed')continue;   // bouton masqué
+    const r=b.getBoundingClientRect();
+    if(t.clientX>=r.left-M&&t.clientX<=r.right+M&&t.clientY>=r.top-M&&t.clientY<=r.bottom+M)return true;
+  }
+  return false;
+}
 function attachZoomPan(id,axis,opts){
   const cv=$(id), padL=26, axH=13, padR=(opts&&opts.padR)||0;
   const off3d=()=>id==='sgramCv'&&S.sg3d;   // en vue 3D, les gestes 2D sont désactivés (la rotation prend le relais)
@@ -3182,6 +3196,7 @@ function attachZoomPan(id,axis,opts){
   let mode=null,pinchAx='main',panAx=null,anchV=0,anchB=0,anchors=null,moved=false,sX=0,sY=0,lastTap=0,pinchMoved=false;
 
   cv.addEventListener('touchstart',e=>{
+    if(overOverlayBtn(e,cv))return;   // tap visant une icône superposée : ignoré
     if(off3d())return;
     e.preventDefault();
     const r=cv.getBoundingClientRect();
@@ -3349,6 +3364,7 @@ function attachZoomPan(id,axis,opts){
     }
   },{passive:false});
   cv.addEventListener('click',e=>{
+    if(overOverlayBtn(e,cv))return;   // tap visant une icône superposée : ignoré
     if(!opts.onTap)return;
     const r=cv.getBoundingClientRect(), u=uOf(e,r);
     if(u>=0&&u<=1)opts.onTap(TFi(Vof(u)),u);
@@ -3390,6 +3406,7 @@ attachZoomPan('specCv','x',{
   let mode=null,ax=null,anchors=null,sX=0,sY=0,moved=false,lastTap=0;
   const two=e=>[...e.touches].sort((a,b)=>a.identifier-b.identifier);
   cv.addEventListener('touchstart',e=>{
+    if(overOverlayBtn(e,cv))return;   // tap visant une icône superposée : ignoré
     e.preventDefault();
     if(e.touches.length>=2){
       const t=two(e);
@@ -3630,6 +3647,7 @@ $('sg3dBtn').onclick=()=>{
 (function(){
   const cv=$('sgramCv'); let sx=null, sy=null, rot0=0, pit0=0;
   cv.addEventListener('touchstart',e=>{
+    if(overOverlayBtn(e,cv))return;   // tap visant une icône superposée : ignoré
     if(!S.sg3d||e.touches.length!==1)return;
     sx=e.touches[0].clientX; sy=e.touches[0].clientY; rot0=S.sg3dRot||0; pit0=S.sg3dPitch||0;
   },{passive:true});
