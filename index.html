@@ -478,7 +478,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.4-beta</div>
+  <div class="splashver" id="splashVer">2.0.5-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1514,16 +1514,59 @@ async function recSave(){
     date:t0.toISOString(), fs:AREC.fs, len:AREC.len, dur:AREC.len/(AREC.fs||1),
     offset:S.offset, corr:S.corr, corrName:S.corrName||'', nseg:segs.length, app:APP_VERSION };
   await recPut(meta,segs);
-  toast('Enregistrement sauvegardé ('+meta.dur.toFixed(1)+' s)');
+  /* vérification par RELECTURE (diagnostic durabilité iOS) : on ne dit « sauvegardé »
+     que si la base relit vraiment l'entrée et tous ses segments */
+  let ok=false, nseg=0;
+  try{ const back=(await recList()).find(r=>r.id===meta.id); nseg=(await recSegs(meta.id)).length; ok=!!back&&nseg===segs.length; }catch(_){}
+  toast(ok?('Sauvegardé et vérifié ('+meta.dur.toFixed(1)+' s, '+nseg+' seg) — attends ~10 s avant de fermer/recharger (écriture disque iOS)')
+          :'ATTENTION : la relecture après sauvegarde a échoué — stockage local défaillant');
   renderRecList();
+}
+function recList(){ return rdbTx(['recs'],'readonly',tx=>{
+  const out=[]; tx.objectStore('recs').openCursor().onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value);c.continue();}};
+  return out;
+});}
+function recDelete(id){ return rdbTx(['recs','chunks'],'readwrite',tx=>{
+  tx.objectStore('recs').delete(id);
+  tx.objectStore('chunks').delete(IDBKeyRange.bound([id,0],[id,1e9]));
+});}
+function recRename(id,name){ return rdbTx(['recs'],'readwrite',tx=>{
+  const st=tx.objectStore('recs'); st.get(id).onsuccess=e=>{const m=e.target.result;if(m){m.name=name;st.put(m);}};
+});}
+function recSegs(id){ return rdbTx(['chunks'],'readonly',tx=>{
+  const out=[]; tx.objectStore('chunks').openCursor(IDBKeyRange.bound([id,0],[id,1e9])).onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value.pcm);c.continue();}};
+  return out;
+});}
+async function recWavBlob(id,meta){
+  const segs=await recSegs(id);
+  const n=segs.reduce((a,s)=>a+s.length,0), fs=meta.fs||44100;
+  const b=new ArrayBuffer(44+n*2), v=new DataView(b);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF'); v.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,fs,true); v.setUint32(28,fs*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  ws(36,'data'); v.setUint32(40,n*2,true);
+  let o=44; for(const s of segs){ new Int16Array(b,o,s.length).set(s); o+=s.length*2; }
+  return new Blob([b],{type:'audio/wav'});
 }
 async function renderRecList(){
   const box=$('recList'); if(!box)return;
-  let recs=[]; try{ recs=await recList(); }catch(_){ box.innerHTML='<div class="mnote">bibliothèque indisponible</div>'; return; }
+  let recs=[], err='';
+  try{ recs=await recList(); }catch(e){ err=(e&&(e.name+': '+e.message))||'erreur inconnue'; }
+  /* --- panneau de diagnostic stockage (beta) --- */
+  let diag='';
+  try{
+    const persisted=navigator.storage&&navigator.storage.persisted?await navigator.storage.persisted():null;
+    const est=navigator.storage&&navigator.storage.estimate?await navigator.storage.estimate():null;
+    const standalone=(window.navigator.standalone===true)||matchMedia('(display-mode: standalone)').matches;
+    diag='stockage : '+(persisted===true?'persistant':persisted===false?'NON persistant (purgeable par iOS)':'?')
+      +(est&&est.usage!=null?' · '+(est.usage/1048576).toFixed(1)+' / '+(est.quota?(est.quota/1048576).toFixed(0):'?')+' Mo':'')
+      +' · contexte : '+(standalone?'app installée':'Safari')+' · '+location.pathname;
+  }catch(_){ diag='diagnostic stockage indisponible'; }
+  if(err){ box.innerHTML='<div class="mnote" style="margin:0;color:#FFB454">bibliothèque en erreur : '+err+'</div><div class="mnote" style="margin:2px 0 0">'+diag+'</div>'; return; }
   recs.sort((a,b)=>b.date<a.date?-1:1);
-  if(!recs.length){ box.innerHTML='<div class="mnote" style="margin:0">aucun enregistrement sauvegardé</div>'; return; }
+  if(!recs.length){ box.innerHTML='<div class="mnote" style="margin:0">aucun enregistrement en base</div><div class="mnote" style="margin:2px 0 0">'+diag+'</div>'; return; }
   box.innerHTML='';
-  let usage=''; try{ const e=await navigator.storage.estimate(); if(e&&e.usage)usage=(e.usage/1048576).toFixed(0)+' Mo utilisés'; }catch(_){}
   for(const m of recs){
     const d=document.createElement('div'); d.className='rec-item';
     d.innerHTML='<div class="ri-t"><b></b><span>'+new Date(m.date).toLocaleString('fr-FR')+' · '+m.dur.toFixed(1)+' s · '+(m.len*2/1048576).toFixed(1)+' Mo · '+Math.round(m.fs)+' Hz</span></div>'+
@@ -1535,7 +1578,7 @@ async function renderRecList(){
     d.querySelector('[data-a="del"]').onclick=async()=>{ if(confirm('Supprimer « '+m.name+' » ?')){ await recDelete(m.id); renderRecList(); } };
     box.appendChild(d);
   }
-  if(usage){ const u=document.createElement('div'); u.className='mnote'; u.style.margin='2px 0 0'; u.textContent=usage; box.appendChild(u); }
+  const u=document.createElement('div'); u.className='mnote'; u.style.margin='2px 0 0'; u.textContent=diag; box.appendChild(u);
 }
 function toast(msg){ const el=$('err'); if(!el)return; el.style.display='block'; el.textContent=msg; clearTimeout(toast._t); toast._t=setTimeout(()=>el.style.display='none',3000); }
 /* ===== V2 · MOTEUR DE REPLAY (chantier 3) ===================================
