@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.54-beta** : fix courbe bande fine qui debordait sur la zone des ordonnees. Cause : i0=floor(fmin/binHz) -> 1er point a une frequence < fmin -> x2 < padL (a gauche de l'axe). Correctif : clip du trace a la zone du graphe rect(padL,0,w-padL,h) autour du stroke. (Rappel : y2 clampe deja en vertical.)
+
 - **2.0.53-beta** : ajustements mise en page. Grand chiffre principal .numwrap clamp(44,13vw,64)->clamp(38,11vw,54) (plus petit). Clavier plus compact : .key min-height 52->45px, .keypad gap 7->6/padding 9-10->7-8/margin-top 10->8, .krow gap 7->6 -> le bezel (flex:1) gagne en hauteur, ecran graphique plus haut.
 
 - **2.0.52-beta** : preset Transitoire ramene a 2 moyennes (au lieu de 8) — peu de moyennage = reactif, coherent pour evenements brefs. Picker + aide MAJ (moyennage 2x). Tonal=2, Equilibre=4, Transitoire=2.
