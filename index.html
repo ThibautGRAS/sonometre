@@ -323,7 +323,6 @@ if('serviceWorker' in navigator){
   .rb-track::before{content:"";position:absolute;left:0;right:0;height:4px;background:#0B2450;border-radius:2px}
   .rb-fill{position:absolute;left:0;height:4px;background:#4FC3FF;border-radius:2px;width:0}
   .rb-dot{position:absolute;width:15px;height:15px;border-radius:50%;background:#4FC3FF;box-shadow:0 0 9px rgba(79,195,255,.65);transform:translateX(-8px);left:0}
-  #rbReplay{width:32px;height:26px;border-radius:8px;border:1px solid rgba(79,195,255,.5);background:rgba(79,195,255,.16);color:#CFEBFF;font-size:15px;font-weight:700;font-family:var(--font);padding:0}
   .bottomstrip b{color:var(--lcd-ink);font-weight:700;text-shadow:0 0 6px rgba(79,195,255,.35)}
   .progress{height:3px;background:#0B2450;border-radius:2px;overflow:hidden;flex:1;margin:0 10px}
   .progress .p{height:100%;width:0%;background:var(--red);box-shadow:0 0 6px rgba(239,51,70,.7)}
@@ -479,7 +478,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.20-beta</div>
+  <div class="splashver" id="splashVer">2.0.21-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -633,7 +632,6 @@ if('serviceWorker' in navigator){
       <span id="rbCur">0:00</span>
       <div class="rb-track" id="rbTrack"><div class="rb-fill" id="rbFill"></div><div class="rb-dot" id="rbDot"></div></div>
       <span id="rbDur">0:00</span>
-      <button id="rbReplay" style="display:none">⟲</button>
     </div>
 
     <div class="bottomstrip" id="bottomStrip">
@@ -1765,7 +1763,7 @@ async function replayStart(id,startAt,startPaused){
   S.running=true; S.paused=true; S.lastT=0; S.warmT=0; S.warmAge=0; S.delayT=0; S.trigWait=false; S.K=0;
   clearRunVisuals();
   if(S.binEnergy&&!REPL._binEn){ REPL._binEn=S.binEnergy; S.binEnergy=null; }   // fine MOY off en replay (restauré au teardown)
-  $('rbReplay').style.display='none'; $('replBar').classList.add('on'); $('rbDur').textContent=rbFmt(REPL.dur);
+  $('replBar').classList.add('on'); $('rbDur').textContent=rbFmt(REPL.dur);
   cancelAnimationFrame(S.raf);                                    // la boucle live NE tourne PAS en replay
   $('expPop').classList.remove('on');
   toast(reuse?('Replay : '+meta.name):'Analyse de l\u2019enregistrement…');
@@ -4481,10 +4479,7 @@ function stopMeasure(auto){
   try{S.wake?.release();S.wake=null;}catch(e){}
   const badge=$('modeBadge');
   badge.textContent=wasReplay?(auto?'REPLAY FINI · Leq figé':'REPLAY ARRÊTÉ'):(auto?'FINI · Leq figé':'ARRÊTÉ');badge.className='badge';
-  if(wasReplay&&REPL.lastId){
-    $('replBar').classList.add('on'); $('rbReplay').style.display='block';   // rejouer sans repasser par le menu
-    REPL.i=0; replTickUi(0);   // curseur remis au début
-  }
+  if(wasReplay){ $('replBar').classList.remove('on'); REPL.i=0; }   // sortie du replay : barre masquée
 }
 
 /* ================= Export CSV ================= */
@@ -4776,7 +4771,6 @@ function replPreviewFill(t){
     moveTo(xToI(e));
   });
 })();
-$('rbReplay').onclick=()=>{ if(REPL.lastId&&!REPL.on) replayStart(REPL.lastId,0,false); else if(REPL.on){ REPL.i=0; renderReplayFrame(0); replPlay(); } };
 $('epCsvDl').onclick   =()=>dl(csvBlob(),'sonometre_'+stamp()+'.csv');
 $('epPngShare').onclick=()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>shareOrDownload(b,'sonometre_'+stamp()+'.png','Graphe sonomètre CETIM'),'image/png'); };
 $('epPngDl').onclick   =()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>dl(b,'sonometre_'+stamp()+'.png'),'image/png'); };
