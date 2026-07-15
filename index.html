@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.17-beta</div>
+  <div class="splashver" id="splashVer">2.0.18-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1616,37 +1616,135 @@ function toast(msg){ const el=$('err'); if(!el)return; el.style.display='block';
    Calibration : l'offset DE L'ENREGISTREMENT est appliqué le temps du replay
    (dB SPL du jour de la mesure), puis restauré. Pas d'armement (signal propre).
    Pause = suspend/resume du contexte. Fin (naturelle ou stop) → retour micro. */
-const REPL={on:false, src:null, buf:null, meta:null, savedOff:null, startCt:0, startOff:0, dur:0, tick:null, scrub:null, pendingSeek:null, lastId:null};
-/* position courante dans l'enregistrement (s) — le suspend fige currentTime, donc la pause fige la position */
-function replPos(){ return Math.max(0,Math.min(REPL.dur, REPL.startOff+(S.ctx?S.ctx.currentTime-REPL.startCt:0))); }
+const REPL={on:false, src:null, buf:null, meta:null, savedOff:null, dur:0, lastId:null,
+  frames:null, i:0, playing:false, playAcc:0, raf:null, scrubbing:false, sinceAudio:0};
 function rbFmt(t){ const m=Math.floor(t/60), s=Math.floor(t%60); return m+':'+(s<10?'0':'')+s; }
 function replTickUi(t){
-  const u=REPL.dur>0?t/REPL.dur:0;
+  const u=REPL.dur>0?Math.max(0,Math.min(1,t/REPL.dur)):0;
   $('rbCur').textContent=rbFmt(t);
-  $('rbFill').style.width=(u*100)+'%';
-  $('rbDot').style.left=(u*100)+'%';
+  $('rbFill').style.width=(u*100)+'%'; $('rbDot').style.left=(u*100)+'%';
 }
-/* saut dans l'enregistrement : nouvelle source au point choisi.
-   Les intégrateurs REPARTENT au point de saut (beginRun) : les indices affichés
-   couvrent « depuis le dernier saut », jamais un patchwork de morceaux. */
-function replaySeek(t){
-  if(!REPL.on||!REPL.buf) return;
-  t=Math.max(0,Math.min(Math.max(0,REPL.dur-0.05),t));
-  const old=REPL.src;
-  if(old){ old.onended=null; try{old.stop();}catch(_){} try{old.disconnect();}catch(_){} }
+/* ===== V2 · ANALYSE À FROID (chantier replay-scrubber) =====================
+   Au chargement, tout le fichier est découpé en trames (~50 ms) et analysé une
+   fois : spectre → tiers d'octave (brut) + niveaux A/C/Z instantanés, avec sommes
+   cumulées (prefix) pour lire la MOYENNE début→curseur instantanément. Ensuite le
+   slider n'est qu'un INDEX : l'affichage ne dépend plus jamais de l'horloge audio,
+   donc plus aucune dérive. La lecture ne fait qu'avancer l'index + jouer le son. */
+function replResample(ch,srcFs,dstFs){
+  if(srcFs===dstFs) return ch;
+  const r=srcFs/dstFs, n=Math.floor(ch.length/r), out=new Float32Array(n);
+  for(let i=0;i<n;i++){ const x=i*r, k=Math.floor(x), f=x-k; out[i]=k+1<ch.length?ch[k]*(1-f)+ch[k+1]*f:ch[k]; }
+  return out;
+}
+async function replBuildFrames(buf){
+  const fs=S.ctx.sampleRate;
+  const pcm=replResample(buf.getChannelData(0),buf.sampleRate,fs);
+  const N=S.fftN, w=S.winCoef, ws2=S.winSum2, n=N/2;
+  const nb=S.bands.length, bins=S.bandBins, wA=S.wA, wC=S.wC, corr=S.corr!=='off'?S.compGain:null;
+  const hop=Math.max(Math.round(fs*0.05), Math.round(N/4));
+  const count=Math.max(1,Math.floor((pcm.length-N)/hop)+1);
+  const F={ fs, hop, hopSec:hop/fs, N, nb, count,
+    wAfc:new Float64Array(nb), wCfc:new Float64Array(nb),
+    band:new Array(count), A:new Float64Array(count), C:new Float64Array(count), Z:new Float64Array(count),
+    cumBand:new Array(count), cumA:new Float64Array(count), cumC:new Float64Array(count), cumZ:new Float64Array(count),
+    LAF:new Float64Array(count), maxLAF:new Float64Array(count), minLAF:new Float64Array(count), maxC:new Float64Array(count) };
+  for(let b=0;b<nb;b++){ const fc=S.bands[b]; F.wAfc[b]=Math.pow(10,aWeight(fc)/10); F.wCfc[b]=Math.pow(10,cWeight(fc)/10); }
+  const re=new Float64Array(N), im=new Float64Array(N);
+  const run=new Float64Array(nb);
+  let runA=0,runC=0,runZ=0,mxL=-Infinity,mnL=Infinity,mxC=-Infinity;
+  for(let f=0;f<count;f++){
+    const off=f*hop;
+    let Pt=0; for(let i=0;i<N;i++){ const s=pcm[off+i]||0; re[i]=s*w[i]; im[i]=0; Pt+=s*s; } Pt/=N;
+    fft(re,im);
+    let pA=0,pC=0,pZ=0; const norm=2/ws2;
+    for(let i=1;i<n;i++){ let p=(re[i]*re[i]+im[i]*im[i])*norm; if(corr)p*=corr[i]; pZ+=p; pA+=p*wA[i]; pC+=p*wC[i]; }
+    const bd=new Float32Array(nb);
+    for(let b=0;b<nb;b++){ const i0=bins[b][0],i1=bins[b][1]; let s=0; for(let i=i0;i<=i1;i++){ let p=(re[i]*re[i]+im[i]*im[i])*norm; if(corr)p*=corr[i]; s+=p; } bd[b]=s; }
+    const K=(pZ>0&&Pt>0&&isFinite(Pt))?Pt/pZ:1;   // recalage Parseval par trame
+    pA*=K; pC*=K; pZ*=K; for(let b=0;b<nb;b++)bd[b]*=K;
+    F.band[f]=bd; F.A[f]=pA; F.C[f]=pC; F.Z[f]=pZ;
+    runA+=pA; runC+=pC; runZ+=pZ; for(let b=0;b<nb;b++)run[b]+=bd[b];
+    F.cumA[f]=runA; F.cumC[f]=runC; F.cumZ[f]=runZ; F.cumBand[f]=Float32Array.from(run);
+    const laf=pA>0?10*Math.log10(pA)+S.offset:-99, lcf=pC>0?10*Math.log10(pC)+S.offset:-99;
+    F.LAF[f]=laf; if(laf>mxL)mxL=laf; if(laf<mnL)mnL=laf; if(lcf>mxC)mxC=lcf;
+    F.maxLAF[f]=mxL; F.minLAF[f]=mnL; F.maxC[f]=mxC;
+    if((f&255)===0){ $('rbCur').textContent='…'+Math.round(100*f/count)+'%'; await new Promise(r=>setTimeout(r,0)); }
+  }
+  return F;
+}
+/* affiche la trame d'index i : instantané au point + moyenne cumulée début→i */
+function renderReplayFrame(i){
+  const F=REPL.frames; if(!F) return;
+  i=Math.max(0,Math.min(F.count-1,i|0)); REPL.i=i;
+  const cnt=i+1, T=cnt*F.hopSec;
+  const wfc=S.weight==='A'?F.wAfc:S.weight==='C'?F.wCfc:null;   // pondération au centre de bande (comme la source IIR)
+  /* cumul (MOYENNE début→curseur) */
+  S.eqT=T; S.eq.A=F.cumA[i]*F.hopSec; S.eq.C=F.cumC[i]*F.hopSec; S.eq.Z=F.cumZ[i]*F.hopSec;
+  const cb=F.cumBand[i]; for(let b=0;b<F.nb;b++){ const g=wfc?wfc[b]:1; S.bandEnergy[b]=cb[b]*g*F.hopSec; }
+  /* instantané au point */
+  S.pF.A=S.pS.A=S.pV.A=F.A[i]; S.pF.C=S.pS.C=S.pV.C=F.C[i]; S.pF.Z=S.pS.Z=S.pV.Z=F.Z[i];
+  const bd=F.band[i]; for(let b=0;b<F.nb;b++){ const g=wfc?wfc[b]:1; S.bandPowF[b]=S.bandPowS[b]=S.bandPowV[b]=bd[b]*g; }
+  S.lafMax=F.maxLAF[i]; S.lafMin=F.minLAF[i]; S.lcPeak=F.maxC[i];
+  /* spectre bande fine INSTANTANÉ : une FFT du PCM au point (via le ring) */
+  const tEnd=(i*F.hop+F.N)/F.fs;
+  if(replPreviewFill(tEnd)){ S._previewRing=true; const mag=computeSpectrum(); S._previewRing=false;
+    const nn=mag.length; for(let k=0;k<nn;k++){ S.fftDb[k]=mag[k]>0?10*Math.log10(mag[k]):-180; S.binPowF[k]=S.binPowS[k]=S.binPowV[k]=mag[k]; } }
+  /* MOY bande fine indisponible en scrub (binEnergy neutralisé au start) → repli instantané ;
+     les tiers d'octave, eux, sont moyennés exacts début→curseur. */
+  /* courbe d'évolution : L(t) pré-calculé de 0 à i (sous-échantillonné) */
+  const pw=S.weight==='C'?F.C[i]:S.weight==='Z'?F.Z[i]:F.A[i];
+  const L=pw>0?10*Math.log10(pw)+S.offset:-99;
+  const step=Math.max(1,Math.ceil(cnt/600)); S.hist=[];
+  for(let f=0;f<=i;f+=step){ const la=F.LAF[f]; S.hist.push({t:f*F.hopSec, L:la, Leq:lvl(F.cumA[f]/(f+1))}); }
+  S.elapsed=T;
+  replTickUi(i*F.hopSec);
+  if(REPL.playing) sgTick();   // spectrogramme défile pendant la lecture (figé pendant le scrub)
+  updateNumbers(L); drawActive();
+}
+function replSetIndex(i,{audio}={}){
+  if(!REPL.frames)return;
+  renderReplayFrame(i);
+  if(audio) replAudioTo(REPL.i*REPL.frames.hopSec);
+}
+/* (re)positionne la LECTURE AUDIO au temps t (le son suit, l'affichage vient de l'index) */
+function replAudioTo(t){
+  if(!REPL.buf||!S.ctx)return;
+  if(REPL.src){ try{REPL.src.onended=null;REPL.src.stop();}catch(_){} try{REPL.src.disconnect();}catch(_){} REPL.src=null; }
   const src=S.ctx.createBufferSource(); src.buffer=REPL.buf; src.connect(S.analyser);
-  src.onended=()=>{ if(REPL.on&&REPL.src===src) stopMeasure(true); };
-  REPL.src=src; REPL.startCt=S.ctx.currentTime; REPL.startOff=t;
-  src.start(0,t);
-  lsnRetarget(src);                            // l'écoute filtrée suit la nouvelle source
-  beginRun(); S.lcLastCt=S.ctx.currentTime;   // intégration et filtres temporels repartent ici
-  replTickUi(t);
+  src.onended=()=>{};   // la fin est gérée par l'index (replPlayTick), pas par l'audio
+  REPL.src=src; src.start(0,Math.max(0,Math.min(REPL.dur-0.02,t))); lsnRetarget(src);
+}
+function replPlayTick(ts){
+  if(!REPL.on||!REPL.playing){ REPL.raf=null; return; }
+  REPL.raf=requestAnimationFrame(replPlayTick);
+  if(!REPL._lastTs){ REPL._lastTs=ts; return; }
+  const dt=Math.min(0.25,(ts-REPL._lastTs)/1000); REPL._lastTs=ts;
+  REPL.playAcc+=dt;
+  const F=REPL.frames, adv=Math.floor(REPL.playAcc/F.hopSec);
+  if(adv>0){ REPL.playAcc-=adv*F.hopSec; let ni=REPL.i+adv;
+    if(ni>=F.count-1){ renderReplayFrame(F.count-1); replPause(); replTickUi(REPL.dur); return; }
+    renderReplayFrame(ni);
+  }
+}
+function replPlay(){
+  if(!REPL.on||REPL.playing)return;
+  if(REPL.i>=REPL.frames.count-1){ REPL.i=0; }
+  REPL.playing=true; REPL.playAcc=0; REPL._lastTs=0;
+  if(S.ctx&&S.ctx.state!=='running'){ try{S.ctx.resume();}catch(_){} }
+  replAudioTo(REPL.i*REPL.frames.hopSec);
+  setTransport();
+  cancelAnimationFrame(REPL.raf); REPL.raf=requestAnimationFrame(replPlayTick);
+}
+function replPause(){
+  REPL.playing=false;
+  if(REPL.src){ try{REPL.src.onended=null;REPL.src.stop();}catch(_){} try{REPL.src.disconnect();}catch(_){} REPL.src=null; }
+  cancelAnimationFrame(REPL.raf); REPL.raf=null;
+  setTransport();
 }
 async function replayStart(id,startAt,startPaused){
   if(S.running&&!REPL.on){ toast('Arrête la mesure en cours avant de rejouer'); return; }
-  startAt=Math.max(0,startAt||0);
-  let meta=null, buf=null;
-  if(REPL.buf&&REPL.meta&&REPL.meta.id===id){ meta=REPL.meta; buf=REPL.buf; }   // relance instantanée (buffer conservé)
+  let meta=null, buf=null, reuse=(REPL.buf&&REPL.meta&&REPL.meta.id===id&&REPL.frames);
+  if(reuse){ meta=REPL.meta; buf=REPL.buf; }
   else{
     let segs=[];
     try{ meta=(await recList()).find(r=>r.id===id); segs=meta?await recSegs(id):[]; }catch(_){}
@@ -1655,56 +1753,37 @@ async function replayStart(id,startAt,startPaused){
     if(S.ctx.state!=='running'){ try{ await S.ctx.resume(); }catch(_){} }
     if(!S.analyser){ S.analyser=S.ctx.createAnalyser(); }
     configureAnalyser();
-    /* PCM int16 → AudioBuffer à la fs d'origine (resamplé à la lecture si besoin) */
     buf=S.ctx.createBuffer(1,meta.len,meta.fs||S.ctx.sampleRate);
-    const ch=buf.getChannelData(0); let o=0;
-    for(const s of segs){ for(let i=0;i<s.length;i++)ch[o++]=s[i]/32768; }
+    const ch=buf.getChannelData(0); let o=0; for(const s of segs){ for(let i=0;i<s.length;i++)ch[o++]=s[i]/32768; }
   }
-  if(!S.ctx){ toast('Audio indisponible'); return; }
-  if(S.ctx.state!=='running'){ try{ await S.ctx.resume(); }catch(_){} }
-  startAt=Math.min(startAt,Math.max(0,buf.duration-0.05));
-  if(S.srcNode){ try{S.srcNode.disconnect();}catch(_){}}   // micro écarté (rebranché à la fin)
-  REPL.savedOff=S.offset; if(typeof meta.offset==='number')S.offset=meta.offset;
-  const src=S.ctx.createBufferSource(); src.buffer=buf; src.connect(S.analyser);
-  REPL.on=true; REPL.src=src; REPL.buf=buf; REPL.meta=meta;
-  REPL.dur=buf.duration; REPL.startOff=startAt; REPL.scrub=null; REPL.pendingSeek=null; REPL.lastId=meta.id;
-  $('rbReplay').style.display='none';
+  if(S.srcNode){ try{S.srcNode.disconnect();}catch(_){}}         // micro écarté
+  REPL.savedOff=(REPL.savedOff!=null?REPL.savedOff:S.offset); if(typeof meta.offset==='number')S.offset=meta.offset;
+  REPL.on=true; REPL.buf=buf; REPL.meta=meta; REPL.dur=buf.duration; REPL.lastId=meta.id; REPL.playing=false;
   resetMeasure();
-  S.running=true; S.paused=false; S.lastT=0;
-  S.warmT=0; S.warmAge=0; S.delayT=0; S.trigWait=false;    // pas d'armement ni de déclenchement
-  S.K=0; S.lcBq=null; S.lcLastCt=S.ctx.currentTime;        // filtres temporels réamorcés
-  clearRunVisuals();                                        // vrai démarrage d'un replay : spectrogramme/vues remis à zéro (beginRun ne le fait plus en replay)
-  beginRun();
-  setTransport(); setLocks();
-  src.onended=()=>{ if(REPL.on&&REPL.src===src) stopMeasure(true); };
-  src.start(0,startAt);
-  lsnRetarget(src);                            // écoute filtrée déjà active : elle suit le replay
-  REPL.startCt=S.ctx.currentTime;
-  $('replBar').classList.add('on'); $('rbDur').textContent=rbFmt(REPL.dur); replTickUi(startAt);
-  clearInterval(REPL.tick);
-  REPL.tick=setInterval(()=>{ if(REPL.scrub==null&&REPL.pendingSeek==null) replTickUi(replPos()); },200);
-  try{S.wake=null;}catch(_){}
-  cancelAnimationFrame(S.raf); S.raf=requestAnimationFrame(loop);
-  if(startPaused){ S.paused=true; try{S.ctx.suspend();}catch(_){} setTransport(); }   // démarrage gelé (scrub)
+  S.running=true; S.paused=true; S.lastT=0; S.warmT=0; S.warmAge=0; S.delayT=0; S.trigWait=false; S.K=0;
+  clearRunVisuals();
+  if(S.binEnergy&&!REPL._binEn){ REPL._binEn=S.binEnergy; S.binEnergy=null; }   // fine MOY off en replay (restauré au teardown)
+  $('rbReplay').style.display='none'; $('replBar').classList.add('on'); $('rbDur').textContent=rbFmt(REPL.dur);
+  cancelAnimationFrame(S.raf);                                    // la boucle live NE tourne PAS en replay
   $('expPop').classList.remove('on');
-  toast('Replay : '+meta.name);
+  toast(reuse?('Replay : '+meta.name):'Analyse de l\u2019enregistrement…');
+  if(!reuse){ REPL.frames=await replBuildFrames(buf); }
+  const i0=startAt? Math.round(startAt/REPL.frames.hopSec):0;
+  renderReplayFrame(i0);
+  setTransport(); setLocks();
+  if(!startPaused) replPlay();                                    // par défaut : démarre en lecture
   ui();
 }
 function replayTeardown(){
   if(!REPL.on) return;
-  REPL.on=false;
-  clearInterval(REPL.tick); REPL.tick=null;
+  replPause();
+  REPL.on=false; S._previewRing=false;
   $('replBar').classList.remove('on');
-  try{ REPL.src&&(REPL.src.onended=null); REPL.src&&REPL.src.stop(); }catch(_){}
-  try{ REPL.src&&REPL.src.disconnect(); }catch(_){}
-  REPL.src=null; REPL.scrub=null; S._previewRing=false;
-  /* buffer et meta CONSERVÉS tant que la barre est affichée : glisser après la fin
-     relance instantanément au point visé, sans relire la base. Libérés dès qu'une
-     mesure micro démarre (voir ui()). */
   if(REPL.savedOff!=null){ S.offset=REPL.savedOff; REPL.savedOff=null; }
+  if(REPL._binEn){ S.binEnergy=REPL._binEn; REPL._binEn=null; }   // restaure l'accumulateur MOY fine pour la mesure micro
   if(S.ctx&&S.ctx.state==='suspended'){ try{S.ctx.resume();}catch(_){} }
-  if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} arecWire(); }  // retour micro
-  if(LSN.on) lsnRetarget(S.srcNode||null);     // écoute filtrée : retour micro, ou extinction s'il n'y en a pas
+  if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} arecWire(); }
+  if(LSN.on) lsnRetarget(S.srcNode||null);
   ui();
 }
 async function acquireMic(){
@@ -3623,10 +3702,11 @@ function ui(){
   const offd=Math.abs(S.offset-120.0)>=0.05;
   $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
   const badge=$('modeBadge');
-  if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
-  else if(S.running&&!S.paused){ if(REPL.on){badge.textContent='REPLAY';badge.className='badge replay';} else {badge.textContent='MESURE';badge.className='badge rec';} }
-  else if(S.paused){badge.textContent=REPL.on?'REPLAY · PAUSE':'PAUSE';badge.className='badge';}
-  if(S.running&&!REPL.on){$('replBar').classList.remove('on'); REPL.buf=null; REPL.meta=null;}   // mesure micro : barre masquée, buffer libéré
+  if(REPL.on){ badge.textContent=REPL.playing?'REPLAY':'REPLAY · PAUSE'; badge.className=REPL.playing?'badge replay':'badge'; }
+  else if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
+  else if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
+  else if(S.paused){badge.textContent='PAUSE';badge.className='badge';}
+  if(S.running&&!REPL.on){$('replBar').classList.remove('on'); REPL.buf=null; REPL.meta=null; REPL.frames=null;}   // mesure micro : barre masquée, mémoire libérée
   ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
   $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
   $('bottomStrip').style.visibility = S.screen==='val' ? 'hidden' : 'visible';   // redondant sur Valeurs
@@ -4272,16 +4352,17 @@ const ICO={
   play:'<svg class="tico" viewBox="0 0 24 24"><path d="M8 5.6c0-1.2 1.3-1.9 2.3-1.3l9.2 6.4c.9.6.9 1.9 0 2.5l-9.2 6.4c-1 .7-2.3-.1-2.3-1.3V5.6z"/></svg>'
 };
 function setTransport(){
-  const key=(S.running?'R':'r')+(S.paused?'P':'p');
+  const paused = REPL.on ? !REPL.playing : S.paused;   // en replay, l'état vient de REPL.playing
+  const key=(S.running?'R':'r')+(paused?'P':'p');
   if(S._transport===key)return;                 // rien n'a changé : ne pas re-rendre les SVG
   S._transport=key;
   $('kStart').querySelector('.kv').innerHTML=S.running?ICO.stop:ICO.record;
   $('kStart').classList.toggle('running',S.running);
   $('kStart').setAttribute('aria-label',S.running?'Arrêter':'Démarrer');
   const p=$('kPause');
-  p.querySelector('.kv').innerHTML=S.paused?ICO.play:ICO.pause;   // le bouton montre l'ACTION à venir : ▶ vert en pause, ⏸ en lecture
-  p.classList.toggle('paused',S.paused);
-  p.setAttribute('aria-label',S.paused?'Reprendre':'Pause');
+  p.querySelector('.kv').innerHTML=paused?ICO.play:ICO.pause;   // ▶ vert quand la lecture est en pause, ⏸ en lecture
+  p.classList.toggle('paused',paused);
+  p.setAttribute('aria-label',paused?'Reprendre':'Pause');
   p.disabled=!S.running;
 }
 /* ===== menu DÉCLENCHEMENT (appui long sur Démarrer) ===== */
@@ -4364,11 +4445,8 @@ $('kStart').onclick=async function(){
 };
 $('kPause').onclick=()=>{
   if(!S.running)return;
+  if(REPL.on){ if(REPL.playing)replPause(); else replPlay(); ui(); return; }   // replay : lecture/pause par index
   S.paused=!S.paused;
-  if(REPL.on){
-    if(S.paused){ try{S.ctx.suspend();}catch(_){} }
-    else { if(REPL.pendingSeek!=null){ replaySeek(REPL.pendingSeek); REPL.pendingSeek=null; } try{S.ctx.resume();}catch(_){} }
-  }
   setTransport();
   S.lastT=0;                               // repartir proprement sans compter le temps de pause
   ui();
@@ -4385,7 +4463,7 @@ function stopMeasure(auto){
   badge.textContent=wasReplay?(auto?'REPLAY FINI · Leq figé':'REPLAY ARRÊTÉ'):(auto?'FINI · Leq figé':'ARRÊTÉ');badge.className='badge';
   if(wasReplay&&REPL.lastId){
     $('replBar').classList.add('on'); $('rbReplay').style.display='block';   // rejouer sans repasser par le menu
-    REPL.startOff=0; REPL.pendingSeek=null; REPL.scrub=null; replTickUi(0);   // curseur remis au début
+    REPL.i=0; replTickUi(0);   // curseur remis au début
   }
 }
 
@@ -4663,29 +4741,22 @@ function replPreviewFill(t){
 (function(){
   const tk=$('rbTrack'); if(!tk)return;
   let lastTouch=0, starting=false;
-  const xToT=e=>{ const r=tk.getBoundingClientRect(); const x=(e.touches&&e.touches.length?e.touches[0].clientX:(e.changedTouches&&e.changedTouches.length?e.changedTouches[0].clientX:e.clientX))-r.left; return Math.max(0,Math.min(1,x/r.width))*REPL.dur; };
+  const xToI=e=>{ const r=tk.getBoundingClientRect(); const x=(e.touches&&e.touches.length?e.touches[0].clientX:(e.changedTouches&&e.changedTouches.length?e.changedTouches[0].clientX:e.clientX))-r.left; const u=Math.max(0,Math.min(1,x/r.width)); return REPL.frames?Math.round(u*(REPL.frames.count-1)):0; };
   const canScrub=()=>REPL.on||(!S.running&&REPL.lastId&&REPL.dur>0&&$('replBar').classList.contains('on'));
-  /* SCRUB VISUEL : toucher la barre MET EN PAUSE (on explore). Le tampon d'analyse
-     est rempli avec le PCM sous le doigt → courbes en direct, sans lecture audio.
-     Au relâcher on RESTE en pause au point visé ; ▶ reprend la lecture de là. */
-  const grab=()=>{
-    if(REPL.on){ if(!S.paused){ S.paused=true; try{S.ctx.suspend();}catch(_){} setTransport(); } }
-  };
-  const preview=t=>{
-    if(!REPL.on){ if(!starting&&REPL.lastId){ starting=true; replayStart(REPL.lastId,t,true).finally(()=>{starting=false;}); } return; }  // replay fini : reprend gelé
-    if(replPreviewFill(t))S._previewRing=true;
-  };
-  const commit=t=>{
-    S._previewRing=false;
-    if(REPL.on){ REPL.pendingSeek=t; REPL.startOff=t; replTickUi(t);       // reste en pause ICI ; la reprise (▶) sautera à t
-      if(!S.paused){ S.paused=true; try{S.ctx.suspend();}catch(_){} setTransport(); } }
-    else if(!starting&&REPL.lastId) replayStart(REPL.lastId,t,true);
-  };
-  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); if(ev==='touchstart')grab(); REPL.scrub=xToT(e); replTickUi(REPL.scrub); preview(REPL.scrub); },{passive:false}));
-  ['touchend','touchcancel'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); if(REPL.scrub!=null){ commit(REPL.scrub); REPL.scrub=null; } else S._previewRing=false; },{passive:false}));
-  tk.addEventListener('mousedown',e=>{ if(!canScrub())return; if(Date.now()-lastTouch<700)return; grab(); commit(xToT(e)); });
+  /* MODÈLE LECTEUR : toucher la barre MET EN PAUSE, glisser déplace l'INDEX (affichage
+     instantané du point, aucun son), relâcher RESTE au point. ▶ reprend la lecture d'ici. */
+  const moveTo=i=>{ if(REPL.on){ if(REPL.playing)replPause(); renderReplayFrame(i); } };
+  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{
+    if(!canScrub())return; e.preventDefault(); lastTouch=Date.now();
+    if(!REPL.on){ if(!starting&&REPL.lastId){ starting=true; replayStart(REPL.lastId,0,true).then(()=>{ renderReplayFrame(xToI(e)); }).finally(()=>{starting=false;}); } return; }
+    moveTo(xToI(e));
+  },{passive:false}));
+  tk.addEventListener('mousedown',e=>{ if(!canScrub())return; if(Date.now()-lastTouch<700)return;
+    if(!REPL.on){ if(!starting&&REPL.lastId){ starting=true; replayStart(REPL.lastId,0,true).then(()=>{ renderReplayFrame(xToI(e)); }).finally(()=>{starting=false;}); } return; }
+    moveTo(xToI(e));
+  });
 })();
-$('rbReplay').onclick=()=>{ if(REPL.lastId&&!S.running) replayStart(REPL.lastId); };
+$('rbReplay').onclick=()=>{ if(REPL.lastId&&!REPL.on) replayStart(REPL.lastId,0,false); else if(REPL.on){ REPL.i=0; renderReplayFrame(0); replPlay(); } };
 $('epCsvDl').onclick   =()=>dl(csvBlob(),'sonometre_'+stamp()+'.csv');
 $('epPngShare').onclick=()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>shareOrDownload(b,'sonometre_'+stamp()+'.png','Graphe sonomètre CETIM'),'image/png'); };
 $('epPngDl').onclick   =()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>dl(b,'sonometre_'+stamp()+'.png'),'image/png'); };
