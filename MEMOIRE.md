@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.35-beta** : **CORRECTIF débordement LAeq (écran Valeurs)**. Sur iPhone le grand nombre LAeq débordait de sa case et chevauchait LCpeak/LAFmax. Cause : auto-agrandissement de police iOS (`text-size-adjust` non défini) qui gonflait le nombre héro. Correctif : `-webkit-text-size-adjust:100%` sur html/body + `line-height:1` sur la valeur héro, `line-height:1.05` sur les valeurs, `overflow:hidden` sur les cellules (anti-débordement). **Porté aussi en V1 (1.35.48)** — même bug en production.
+
 - **2.0.34-beta** : **CORRECTIF filtre d'écoute ♪ en replay**. `lsnTick` ne rafraîchissait le filtre que si `!S.running` ; or en replay `S.running` est vrai et `loop()` (qui met à jour le filtre en live) NE tourne pas → le filtre ne suivait plus le zoom fréquentiel du spectrogramme. Corrigé : `lsnTick` appelle `lsnUpdate` aussi quand `REPL.on`. La bande passante de l'écoute suit de nouveau la fenêtre zoomée en réécoute.
 
 - **2.0.33-beta** : section SORTIE affiche le **nom de sortie détecté** s'il est exposé (lecture seule sur iOS), sinon message clair "iOS n'expose pas le périphérique de sortie". enumerateDevices ne renvoie en général que les entrées sur iOS → le nom de sortie est le plus souvent indisponible ; l'app le dit honnêtement plutôt que d'afficher un faux "Automatique".
