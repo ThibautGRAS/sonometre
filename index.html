@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.26-beta</div>
+  <div class="splashver" id="splashVer">2.0.27-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1681,6 +1681,31 @@ async function replBuildFrames(buf){
     F.maxLAF[f]=mxL; F.minLAF[f]=mnL; F.maxC[f]=mxC;
     if((f&255)===0){ $('rbCur').textContent='…'+Math.round(100*f/count)+'%'; await new Promise(r=>setTimeout(r,0)); }
   }
+  /* ===== pistes temporelles Fast/Slow/V-Slow (mêmes constantes que le direct) =====
+     filtre exponentiel déroulé sur les trames : niveau[i]=α·niveau[i-1]+(1-α)·inst[i].
+     Le slider lira l'index → changer TEMPS en replay = changer de piste (instantané). */
+  const dtS=F.hopSec, aF=Math.exp(-dtS/0.125), aS=Math.exp(-dtS/1.0), aV=Math.exp(-dtS/10.0);
+  for(const k of ['A','C','Z']){ F['tF'+k]=new Float64Array(count); F['tS'+k]=new Float64Array(count); F['tV'+k]=new Float64Array(count); }
+  F.tFband=new Array(count); F.tSband=new Array(count); F.tVband=new Array(count);
+  let fA=F.A[0],fC=F.C[0],fZ=F.Z[0], sA=fA,sC=fC,sZ=fZ, vA=fA,vC=fC,vZ=fZ;
+  const fb=Float32Array.from(F.band[0]), sb=Float32Array.from(F.band[0]), vb=Float32Array.from(F.band[0]);
+  for(let f=0;f<count;f++){
+    const iA=F.A[f],iC=F.C[f],iZ=F.Z[f], ib=F.band[f];
+    if(f===0){ fA=sA=vA=iA; fC=sC=vC=iC; fZ=sZ=vZ=iZ; }
+    else{
+      fA=aF*fA+(1-aF)*iA; fC=aF*fC+(1-aF)*iC; fZ=aF*fZ+(1-aF)*iZ;
+      sA=aS*sA+(1-aS)*iA; sC=aS*sC+(1-aS)*iC; sZ=aS*sZ+(1-aS)*iZ;
+      vA=aV*vA+(1-aV)*iA; vC=aV*vC+(1-aV)*iC; vZ=aV*vZ+(1-aV)*iZ;
+    }
+    F.tFA[f]=fA;F.tFC[f]=fC;F.tFZ[f]=fZ; F.tSA[f]=sA;F.tSC[f]=sC;F.tSZ[f]=sZ; F.tVA[f]=vA;F.tVC[f]=vC;F.tVZ[f]=vZ;
+    const nfb=new Float32Array(nb), nsb=new Float32Array(nb), nvb=new Float32Array(nb);
+    for(let b=0;b<nb;b++){
+      if(f===0){ fb[b]=sb[b]=vb[b]=ib[b]; }
+      else{ fb[b]=aF*fb[b]+(1-aF)*ib[b]; sb[b]=aS*sb[b]+(1-aS)*ib[b]; vb[b]=aV*vb[b]+(1-aV)*ib[b]; }
+      nfb[b]=fb[b]; nsb[b]=sb[b]; nvb[b]=vb[b];
+    }
+    F.tFband[f]=nfb; F.tSband[f]=nsb; F.tVband[f]=nvb;
+  }
   return F;
 }
 /* affiche la trame d'index i : instantané au point + moyenne cumulée début→i */
@@ -1692,9 +1717,13 @@ function renderReplayFrame(i){
   /* cumul (MOYENNE début→curseur) */
   S.eqT=T; S.eq.A=F.cumA[i]*F.hopSec; S.eq.C=F.cumC[i]*F.hopSec; S.eq.Z=F.cumZ[i]*F.hopSec;
   const cb=F.cumBand[i]; for(let b=0;b<F.nb;b++){ const g=wfc?wfc[b]:1; S.bandEnergy[b]=cb[b]*g*F.hopSec; }
-  /* instantané au point */
-  S.pF.A=S.pS.A=S.pV.A=F.A[i]; S.pF.C=S.pS.C=S.pV.C=F.C[i]; S.pF.Z=S.pS.Z=S.pV.Z=F.Z[i];
-  const bd=F.band[i]; for(let b=0;b<F.nb;b++){ const g=wfc?wfc[b]:1; S.bandPowF[b]=S.bandPowS[b]=S.bandPowV[b]=bd[b]*g; }
+  /* niveaux « instantanés » au point = pistes temporelles Fast/Slow/V-Slow pré-calculées
+     (le sélecteur TEMPS choisit la piste — comme en direct) */
+  S.pF.A=F.tFA[i]; S.pF.C=F.tFC[i]; S.pF.Z=F.tFZ[i];
+  S.pS.A=F.tSA[i]; S.pS.C=F.tSC[i]; S.pS.Z=F.tSZ[i];
+  S.pV.A=F.tVA[i]; S.pV.C=F.tVC[i]; S.pV.Z=F.tVZ[i];
+  const bF=F.tFband[i], bS=F.tSband[i], bV=F.tVband[i];
+  for(let b=0;b<F.nb;b++){ const g=wfc?wfc[b]:1; S.bandPowF[b]=bF[b]*g; S.bandPowS[b]=bS[b]*g; S.bandPowV[b]=bV[b]*g; }
   S.lafMax=F.maxLAF[i]; S.lafMin=F.minLAF[i]; S.lcPeak=F.maxC[i];
   /* spectre bande fine INSTANTANÉ : une FFT du PCM au point (via le ring) */
   const tEnd=(i*F.hop+F.N)/F.fs;
@@ -1702,11 +1731,17 @@ function renderReplayFrame(i){
     const nn=mag.length; for(let k=0;k<nn;k++){ S.fftDb[k]=mag[k]>0?10*Math.log10(mag[k]):-180; S.binPowF[k]=S.binPowS[k]=S.binPowV[k]=mag[k]; } }
   /* MOY bande fine indisponible en scrub (binEnergy neutralisé au start) → repli instantané ;
      les tiers d'octave, eux, sont moyennés exacts début→curseur. */
-  /* courbe d'évolution : L(t) pré-calculé de 0 à i (sous-échantillonné) */
-  const pw=S.weight==='C'?F.C[i]:S.weight==='Z'?F.Z[i]:F.A[i];
+  /* valeur principale = piste temporelle sélectionnée, pondération courante */
+  const tr=S.time==='S'?S.pS:S.time==='V'?S.pV:S.pF;
+  const pw=S.weight==='C'?tr.C:S.weight==='Z'?tr.Z:tr.A;
   const L=pw>0?10*Math.log10(pw)+S.offset:-99;
+  /* courbe d'évolution : L(t) selon TEMPS+pondération, de 0 à i (sous-échantillonné) */
+  const trkA=S.time==='S'?F.tSA:S.time==='V'?F.tVA:F.tFA;
+  const trkC=S.time==='S'?F.tSC:S.time==='V'?F.tVC:F.tFC;
+  const trkZ=S.time==='S'?F.tSZ:S.time==='V'?F.tVZ:F.tFZ;
+  const trk=S.weight==='C'?trkC:S.weight==='Z'?trkZ:trkA;
   const step=Math.max(1,Math.ceil(cnt/600)); S.hist=[];
-  for(let f=0;f<=i;f+=step){ const la=F.LAF[f]; S.hist.push({t:f*F.hopSec, L:la, Leq:lvl(F.cumA[f]/(f+1))}); }
+  for(let f=0;f<=i;f+=step){ const lv=trk[f]>0?10*Math.log10(trk[f])+S.offset:-99; S.hist.push({t:f*F.hopSec, L:lv, Leq:lvl(F.cumA[f]/(f+1))}); }
   S.elapsed=T;
   replTickUi(i*F.hopSec);
   if(REPL.playing) sgTick();   // spectrogramme défile pendant la lecture (figé pendant le scrub)
@@ -4335,8 +4370,8 @@ $('mResetPrefs').onclick=function(){
   if(confirm("Réinitialiser tous les paramètres (thème, pondération, échelles, calibration…) aux valeurs par défaut ? L'application va redémarrer.")) resetPrefs();
 };
 
-$('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();drawActive();};
-$('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER.length];ui();drawActive();};
+$('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();if(REPL.on)renderReplayFrame(REPL.i);else drawActive();};
+$('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER.length];ui();if(REPL.on)renderReplayFrame(REPL.i);else drawActive();};
 $('kMode').onclick=()=>{S.mode=S.mode==='toct'?'oct':S.mode==='oct'?'fft':'toct';S.cursor=null;ui();drawActive();};
 $('kDur').onclick=()=>{S.duration=DURS[(DURS.indexOf(S.duration)+1)%DURS.length];ui();updateNumbers(-99);};
 
@@ -4383,8 +4418,11 @@ $('kReset').onclick=()=>{if(S.running)stopMeasure(false);resetMeasure();$('modeB
 /* verrouille/déverrouille les réglages qui biaiseraient une mesure en cours */
 function replFileLoaded(){ return !!(REPL.lastId && REPL.buf && REPL.frames && $('replBar').classList.contains('on')); }
 function setLocks(){
-  const active=S.running||REPL.on;        // verrouillé pendant mesure micro OU replay actif (pas si fichier seulement chargé)
-  ['kW','kT','kDur','kCal'].forEach(id=>$(id).classList.toggle('locked',active));
+  const mic=S.running&&!REPL.on;                 // mesure micro : tout verrouillé
+  $('kW').classList.toggle('locked',mic);        // en replay : Pondération/Temps/Correction ACTIFS (instantanés)
+  $('kT').classList.toggle('locked',mic);
+  $('kCal').classList.toggle('locked',mic);
+  $('kDur').classList.toggle('locked',mic||REPL.on);   // durée sans objet en replay
 }
 
 /* icônes transport universelles */
