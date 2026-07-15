@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.38-beta</div>
+  <div class="splashver" id="splashVer">2.0.39-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -767,6 +767,20 @@ if('serviceWorker' in navigator){
       <span class="cp-mini" style="flex:1">dB — la mesure démarre au franchissement</span>
     </div>
     <div class="mnote" style="margin-top:8px">Ordre : armement micro → décompte → attente du seuil → mesure. Appui court sur ▶ pour lancer.</div>
+  </div></div>
+
+  <!-- popover DURÉE (appui long sur DURÉE) -->
+  <div id="durPop" class="calpop"><div class="calpop-in">
+    <div class="cp-head">DURÉE DE MESURE <button id="durClose">✕</button></div>
+    <div class="cp-lbl">DURÉES PRÉDÉFINIES</div>
+    <div class="cp-presets" id="durPresets"></div>
+    <div class="cp-lbl" style="margin-top:10px">DURÉE PERSONNALISÉE</div>
+    <div class="cp-fine">
+      <input class="cin" id="durCustom" type="number" inputmode="numeric" min="1" step="1" placeholder="—" style="width:96px">
+      <span class="cp-mini" style="flex:1">secondes (0 ou vide = ∞)</span>
+      <button id="durApply" class="cp-ok">OK</button>
+    </div>
+    <div class="mnote" style="margin-top:8px">La mesure s'arrête automatiquement à la durée choisie. Appui court sur DURÉE = cycle rapide.</div>
   </div></div>
 
   <!-- menu EXPORT -->
@@ -1400,6 +1414,13 @@ function fft(re,im){
 }
 const NOMS=[20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000];
 const DURS=[0,10,30,60,300,900], DURL=['∞','10 s','30 s','1 min','5 min','15 min'];
+/* libellé de durée : gère aussi les valeurs PERSO hors liste (0 = illimité) */
+function durLabel(d){
+  if(!d||d<=0)return '∞';
+  if(d<60)return d+' s';
+  const m=Math.floor(d/60), s=Math.round(d%60);
+  return s?(m+' min '+s+' s'):(m+' min');
+}
 const TAU={F:0.125,S:1.0,V:10.0};                  // constantes de temps (s)
 const TIME_ORDER=['F','S','V'];
 const TIME_LBL={F:'Fast',S:'Slow',V:'V-Slow'};
@@ -2077,7 +2098,7 @@ function resetMeasure(){
   if(SG.cols)SG.cols.fill(null);
   SG.colSeq=0; SG.vScaleKey=''; SG.vViewKey=''; SG.vSeq=-1;
   resetSg3d();
-  S.sgCursor=null; S.histCursor=null;
+  S.sgCursor=null; S.histCursor=null; S.cursor=null; S.maxCur=false;
   S.tview=sgDefaultView(); S.histView=null;
   updateNumbers(-99); drawActive();
 }
@@ -2366,7 +2387,7 @@ function updateNumbers(L){
   $('barFill').style.width=Math.max(0,Math.min(100,(L-30)))+'%';
   $('peakMark').style.left=Math.max(0,Math.min(100,(S.peakHold-30)))+'%';
   const m=Math.floor(S.elapsed/60),s=Math.floor(S.elapsed%60);
-  $('tLine').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+' / '+DURL[DURS.indexOf(S.duration)];
+  $('tLine').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+' / '+durLabel(S.duration);
   if(S.duration>0)$('tProg').style.width=Math.min(100,S.elapsed/S.duration*100)+'%';
   else $('tProg').style.width='0%';
 }
@@ -3956,7 +3977,7 @@ function ui(){
   $('kWV').textContent=S.weight;
   $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':S.mode==='oct'?'1/1 oct':'FFT';
-  $('kDurV').textContent=DURL[DURS.indexOf(S.duration)];
+  $('kDurV').textContent=durLabel(S.duration);
   const offd=Math.abs(S.offset-120.0)>=0.05;
   $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
   const badge=$('modeBadge');
@@ -4585,7 +4606,41 @@ $('mResetPrefs').onclick=function(){
 $('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();if(REPL.on)renderReplayFrame(REPL.i);else drawActive();};
 $('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER.length];ui();if(REPL.on)renderReplayFrame(REPL.i);else drawActive();};
 $('kMode').onclick=()=>{S.mode=S.mode==='toct'?'oct':S.mode==='oct'?'fft':'toct';S.cursor=null;ui();drawActive();};
-$('kDur').onclick=()=>{S.duration=DURS[(DURS.indexOf(S.duration)+1)%DURS.length];ui();updateNumbers(-99);};
+/* ===== DURÉE : appui court = cycle · appui long = sous-menu (presets + perso) ===== */
+const DUR_PRESETS=[['∞',0],['10 s',10],['30 s',30],['1 min',60],['5 min',300],['15 min',900]];
+function renderDurPop(){
+  const g=$('durPresets'); if(!g)return; g.innerHTML='';
+  for(const [lbl,val] of DUR_PRESETS){
+    const b=document.createElement('button'); b.textContent=lbl;
+    if(S.duration===val)b.className='on';
+    b.onclick=()=>{ S.duration=val; ui(); updateNumbers(-99); renderDurPop(); };
+    g.appendChild(b);
+  }
+  const ci=$('durCustom');
+  if(ci && document.activeElement!==ci) ci.value=(S.duration>0 && !DURS.includes(S.duration))?S.duration:'';
+}
+function applyDurCustom(){
+  const v=parseInt(($('durCustom').value||'').trim(),10);
+  S.duration=(!isFinite(v)||v<=0)?0:Math.min(86400,v);   // borne 24 h
+  ui(); updateNumbers(-99); renderDurPop();
+}
+$('durApply').onclick=applyDurCustom;
+$('durCustom').addEventListener('change',applyDurCustom);
+$('durClose').onclick=()=>$('durPop').classList.remove('on');
+$('durPop').addEventListener('click',e=>{if(e.target.id==='durPop')$('durPop').classList.remove('on');});
+let durLong=false,durT;
+$('kDur').addEventListener('pointerdown',()=>{
+  durLong=false;
+  if($('kDur').classList.contains('locked'))return;      // verrouillé (mesure/replay) : ni cycle ni menu
+  durT=setTimeout(()=>{ durLong=true; renderDurPop(); $('durPop').classList.add('on'); },500);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kDur').addEventListener(ev,()=>clearTimeout(durT)));
+$('kDur').onclick=()=>{
+  if(durLong){durLong=false;return;}                     // l'appui long a ouvert le menu
+  if($('kDur').classList.contains('locked'))return;
+  S.duration=DURS[(DURS.indexOf(S.duration)+1)%DURS.length];   // perso hors liste → indexOf −1 → repart à ∞
+  ui();updateNumbers(-99);
+};
 
 /* ===== Popover CALIBRATION global (Auto + presets + fin ±0.5 + avancé) ===== */
 const OFFSET_PRESETS=[94,100,110,120,130];
