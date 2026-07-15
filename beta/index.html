@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.12-beta</div>
+  <div class="splashver" id="splashVer">2.0.13-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1673,6 +1673,7 @@ async function replayStart(id,startAt){
   S.running=true; S.paused=false; S.lastT=0;
   S.warmT=0; S.warmAge=0; S.delayT=0; S.trigWait=false;    // pas d'armement ni de déclenchement
   S.K=0; S.lcBq=null; S.lcLastCt=S.ctx.currentTime;        // filtres temporels réamorcés
+  clearRunVisuals();                                        // vrai démarrage d'un replay : spectrogramme/vues remis à zéro (beginRun ne le fait plus en replay)
   beginRun();
   setTransport(); setLocks();
   src.onended=()=>{ if(REPL.on&&REPL.src===src) stopMeasure(true); };
@@ -2845,18 +2846,24 @@ function sgBlit(c){
   $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(nfmin)+'–'+fmtF(nfmax)+'Hz';
 }
 /* démarre réellement l'intégration : compteurs remis à zéro sur un signal propre */
+function clearRunVisuals(){
+  /* départ VIERGE : rien d'antérieur à l'écran (spectrogramme, 3D, vues) */
+  S.histView=null; S.histCursor=null; S.tview=sgDefaultView();
+  if(SG.cols){SG.cols.fill(null);SG.colSeq=0;SG.vScaleKey='';SG.vSeq=-1;S.sgCursor=null;}
+  resetSg3d();
+}
 function beginRun(){
   S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;
   S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;S.lcPeak=-Infinity;
   S.L10=-99;S.L50=-99;S.L90=-99;S.statT=0;
-  /* départ VIERGE : la mesure commence exactement ici, rien d'antérieur à l'écran */
   if(S.bandPeak)S.bandPeak.fill(-99);
   if(S.bandEnergy)S.bandEnergy.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
   if(S.recAudio&&!REPL.on)arecReset();          // V2 : nouvel enregistrement audio par mesure (jamais en replay)
-  S.histView=null; S.histCursor=null; S.tview=sgDefaultView();
-  if(SG.cols){SG.cols.fill(null);SG.colSeq=0;SG.vScaleKey='';SG.vSeq=-1;S.sgCursor=null;}
-  resetSg3d();
+  /* en REPLAY, un saut de timeline relance les intégrateurs mais PRÉSERVE le
+     spectrogramme (flux continu de ce qu'on explore) ; le nettoyage complet
+     n'a lieu qu'au démarrage d'un replay (replayStart) ou d'une mesure micro. */
+  if(!REPL.on) clearRunVisuals();
   ui();
 }
 /* alimente le spectrogramme (appelé par la boucle même quand un autre écran/menu est affiché) */
