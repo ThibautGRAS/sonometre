@@ -479,7 +479,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.11-beta</div>
+  <div class="splashver" id="splashVer">2.0.12-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1695,7 +1695,7 @@ function replayTeardown(){
   $('replBar').classList.remove('on');
   try{ REPL.src&&(REPL.src.onended=null); REPL.src&&REPL.src.stop(); }catch(_){}
   try{ REPL.src&&REPL.src.disconnect(); }catch(_){}
-  REPL.src=null; REPL.scrub=null;
+  REPL.src=null; REPL.scrub=null; S._previewRing=false;
   /* buffer et meta CONSERVÉS tant que la barre est affichée : glisser après la fin
      relance instantanément au point visé, sans relire la base. Libérés dès qu'une
      mesure micro démarre (voir ui()). */
@@ -1788,12 +1788,14 @@ window.addEventListener('pageshow',()=>setTimeout(reviveMic,250));
 /* calcule le spectre courant (magnitude puissance par bin) avec la fenêtre choisie */
 function computeSpectrum(){
   const N=S.fftN, tap=S.tap, an=S.analyser;
-  an.getFloatTimeDomainData(tap);
-  /* alimente le ring buffer avec le dernier bloc capté */
-  const L=tap.length;
-  if(N<=L){ S.ring.set(tap.subarray(L-N)); }
-  else {
-    S.ring.copyWithin(0,L); S.ring.set(tap,N-L);
+  if(!S._previewRing){                       // scrub replay : le ring est rempli par replPreviewFill
+    an.getFloatTimeDomainData(tap);
+    /* alimente le ring buffer avec le dernier bloc capté */
+    const L=tap.length;
+    if(N<=L){ S.ring.set(tap.subarray(L-N)); }
+    else {
+      S.ring.copyWithin(0,L); S.ring.set(tap,N-L);
+    }
   }
   const re=S.re, im=S.im, w=S.winCoef;
   for(let i=0;i<N;i++){re[i]=S.ring[i]*w[i];im[i]=0;}
@@ -1840,7 +1842,7 @@ function loop(ts){
   S.raf=requestAnimationFrame(loop);
   if(!S.lastT){S.lastT=ts;return;}
   const dt=Math.min(0.2,(ts-S.lastT)/1000); S.lastT=ts;
-  if(S.paused)return;
+  if(S.paused&&!S._previewRing)return;       // le scrub replay prévisualise même en pause
   /* filet de sécurité : si on est censé mesurer mais que le micro n'est plus vivant
      (arrière-plan, écran verrouillé, appel…), on met en pause au lieu d'intégrer du vide.
      Tolérance : on attend ~0,4 s de micro mort d'affilée pour ne pas réagir à un simple
@@ -1858,7 +1860,7 @@ function loop(ts){
      qui peut durer ~1 s. On reste en préchauffage tant que le niveau n'est pas STABILISÉ,
      avec un minimum de 0,8 s et un maximum de 3 s de sécurité. Rien n'est intégré pendant ce temps. */
   const warm = S.warmT>0;
-  const idle = warm || S.delayT>0 || S.trigWait;    // aucune intégration tant que la mesure n'a pas VRAIMENT commencé
+  const idle = warm || S.delayT>0 || S.trigWait || !!S._previewRing;   // preview scrub : affichage seul, zéro intégration
   S._idle=idle;                                     // miroir lu par la capture audio (V2)
   S.elapsed+=dt;
 
@@ -4625,30 +4627,40 @@ $('arecSave').onclick    =()=>{ recSave().catch(()=>toast('Sauvegarde impossible
    EN PAUSE : le saut est MÉMORISÉ (pendingSeek) et ne s'exécute qu'à la reprise —
    la lecture ne redémarre jamais toute seule. Les événements souris simulés
    qu'iOS émet après un toucher sont ignorés (anti double-saut). */
+/* remplit le tampon d'analyse avec les N échantillons du PCM rejoué finissant à t
+   (rééchantillonnage linéaire si la fs de l'enregistrement diffère du contexte).
+   La boucle d'affichage normale fait le reste : le spectre suit le doigt à 60 fps. */
+function replPreviewFill(t){
+  if(!REPL.buf||!S.ring)return false;
+  const N=S.ring.length, ch=REPL.buf.getChannelData(0);
+  const bufFs=REPL.buf.sampleRate, ctxFs=S.ctx?S.ctx.sampleRate:bufFs;
+  const r=bufFs/ctxFs;
+  let pos=t*bufFs-N*r;
+  for(let i=0;i<N;i++){
+    const x=pos+i*r, k=Math.floor(x), fr=x-k;
+    S.ring[i]=(k<0||k+1>=ch.length)?0:(ch[k]*(1-fr)+ch[k+1]*fr);
+  }
+  return true;
+}
 (function(){
   const tk=$('rbTrack'); if(!tk)return;
-  let lastTouch=0, lastLive=0, starting=false;
+  let lastTouch=0, starting=false;
   const xToT=e=>{ const r=tk.getBoundingClientRect(); const x=(e.touches&&e.touches.length?e.touches[0].clientX:(e.changedTouches&&e.changedTouches.length?e.changedTouches[0].clientX:e.clientX))-r.left; return Math.max(0,Math.min(1,x/r.width))*REPL.dur; };
   const canScrub=()=>REPL.on||(!S.running&&REPL.lastId&&REPL.dur>0&&$('replBar').classList.contains('on'));
-  /* SCRUB LIVE : pendant le glissé, sauts réels throttlés (~7/s) → la vraie chaîne
-     analyse le point sous le doigt, les courbes suivent (recherche visuelle d'un
-     moment). En pause : affichage seul, saut mémorisé. Après la fin : le premier
-     mouvement relance la lecture (buffer conservé → instantané). */
-  const live=t=>{
-    const now=Date.now();
-    if(!REPL.on){
-      if(!starting&&REPL.lastId){ starting=true; replayStart(REPL.lastId,t).finally(()=>{starting=false;}); }
-      return;
-    }
-    if(S.paused){ replTickUi(t); return; }               // en pause : pas de lecture pendant le drag
-    if(now-lastLive>140){ lastLive=now; replaySeek(t); }
+  /* SCRUB VISUEL : pendant le glissé, le tampon d'analyse est rempli avec le PCM du
+     point sous le doigt → les courbes suivent en direct (même en pause), sans toucher
+     à la lecture ni à l'intégration. Le saut audio réel se fait au relâcher. */
+  const preview=t=>{
+    if(!REPL.on&&!starting&&REPL.lastId){ starting=true; replayStart(REPL.lastId,t).finally(()=>{starting=false;}); return; }
+    if(replPreviewFill(t))S._previewRing=true;
   };
   const commit=t=>{
+    S._previewRing=false;
     if(REPL.on){ if(S.paused){ REPL.pendingSeek=t; replTickUi(t); } else replaySeek(t); }
     else if(!starting&&REPL.lastId) replayStart(REPL.lastId,t);
   };
-  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); REPL.scrub=xToT(e); replTickUi(REPL.scrub); live(REPL.scrub); },{passive:false}));
-  ['touchend','touchcancel'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); if(REPL.scrub!=null){ commit(REPL.scrub); REPL.scrub=null; } },{passive:false}));
+  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); REPL.scrub=xToT(e); replTickUi(REPL.scrub); preview(REPL.scrub); },{passive:false}));
+  ['touchend','touchcancel'].forEach(ev=>tk.addEventListener(ev,e=>{ if(!canScrub())return; e.preventDefault(); lastTouch=Date.now(); if(REPL.scrub!=null){ commit(REPL.scrub); REPL.scrub=null; } else S._previewRing=false; },{passive:false}));
   tk.addEventListener('mousedown',e=>{ if(!canScrub())return; if(Date.now()-lastTouch<700)return; commit(xToT(e)); });
 })();
 $('rbReplay').onclick=()=>{ if(REPL.lastId&&!S.running) replayStart(REPL.lastId); };
