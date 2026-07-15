@@ -490,7 +490,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.30-beta</div>
+  <div class="splashver" id="splashVer">2.0.31-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -682,6 +682,9 @@ if('serviceWorker' in navigator){
     <div class="cp-lbl">MICRO</div>
     <div class="cp-row"><span id="cpMicName" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62%">—</span><b id="cpMicRate">—</b></div>
     <div class="cp-row"><span>Choisir</span><select id="micSelPop" class="micsel" style="max-width:62%"><option value="">Automatique</option></select></div>
+    <div class="cp-lbl">SORTIE (réécoute ♪)</div>
+    <div class="cp-row"><span>Haut-parleur</span><select id="outSelPop" class="micsel" style="max-width:62%"><option value="">Automatique (système)</option></select></div>
+    <div class="cp-note" id="outNote" style="font-size:11px;opacity:.7;padding:2px 0 4px"></div>
     <div class="cp-row"><span>Correction amplitude</span><button id="cpCorr">Off</button></div>
     <div class="cp-lbl">OFFSET dBFS → dB SPL</div>
     <div class="cp-presets" id="cpPresets"></div>
@@ -937,7 +940,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -1462,6 +1465,7 @@ function configureAnalyser(){
 }
 async function initAudio(){
   S.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  try{ if(S.outId&&S.ctx.setSinkId) await S.ctx.setSinkId(S.outId); }catch(_){}   // sortie réécoute (si supportée)
   S.analyser=S.ctx.createAnalyser();
   await acquireMic();
   configureAnalyser();
@@ -1863,7 +1867,7 @@ async function replayStart(id,startAt,startPaused){
     let segs=[];
     try{ meta=(await recList()).find(r=>r.id===id); segs=meta?await recSegs(id):[]; }catch(_){}
     if(!meta||!segs.length){ toast('Enregistrement introuvable'); return; }
-    if(!S.ctx){ try{ S.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ toast('Audio indisponible'); return; } }
+    if(!S.ctx){ try{ S.ctx=new (window.AudioContext||window.webkitAudioContext)(); try{ if(S.outId&&S.ctx.setSinkId) await S.ctx.setSinkId(S.outId); }catch(_){} }catch(_){ toast('Audio indisponible'); return; } }
     if(S.ctx.state!=='running'){ try{ await S.ctx.resume(); }catch(_){} }
     if(!S.analyser){ S.analyser=S.ctx.createAnalyser(); }
     configureAnalyser();
@@ -3959,7 +3963,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
                    'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','specAvg','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId'];
+                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','specAvg','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
@@ -4026,6 +4030,7 @@ async function applyMicChoice(sel){
 }
 $('micSel').onchange=e=>applyMicChoice(e.target);
 $('micSelPop').onchange=e=>applyMicChoice(e.target);
+$('outSelPop').onchange=e=>applyOutChoice(e.target);
 loadPrefs(); applyTheme(); _prefsReady=true;
 $('mToctSrc').onclick=()=>{
   S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
@@ -4229,7 +4234,30 @@ async function populateMicList(){
       sel.innerHTML='<option value="">Automatique (défaut système)</option>';
       ins.forEach((d,i)=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||('Entrée '+(i+1)); if(d.deviceId&&d.deviceId===S.micId)o.selected=true; sel.appendChild(o); });
     }
+    /* SORTIE (réécoute) : sélection possible seulement si le navigateur supporte setSinkId
+       (Chrome/Edge desktop). iOS/Safari route en automatique (écouteurs si branchés) → info. */
+    const outSel=$('outSelPop'), note=$('outNote');
+    const canPick = !!(window.AudioContext && (AudioContext.prototype.setSinkId));
+    if(outSel){
+      const outs=devs.filter(d=>d.kind==='audiooutput');
+      if(canPick && outs.length){
+        outSel.disabled=false;
+        outSel.innerHTML='<option value="">Automatique (système)</option>';
+        outs.forEach((d,i)=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||('Sortie '+(i+1)); if(d.deviceId&&d.deviceId===S.outId)o.selected=true; outSel.appendChild(o); });
+        if(note)note.textContent='';
+      } else {
+        outSel.disabled=true;
+        outSel.innerHTML='<option value="">Automatique (système)</option>';
+        if(note)note.textContent='Sur iPhone, la sortie est gérée par le système : branche des écouteurs pour la réécoute, sinon haut-parleur.';
+      }
+    }
   }catch(e){}
+}
+/* applique le choix de sortie (si supporté) au contexte audio → réécoute ♪ SON / replay */
+async function applyOutChoice(sel){
+  const id=sel?sel.value:'';
+  S.outId=id||null; savePrefs&&savePrefs();
+  try{ if(S.ctx&&S.ctx.setSinkId) await S.ctx.setSinkId(id||''); }catch(e){ toast('Sortie non modifiable ici'); }
 }
 function showMicInfo(){
   const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
