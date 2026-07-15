@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.39-beta** : (1) MESURE Réinit efface desormais AUSSI le curseur du spectre (S.cursor) et le suivi de max (S.maxCur) — ajoutes dans resetMeasure (les curseurs spectro/evolution etaient deja effaces). (2) Appui LONG sur DUREE ouvre un sous-menu (popover durPop) : presets ∞/10s/30s/1min/5min/15min + champ duree PERSONNALISEE en secondes (borne 24 h ; 0/vide = ∞). Appui COURT sur DUREE = cycle rapide inchange. Nouveau formateur durLabel() gere l'affichage des durees perso hors liste (kDurV + tLine). Popover verrouille si mesure/replay en cours.
+
 - **2.0.38-beta** : completion gestes PC. Ajout des equivalents souris/clavier manquants : tableau Valeurs (molette, fleches gauche/droite, clic sur les points = changer de page), curseur max auto via Maj+clic (equivalent deux doigts / onTap2), raccourcis clavier Espace=demarrer/arreter, R=reset vue, M=curseur max. Doc (aide Gestes) completee dynamiquement pour PC via applyInputHints. Raccourcis ignores si un champ de saisie a le focus.
 
 - **2.0.37-beta** : consignes adaptees PC vs tactile. Detection IS_PC (matchMedia hover:hover + pointer:fine). Si PC, applyInputHints() reecrit l'aide Gestes (molette=Y, Ctrl+molette=X, clic-glisser=deplacer, clic=curseur, double-clic=reset), la note du menu dynamique, et le texte incruste du spectrogramme. Ajout double-clic PC = reset vue / retrait curseur dans attachZoomPan (equivalent du double-tap tactile). Tactile : libelles inchanges.
