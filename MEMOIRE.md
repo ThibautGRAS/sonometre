@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.71-beta** : logique fade boutons MOY/EMG clarifiee. De base estompes (.4) ; un clic sur l'un toggle son etat + fadeWake (les deux pleinement visibles, aura de couleur sur l'actif) ; ~2,2 s apres, les DEUX re-estompent ensemble (plus d'exception .on qui gardait l'actif a .9 -> l'actif s'estompe aussi mais garde sa teinte). fadeWake ajoute dans avgBtn/emgBtn onclick pour reveil fiable au clic. Delai 3500->2200 ms.
+
 - **2.0.70-beta** : MOY/EMG toujours OFF + estompes au lancement. (1) defaut emgOn:true -> false. (2) 'emgOn' et 'specAvg' retires de PREF_FIELDS -> etat on/off non memorise, toujours off au demarrage (emgThr reste persiste). (3) DOMContentLoaded ajoute body.sgbtn-dim d'emblee (avant fadeWake au 1er lancement laissait les boutons visibles 3,5 s) -> boutons estompes des l'init, reveil a la 1re interaction.
 
 - **2.0.69-beta** : lisere LED (rouge rotation/pause, vert fin) = halo lumineux doux, triple drop-shadow (rayonnement leger) au lieu d'une seule ombre.

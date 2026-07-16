@@ -268,8 +268,7 @@ if('serviceWorker' in navigator){
   .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2;max-width:43%;white-space:nowrap;overflow:hidden;text-align:right}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
   .sg3dbtn{transition:opacity .35s ease;}
-  body.sgbtn-dim .sg3dbtn{opacity:.42 !important}
-  body.sgbtn-dim .sg3dbtn.on{opacity:.9 !important}   /* actif : reste bien visible même estompé */
+  body.sgbtn-dim .sg3dbtn{opacity:.4 !important}   /* estompage SIMULTANÉ, actif ou non (l'actif garde sa teinte) */
   #sg3dBtn:active,#lsnBtn:active{opacity:1 !important}
   .sg3dbtn:active{opacity:1}
   .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:40px;height:22px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:10px;letter-spacing:.04em;border-radius:7px;cursor:pointer}
@@ -571,7 +570,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.70-beta</div>
+  <div class="splashver" id="splashVer">2.0.71-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1261,7 +1260,7 @@ const FADE={t:null};
 function fadeWake(){
   document.body.classList.remove('sgbtn-dim');            // réveil : tous les boutons pleinement visibles
   clearTimeout(FADE.t);
-  FADE.t=setTimeout(()=>{ document.body.classList.add('sgbtn-dim'); },3500);   // estompage SIMULTANÉ de tous les boutons
+  FADE.t=setTimeout(()=>{ document.body.classList.add('sgbtn-dim'); },2200);   // estompage SIMULTANÉ de tous les boutons
 }
 document.addEventListener('DOMContentLoaded',()=>{
   const zone=document.querySelector('.lcd')||document.body;
@@ -4273,9 +4272,9 @@ $('mSgSpeed').onclick=()=>{
   ui();
 };
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
-$('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();drawActive();};
+$('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();fadeWake();drawActive();};
 $('vibBtn').onclick=()=>{vibToggle();};
-$('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; savePrefs(); ui(); if(S.screen==='spec')drawSpectrum(); };
+$('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); fadeWake(); if(S.screen==='spec')drawSpectrum(); };
 $('lsnBtn').onclick=()=>{lsnToggle();};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
 const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['neon','Néon'],['gameboy','Game Boy'],['matrix','Matrice']];
