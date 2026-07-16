@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.56-beta** : resolution frequentielle du spectre fin en RELECTURE rendue adaptative a la taille du fichier. Avant : grille fine reduite plafonnee a RES=320 lignes (budget 20 Mo, 40e6/(16*count)) quelle que soit la duree -> trop grossier. Maintenant RESmax=max(64,min(n,floor(48e6/(8*count)))) : budget ~48 Mo pour les 2 pistes fines (rawFine+cumFine, 8 o/element) divise par le nb de trames. Petits fichiers -> jusqu'a la PLEINE resolution FFT (RES=n) ; gros fichiers -> reduit auto mais bien > 320 (ex. 30s=plein, 1min~5000, 5min~1000, 20min~250 vs ~100 avant). finMap Int16 OK (RES<=n<=16384). Aucun surcout FFT (RES n'affecte que le stockage/bucketing O(n)).
+
 - **2.0.55-beta** : (1) legende spectre qui chevauchait l'echelle : titre raccourci (SPECTRE · BANDE FINE · Z, 1/3 OCT ; 'POND.' retire) + .gtitle/.gscale bornes (max-width 56%/43%, nowrap, ellipsis). (2) boutons MOY/EMG actifs : surbrillance nette (.sg3dbtn.on bg .5 + bordure #7FD8FF + halo). (3) nouveau theme 'Neon' : touches a lisere lumineux (bordure+halo bleu), couleur qui vire au rose #FF3D6E a l'appui (transition), keypad avec halo ; key-start halo rouge. Ajoute a THEMES + retrait classe th-neon.
 
 - **2.0.54-beta** : fix courbe bande fine qui debordait sur la zone des ordonnees. Cause : i0=floor(fmin/binHz) -> 1er point a une frequence < fmin -> x2 < padL (a gauche de l'axe). Correctif : clip du trace a la zone du graphe rect(padL,0,w-padL,h) autour du stroke. (Rappel : y2 clampe deja en vertical.)

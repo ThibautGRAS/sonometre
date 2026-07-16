@@ -556,7 +556,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.55-beta</div>
+  <div class="splashver" id="splashVer">2.0.56-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1828,13 +1828,15 @@ async function replBuildFrames(buf){
   const nb=S.bands.length, bins=S.bandBins, wA=S.wA, wC=S.wC, corr=S.corr!=='off'?S.compGain:null;
   const hop=Math.max(Math.round(fs*0.05), Math.round(N/4));
   const count=Math.max(1,Math.floor((pcm.length-N)/hop)+1);
-  /* ===== grille bande fine ADAPTATIVE (anti raies fantômes) =====
+  /* ===== grille bande fine ADAPTATIVE (anti raies fantômes) + résolution selon la taille du fichier =====
      Une grille log fixe a, en bas du spectre, PLUS de lignes que la FFT n'a de points →
      lignes vides = raies fantômes (surtout en log). Ici : 1 point FFT par ligne tant que
-     le pas log est plus fin que la FFT (→ pleine résolution en bas, ex. autour de 100 Hz),
-     puis regroupement progressif en haut. Aucune ligne vide. */
+     le pas log est plus fin que la FFT (→ pleine résolution en bas), puis regroupement en haut.
+     RESmax est calé sur un budget mémoire (~48 Mo pour les 2 pistes fines) DIVISÉ par le nombre
+     de trames : petits fichiers → RES peut atteindre la pleine résolution FFT (n points) ;
+     gros fichiers → RES réduit automatiquement (mais bien au-delà de l'ancien plafond de 320). */
   const binHz=fs/N, f1=fs/2, lr1=Math.log(f1);
-  const RESmax=Math.max(48,Math.min(320,Math.floor(40e6/(16*Math.max(1,count)))));
+  const RESmax=Math.max(64, Math.min(n, Math.floor(48e6/(8*Math.max(1,count)))));
   const finMap=new Int16Array(n);
   const lineSumF=[], lineCnt=[];
   { let L=0, step=(lr1-Math.log(binHz))/RESmax, boundLog=Math.log(binHz)+step;
