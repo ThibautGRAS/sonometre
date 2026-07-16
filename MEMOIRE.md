@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.74-beta** : halo du lisere LED (rouge rotation/pause, vert fin) accentue : 4 drop-shadow (jusqu'a 48-50px de rayon) au lieu de 3, lueurs plus intenses.
+
 - **2.0.73-beta** : EMG actif = ambre PLEIN comme MOY (vert plein). Retrait de l'override #emgBtn.on translucide (.24) -> EMG utilise .sg3dbtn.on (ambre plein). MOY reste vert plein (#avgBtn.on).
 
 - **2.0.72-beta** : logique boutons overlay refaite PAR BOUTON (independants). Base .sg3dbtn opacity .4 (toujours semi-transparent), classe .flash -> opacity 1 pendant 1,5 s. flashBtn/unflashBtn. Clic : activation -> flash 1,5 s puis re-transparent ; desactivation -> unflash immediat. Applique a avgBtn/emgBtn/sg3dBtn/lsnBtn. Retire l'ancien systeme global (body.sgbtn-dim, fadeWake, tap-anywhere). BUG CORRIGE : #avgBtn.on etait redefini en BLEU (ecrasait le vert) -> supprime, MOY actif enfin VERT. #sg3dBtn/#lsnBtn opacity .75->.4 (uniforme).
