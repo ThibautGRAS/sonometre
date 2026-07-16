@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.65-beta** : boutons overlay (MOY/EMG) plus reperables en mode estompe : .sg3dbtn.fade opacite .18 -> .42 ; bouton ACTIF reste bien visible meme estompe (.sg3dbtn.on.fade opacite .9).
+
 - **2.0.64-beta** : bouton overlay actif (MOY/EMG) passe en AMBRE vif #FFA92E (vert pas assez visible) : texte fonce + halo ambre, tres contraste sur l'ecran.
 
 - **2.0.63-beta** : fin de mesure = 2 clignotements LEGERS verts (peaks .75) puis liseré VERT STABLE (opacite .5) MAINTENU jusqu'a la prochaine mesure. ledDone remanie (finit a .5, animation forwards one-shot -> pas de CPU continu). Retrait du setTimeout : rec-done reste jusqu'a kStart/resetMeasure/replayStart.
