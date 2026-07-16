@@ -207,6 +207,14 @@ if('serviceWorker' in navigator){
     animation:ledBlink 1.5s ease-in-out infinite;
   }
   @keyframes ledBlink{ 0%,100%{opacity:.22} 50%{opacity:.7} }
+  /* FIN DE MESURE (durée atteinte) : le liseré devient un anneau VERT qui entoure l'écran puis s'estompe */
+  body.rec-done .bezel::before{
+    opacity:1;
+    background:conic-gradient(from 0deg, rgba(47,191,131,.75), rgba(140,255,190,.8) 50%, rgba(47,191,131,.75));
+    filter:drop-shadow(0 0 5px rgba(47,191,131,.7));
+    animation:ledDone 2.4s ease-out forwards;
+  }
+  @keyframes ledDone{ 0%{opacity:0} 10%{opacity:1} 45%{opacity:.55} 60%{opacity:1} 100%{opacity:0} }
   /* accessibilité : pas d'animation → pulsation douce du liseré à la place */
   @media (prefers-reduced-motion:reduce){
     body.rec-on .bezel::before{ animation:ledPulse 1.8s ease-in-out infinite;
@@ -556,7 +564,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.58-beta</div>
+  <div class="splashver" id="splashVer">2.0.59-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2214,6 +2222,7 @@ function resetMeasure(){
   S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0}; S.pV={A:0,C:0,Z:0};
   S.lvlDet=null;                       // détecteur temporel : reconstruit + re-calé au prochain bloc
   S.welch=null;                        // moyennage spectre (Welch) : repart propre
+  document.body.classList.remove('rec-done');
   S.eq={A:0,C:0,Z:0}; S.eqT=0;
   S.lafMax=-Infinity; S.lafMin=Infinity;
   S.lcPeak=-Infinity; S.L10=-99; S.L50=-99; S.L90=-99; S.statT=0;
@@ -2299,7 +2308,7 @@ function loop(ts){
   const warm = S.warmT>0;
   const idle = warm || S.delayT>0 || S.trigWait || !!S._previewRing;   // preview scrub : affichage seul, zéro intégration
   S._idle=idle;                                     // miroir lu par la capture audio (V2)
-  if(!S._previewRing) S.elapsed+=dt;                // SCRUB : horloge gelée (le doigt ne fait pas avancer le temps)
+  if(!S._previewRing && !warm) S.elapsed+=dt;         // SCRUB : horloge gelée · INIT micro : chrono à 0 (on ne mesure pas encore)
 
   const mag=computeSpectrum();
   const n=mag.length;
@@ -4976,7 +4985,8 @@ $('kStart').onclick=async function(){
   S.running=true;S.paused=false;S.lastT=0;
   S.warmT=1;                   // armement actif
   S.warmAge=0;
-  S.warmMax=coldStart?2.5:0.6; // micro froid → armement long ; déjà chaud → court
+  S.warmMax=coldStart?2.5:0.05; // 1re mesure (micro froid) → armement long ; suivantes (micro déjà actif) → quasi instantané
+  document.body.classList.remove('rec-done');
   S.K=0;
   setTransport();
   setLocks();
@@ -5005,6 +5015,10 @@ function stopMeasure(auto){
   const badge=$('modeBadge');
   badge.textContent=wasReplay?(auto?'REPLAY FINI · Leq figé':'REPLAY ARRÊTÉ'):(auto?'FINI · Leq figé':'ARRÊTÉ');badge.className='badge';
   if(wasReplay){ $('replBar').classList.remove('on'); REPL.i=0; }   // sortie du replay : barre masquée
+  if(auto && !wasReplay){                                            // mesure terminée (durée atteinte) : anneau vert
+    document.body.classList.add('rec-done');
+    clearTimeout(S._doneT); S._doneT=setTimeout(()=>document.body.classList.remove('rec-done'),2500);
+  }
 }
 
 /* ================= Export CSV ================= */
