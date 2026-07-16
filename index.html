@@ -267,8 +267,8 @@ if('serviceWorker' in navigator){
   .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--ice);z-index:2;text-shadow:0 0 8px rgba(79,195,255,.4);max-width:56%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2;max-width:43%;white-space:nowrap;overflow:hidden;text-align:right}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
-  .sg3dbtn{transition:opacity .35s ease;}
-  body.sgbtn-dim .sg3dbtn{opacity:.4 !important}   /* estompage SIMULTANÉ, actif ou non (l'actif garde sa teinte) */
+  .sg3dbtn{transition:opacity .3s ease;opacity:.4}   /* toujours semi-transparent par défaut */
+  .sg3dbtn.flash{opacity:1 !important}               /* rendu pleinement visible ~1,5 s après un clic */
   #sg3dBtn:active,#lsnBtn:active{opacity:1 !important}
   .sg3dbtn:active{opacity:1}
   .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:40px;height:22px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:10px;letter-spacing:.04em;border-radius:7px;cursor:pointer}
@@ -277,12 +277,11 @@ if('serviceWorker' in navigator){
   #avgBtn.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY actif = vert */
   #emgBtn.on{background:rgba(255,180,84,.24);border-color:rgba(255,180,84,.65);color:#FFD9A0}
   #vibBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
-  #avgBtn.on{background:rgba(79,195,255,.24);border-color:rgba(79,195,255,.65);color:#CFEBFF}
   #avgBtn.dis{opacity:.35}
   #lsnBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
   /* icônes du spectrogramme : côte à côte à gauche, dégagées de l'ordonnée (padL≈26) */
-  #sg3dBtn{right:auto;left:30px;top:6px;opacity:.75}
-  #lsnBtn{right:auto;left:82px;top:6px;opacity:.75}
+  #sg3dBtn{right:auto;left:30px;top:6px}
+  #lsnBtn{right:auto;left:82px;top:6px}
   #vibBtn.dis{opacity:.35}
   .gpane.on{display:block}
   canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
@@ -570,7 +569,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.71-beta</div>
+  <div class="splashver" id="splashVer">2.0.72-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1256,17 +1255,11 @@ function parabolicPeak(getDb, i, binHz){
 /* ===== estompage automatique des icônes flottantes des graphes =====
    Motif « contrôles de lecteur vidéo » : pleinement visibles à l'interaction,
    quasi transparents après 3,5 s pour laisser lire les étiquettes d'axes dessous. */
-const FADE={t:null};
-function fadeWake(){
-  document.body.classList.remove('sgbtn-dim');            // réveil : tous les boutons pleinement visibles
-  clearTimeout(FADE.t);
-  FADE.t=setTimeout(()=>{ document.body.classList.add('sgbtn-dim'); },2200);   // estompage SIMULTANÉ de tous les boutons
-}
-document.addEventListener('DOMContentLoaded',()=>{
-  const zone=document.querySelector('.lcd')||document.body;
-  ['touchstart','mousedown'].forEach(ev=>zone.addEventListener(ev,fadeWake,{passive:true}));
-  document.body.classList.add('sgbtn-dim');   // au lancement : boutons déjà estompés (réveil à la première interaction)
-});
+/* boutons superposés MOY/ÉMG/3D/🔊 : toujours semi-transparents ; un clic les rend
+   pleinement visibles ~1,5 s (flash) puis ils re-disparaissent. Chaque bouton est indépendant. */
+function flashBtn(btn){ if(!btn)return; btn.classList.add('flash'); clearTimeout(btn._ft); btn._ft=setTimeout(()=>btn.classList.remove('flash'),1500); }
+function unflashBtn(btn){ if(!btn)return; clearTimeout(btn._ft); btn.classList.remove('flash'); }
+/* (plus de réveil global au tap : chaque bouton gère son propre flash) */
 /* ===== écoute filtrée en temps réel =====
    Réinjecte le micro vers la sortie audio à travers un passe-bande cascade calé sur la
    fenêtre de fréquence zoomée (2× passe-haut + 2× passe-bas Butterworth ≈ 24 dB/oct de
@@ -4232,6 +4225,7 @@ $('sg3dBtn').onclick=()=>{
   $('sg3dBtn').textContent=S.sg3d?'2D':'3D';
   $('lsnBtn').style.display=S.sg3d?'none':'flex';   // l'écoute n'a pas d'icône en 3D
   SG._3dKey=''; drawSgram(); renderDynPop();
+  if(S.sg3d)flashBtn($('sg3dBtn')); else unflashBtn($('sg3dBtn'));
 };
 /* rotation légère : glissement HORIZONTAL = azimut (autour vertical) ; glissement VERTICAL
    = tangage léger autour de l'axe des fréquences (vers le bas = vue plus en plongée) */
@@ -4272,10 +4266,10 @@ $('mSgSpeed').onclick=()=>{
   ui();
 };
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
-$('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();fadeWake();drawActive();};
+$('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();if(S.emgOn)flashBtn($('emgBtn'));else unflashBtn($('emgBtn'));drawActive();};
 $('vibBtn').onclick=()=>{vibToggle();};
-$('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); fadeWake(); if(S.screen==='spec')drawSpectrum(); };
-$('lsnBtn').onclick=()=>{lsnToggle();};
+$('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); if(S.specAvg)flashBtn($('avgBtn')); else unflashBtn($('avgBtn')); if(S.screen==='spec')drawSpectrum(); };
+$('lsnBtn').onclick=()=>{lsnToggle(); if($('lsnBtn').classList.contains('on'))flashBtn($('lsnBtn'));else unflashBtn($('lsnBtn'));};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
 const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['neon','Néon'],['gameboy','Game Boy'],['matrix','Matrice']];
 /* ===== préférences persistantes ===== */
