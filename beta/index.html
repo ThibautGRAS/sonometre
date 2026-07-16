@@ -501,7 +501,11 @@ if('serviceWorker' in navigator){
   .langbar{display:flex;gap:8px;padding:8px 12px 2px}
   .langbtn{flex:1;background:rgba(127,216,255,.08);border:1px solid rgba(127,216,255,.25);color:#CFE4FF;font-family:var(--font);font-size:12px;font-weight:700;border-radius:8px;padding:7px 0;cursor:pointer}
   .langbtn.on{background:rgba(127,216,255,.22);border-color:rgba(127,216,255,.6)}
-  .helpbody{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-right:4px}
+  .helpbody{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-right:4px;flex:1 1 auto;min-height:0}
+  .helpnav{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 8px;margin-bottom:2px;border-bottom:1px solid rgba(79,195,255,.15);flex:0 0 auto;scrollbar-width:none}
+  .helpnav::-webkit-scrollbar{display:none}
+  .helpnav button{flex:0 0 auto;white-space:nowrap;background:rgba(79,195,255,.12);border:1px solid rgba(79,195,255,.3);color:#CFE4FF;font-family:var(--font);font-size:11px;font-weight:700;border-radius:14px;padding:6px 11px;cursor:pointer}
+  .helpnav button:active{background:rgba(79,195,255,.3)}
   .helpbody h3{font-size:13px;color:var(--ice);letter-spacing:.06em;margin:14px 0 5px;font-weight:700}
   .helpbody h3.warn{color:#FFB454}
   .helpbody h3:first-child{margin-top:2px}
@@ -564,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.59-beta</div>
+  <div class="splashver" id="splashVer">2.0.60-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -887,9 +891,10 @@ if('serviceWorker' in navigator){
   <div id="helpPop" class="calpop"><div class="calpop-in helppop">
     <div class="cp-head">AIDE &amp; GUIDE <span id="hpVer" style="margin-left:auto;margin-right:10px;font-size:10px;letter-spacing:.08em;color:#8FB2E8;font-weight:700"></span><button id="hpClose">✕</button></div>
     <div class="langbar"><button class="langbtn" data-lang="fr">🇫🇷 Français</button><button class="langbtn" data-lang="en">🇬🇧 English</button><button class="langbtn" data-lang="es">🇪🇸 Español</button></div>
+    <div class="helpnav" id="helpNav"></div>
     <div class="helpbody">
       <h3>Démarrer</h3>
-      <p>Autorise le microphone au premier lancement, puis appuie sur <b>▶</b>. Un court « INIT MICRO… » précède la mesure (le temps que le micro se stabilise). <b>■</b> arrête, <b>⏸</b> met en pause.</p>
+      <p>Autorise le microphone au premier lancement, puis appuie sur <b>▶</b>. Un « INIT MICRO… » précède <b>seulement la première mesure</b> (le temps que le micro se stabilise) ; les mesures suivantes démarrent quasi instantanément. Pendant l'init, le chrono reste à 00:00. <b>■</b> arrête, <b>⏸</b> met en pause. Un liseré rouge tourne autour de l'écran pendant l'enregistrement ; à la fin d'une mesure à durée définie, il devient un <b>anneau vert</b>.</p>
 
       <h3>Écrans</h3>
       <p>La touche <b>ÉCRAN</b> fait défiler : Spectre → Spectrogramme → Évolution → Valeurs. La touche <b>MENU</b> ouvre le <b>mode expert</b> (réglages FFT, fenêtre, interpolation, source des tiers d'octave, thème, cette aide).</p>
@@ -914,7 +919,7 @@ if('serviceWorker' in navigator){
         <li id="liGest1"><b>Pincer</b> horizontal/vertical : zoom fréquence, temps ou dB.</li>
         <li id="liGest2"><b>Glisser</b> : déplacer la vue.</li>
         <li id="liGest3"><b>Toucher</b> : poser un curseur de lecture (fréquence + niveau). Toucher le curseur le referme.</li>
-        <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
+        <li>Spectrogramme : <b>double-tap</b> (ou deux doigts, ou touche M) = suivi automatique du maximum ; en <b>relecture</b>, le viseur suit le pic au fil de la lecture. <b>Deux doigts / Maj+clic</b> font pareil.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
         <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
         <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>live</b> et <b>moyenné (Leq)</b> sur toute la durée — libellé « L<i>x</i>·Moy ». Deux débruitages du spectre <b>fin</b> (menu Expert), indépendants du bouton TEMPS : <b>Moyennage (trames)</b> = moyenne des N derniers périodogrammes (méthode de Welch, agrégés à pas fixe = fenêtre·(1−overlap), donc « N moyennes » est une vraie grandeur, identique en direct et en replay), et <b>Lissage fréquentiel</b> = moyenne 1/n octave sur les raies (nettoie sans latence, n'affecte que la courbe pas les mesures au curseur). Le rapport PDF utilise toujours le spectre moyenné.</li>
@@ -952,7 +957,7 @@ if('serviceWorker' in navigator){
       <p>Menu expert ▸ <b>Type de spectre</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse, échelle <b>et moyennage</b>. <b>Tonal</b> (résolution fréquence max, moyennage 2×, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, moyennage 2×, pour chocs/parole), <b>Équilibré</b> (polyvalent, moyennage 4×). Lissage fréquentiel désactivé par défaut (activable à part). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
 
       <h3>Thèmes</h3>
-      <p>Menu expert ▸ <b>Thème de façade</b> : Marine, Acier, Clair labo, OLED noir, <b>Game Boy</b> (écran vert monochrome) et <b>Matrice</b> (noir et verts phosphorescents). Tout suit le thème — façade, écran de mesure, capsule, touches et couleurs des courbes. Le logo CETIM reste conforme à la charte (blanc ou bleu selon le fond).</p>
+      <p>Menu expert ▸ <b>Thème de façade</b> : Marine, Acier, Clair labo, OLED noir, <b>Néon</b> (touches à liseré lumineux, couleur qui change à l'appui), <b>Game Boy</b> (écran vert monochrome) et <b>Matrice</b> (noir et verts phosphorescents). Tout suit le thème — façade, écran de mesure, capsule, touches et couleurs des courbes. Le logo CETIM reste conforme à la charte (blanc ou bleu selon le fond).</p>
 
       <h3>Préférences &amp; mémorisation</h3>
       <p>Les réglages (thème, pondération, temps, mode, échelles, FFT, fenêtre, tiers d'octave, déclenchement, calibration…) sont <b>enregistrés automatiquement</b> et restaurés à la réouverture. Menu expert ▸ <b>Réinitialiser les paramètres</b> (↺) remet tout aux valeurs par défaut.</p>
@@ -4312,7 +4317,22 @@ function applyTheme(){
   }catch(e){}
   if(typeof refreshTheme==='function'){refreshTheme(); if(typeof drawActive==='function')drawActive(true);}
 }
-$('hHelp').onclick=()=>{ $('helpPop').classList.add('on'); };
+/* sommaire de l'aide : une puce cliquable par section (h3), reconstruit à l'ouverture
+   et à chaque changement de langue ; défile la zone d'aide jusqu'à la section visée */
+function buildHelpNav(){
+  const nav=$('helpNav'), hb=document.querySelector('.helpbody');
+  if(!nav||!hb)return;
+  nav.innerHTML='';
+  const hs=hb.querySelectorAll('h3');
+  hs.forEach((h,i)=>{
+    h.id='hsec'+i;
+    const b=document.createElement('button');
+    b.textContent=h.textContent.replace(/[⚠️\s]+$/,'').trim();
+    b.onclick=()=>{ const top=h.getBoundingClientRect().top-hb.getBoundingClientRect().top+hb.scrollTop-4; hb.scrollTo({top,behavior:'smooth'}); };
+    nav.appendChild(b);
+  });
+}
+$('hHelp').onclick=()=>{ $('helpPop').classList.add('on'); buildHelpNav(); const hb=document.querySelector('.helpbody'); if(hb)hb.scrollTop=0; };
 /* version de l'app : source unique = splash (bumpée à chaque déploiement) */
 const APP_VERSION=($('splashVer')&&$('splashVer').textContent.trim())||'';
 if($('hpVer'))$('hpVer').textContent=APP_VERSION?('v'+APP_VERSION):'';
@@ -5576,7 +5596,7 @@ function setLang(l){
   I18.lang=l; localStorage.setItem('sono_lang',l);
   const hb=document.querySelector('.helpbody');
   if(hb)hb.innerHTML = l==='en'?HELP_EN : l==='es'?HELP_ES : HELP_FR;
-  translatePass(); try{ui();}catch(e){}
+  translatePass(); try{ui();}catch(e){} try{buildHelpNav();}catch(e){}
 }
 document.querySelectorAll('.langbtn').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
 const HELP_FR=document.querySelector('.helpbody')?document.querySelector('.helpbody').innerHTML:'';
