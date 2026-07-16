@@ -506,6 +506,7 @@ if('serviceWorker' in navigator){
   .helpnav::-webkit-scrollbar{display:none}
   .helpnav button{flex:0 0 auto;white-space:nowrap;background:rgba(79,195,255,.12);border:1px solid rgba(79,195,255,.3);color:#CFE4FF;font-family:var(--font);font-size:11px;font-weight:700;border-radius:14px;padding:6px 11px;cursor:pointer}
   .helpnav button:active{background:rgba(79,195,255,.3)}
+  .helpnav button.on{background:rgba(47,191,131,.9);border-color:#7CFFB0;color:#04140C;font-weight:800}
   .helpbody h3{font-size:13px;color:var(--ice);letter-spacing:.06em;margin:14px 0 5px;font-weight:700}
   .helpbody h3.warn{color:#FFB454}
   .helpbody h3:first-child{margin-top:2px}
@@ -568,7 +569,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.61-beta</div>
+  <div class="splashver" id="splashVer">2.0.62-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4317,22 +4318,41 @@ function applyTheme(){
   }catch(e){}
   if(typeof refreshTheme==='function'){refreshTheme(); if(typeof drawActive==='function')drawActive(true);}
 }
-/* sommaire de l'aide : une puce cliquable par section (h3), reconstruit à l'ouverture
-   et à chaque changement de langue ; défile la zone d'aide jusqu'à la section visée */
-function buildHelpNav(){
-  const nav=$('helpNav'), hb=document.querySelector('.helpbody');
-  if(!nav||!hb)return;
-  nav.innerHTML='';
-  const hs=hb.querySelectorAll('h3');
-  hs.forEach((h,i)=>{
-    h.id='hsec'+i;
-    const b=document.createElement('button');
-    b.textContent=h.textContent.replace(/[⚠️\s]+$/,'').trim();
-    b.onclick=()=>{ const top=h.getBoundingClientRect().top-hb.getBoundingClientRect().top+hb.scrollTop-4; hb.scrollTo({top,behavior:'smooth'}); };
-    nav.appendChild(b);
-  });
+/* sommaire de l'aide regroupé en 4 GRANDS THÈMES (onglets) : on n'affiche que la rubrique
+   choisie → navigation simple. Le regroupement se fait par ordre des sections (h3), identique
+   dans les 3 langues ; les intitulés des onglets sont traduits. */
+const HELP_GROUPS={
+  fr:['Prise en main','Mesure & indices','Analyse spectre','Réglages & export'],
+  en:['Getting started','Measure & indices','Spectrum analysis','Settings & export'],
+  es:['Inicio','Medición e índices','Análisis espectral','Ajustes y export']
+};
+/* groupe de chaque section, dans l'ordre du document :
+   0 Démarrer,1 Écrans,2 Réglages rapides,3 Gestes,4 Indices,5 Déclenchement,6 Calibration,
+   7 Tiers d'octave,8 Export,9 Émergence,10 Vue 3D,11 Type de spectre,12 Thèmes,13 Préférences,14 Hors ligne */
+const HELP_GROUP_OF=[0,0,0,0, 1,1,1, 2, 3, 1, 2, 2, 3, 3, 3];
+function groupHelp(){
+  const hb=document.querySelector('.helpbody'); if(!hb)return;
+  let idx=-1, grp=0;
+  for(const el of hb.children){
+    if(el.tagName==='H3'){ idx++; grp=(HELP_GROUP_OF[idx]!=null?HELP_GROUP_OF[idx]:0); }
+    el.dataset.grp=grp;
+  }
 }
-$('hHelp').onclick=()=>{ $('helpPop').classList.add('on'); buildHelpNav(); const hb=document.querySelector('.helpbody'); if(hb)hb.scrollTop=0; };
+function showHelpGroup(g){
+  const hb=document.querySelector('.helpbody'); if(!hb)return;
+  for(const el of hb.children) el.style.display=(String(el.dataset.grp)===String(g))?'':'none';
+  hb.scrollTop=0;
+  const nav=$('helpNav'); if(nav)[...nav.children].forEach((b,i)=>b.classList.toggle('on',i===g));
+}
+function buildHelpNav(){
+  const nav=$('helpNav'); if(!nav)return;
+  groupHelp();
+  const names=HELP_GROUPS[I18.lang]||HELP_GROUPS.fr;
+  nav.innerHTML='';
+  names.forEach((nm,i)=>{ const b=document.createElement('button'); b.textContent=nm; b.onclick=()=>showHelpGroup(i); nav.appendChild(b); });
+  showHelpGroup(0);
+}
+$('hHelp').onclick=()=>{ $('helpPop').classList.add('on'); buildHelpNav(); };
 /* version de l'app : source unique = splash (bumpée à chaque déploiement) */
 const APP_VERSION=($('splashVer')&&$('splashVer').textContent.trim())||'';
 if($('hpVer'))$('hpVer').textContent=APP_VERSION?('v'+APP_VERSION):'';
