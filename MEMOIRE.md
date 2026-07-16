@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.63-beta** : fin de mesure = 2 clignotements LEGERS verts (peaks .75) puis liseré VERT STABLE (opacite .5) MAINTENU jusqu'a la prochaine mesure. ledDone remanie (finit a .5, animation forwards one-shot -> pas de CPU continu). Retrait du setTimeout : rec-done reste jusqu'a kStart/resetMeasure/replayStart.
+
 - **2.0.62-beta** : aide regroupee en 4 GRANDS THEMES cliquables (onglets) au lieu de 15 puces. HELP_GROUP_OF mappe chaque section (par ordre du document, identique 3 langues) vers un groupe : 0 Prise en main (Demarrer/Ecrans/Reglages rapides/Gestes), 1 Mesure & indices (Indices/Declenchement/Calibration/Emergence), 2 Analyse spectre (Tiers d'octave/Type de spectre/Vue 3D), 3 Reglages & export (Export/Themes/Preferences/Hors ligne). showHelpGroup n'affiche que les sections du groupe (dataset.grp sur h3+contenu jusqu'au h3 suivant). Intitules traduits (HELP_GROUPS fr/en/es). Onglet actif surbrillance verte. Ouvre sur groupe 0.
 
 - **2.0.61-beta** : (1) bouton overlay actif (MOY/EMG...) desormais VERT bien visible (avant bleu translucide peu lisible) : .sg3dbtn.on fond vert #2FBF83, texte fonce, halo vert. (2) fin de mesure : l'anneau vert CLIGNOTE 2 fois (keyframes ledDone remaniees, duree 1.5s, retrait a 1600 ms). (3) textes des touches reduits pour gagner en hauteur graphe : .kf 8->7.5px, .kv 14->13px, .key min-height 41->38px, gap interne 2->1px.
