@@ -268,7 +268,8 @@ if('serviceWorker' in navigator){
   .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2;max-width:43%;white-space:nowrap;overflow:hidden;text-align:right}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
   .sg3dbtn{transition:opacity .35s ease;}
-  .sg3dbtn.fade{opacity:.18 !important}
+  .sg3dbtn.fade{opacity:.42 !important}
+  .sg3dbtn.on.fade{opacity:.9 !important}   /* actif : reste bien visible même estompé */
   #sg3dBtn:active,#lsnBtn:active{opacity:1 !important}
   .sg3dbtn:active{opacity:1}
   .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:46px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.06em;border-radius:7px;cursor:pointer}
@@ -569,7 +570,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.64-beta</div>
+  <div class="splashver" id="splashVer">2.0.65-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
