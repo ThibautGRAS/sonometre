@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.69-beta** : lisere LED (rouge rotation/pause, vert fin) = halo lumineux doux, triple drop-shadow (rayonnement leger) au lieu d'une seule ombre.
+
 - **2.0.68-beta** : fix estompage boutons overlay. Avant : classe 'fade' posee PAR bouton -> desync (EMG affiche seulement en bande fine reapparaissait sans fade, MOY pouvait se re-afficher seul). Maintenant : classe GLOBALE body.sgbtn-dim (fadeWake la bascule) + CSS body.sgbtn-dim .sg3dbtn{opacity .42}/.on{.9}. Tous les boutons s'estompent/reveillent ENSEMBLE, quel que soit le moment ou ils apparaissent ; plus de reactivation intempestive de MOY.
 
 - **2.0.67-beta** : .kf 7->6.5px. Boutons overlay .sg3dbtn plus petits : 46x26 -> 40x22, font 11->10px ; emgBtn repositionne right 60->54px (sg3dBtn/lsnBtn restent a gauche via CSS). MOY actif vert, EMG ambre (inchange).
