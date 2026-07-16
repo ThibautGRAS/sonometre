@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.75-beta</div>
+  <div class="splashver" id="splashVer">2.0.76-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2659,6 +2659,12 @@ function drawSpectrum(avg,modeOverride){
   const useAvg=(avg===undefined?S.specAvg:avg)&&S.eqT>0;
   const mode=modeOverride||S.mode;             // export : force octave / tiers indépendamment de l'écran
 
+  /* INIT micro : on n'affiche AUCUNE courbe (grille vide) tant que la mesure n'a pas réellement démarré */
+  if(S.running && S.warmT>0 && !REPL.on){
+    grid(g,w,h,sc,padL,10);
+    axisUnits(g,w,h,padL,'Hz');
+    return;
+  }
   if(mode==='toct'||mode==='oct'){
     /* octave : agrège les tiers par groupes centrés sur les fréquences normalisées (…31.5,63,125,250,500,1k…) */
     let names, pw, peak;
@@ -3336,6 +3342,7 @@ function sgWin(sec){ const T=sgBufDur(); if(!isFinite(T)||T<0.5) return {x0:0,x1
 function sgDefaultView(){ return S.sg3d ? sgWin(5) : {x0:0,x1:1}; }
 function sgTick(){
   if(!S.binHz)return;
+  if(S.running && S.warmT>0 && !REPL.on) return;      // INIT micro : aucune colonne (pas de courbe)
   if(!CV.sgramCv)sizeCanvas('sgramCv');               // dimensionne même si l'écran n'est pas affiché
   if(!SG.init&&CV.sgramCv)sgSetup(CV.sgramCv);        // (re)cartographie
   if(!SG.init||!SG.map||!SG.map.length)return;
