@@ -196,7 +196,7 @@ if('serviceWorker' in navigator){
     -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
             mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite:xor; mask-composite:exclude;
-    filter:drop-shadow(0 0 4px rgba(239,51,70,.6)) drop-shadow(0 0 13px rgba(239,51,70,.4)) drop-shadow(0 0 22px rgba(255,90,110,.22));
+    filter:drop-shadow(0 0 5px rgba(239,51,70,.8)) drop-shadow(0 0 17px rgba(239,51,70,.6)) drop-shadow(0 0 32px rgba(255,90,110,.4)) drop-shadow(0 0 48px rgba(255,90,110,.22));
   }
   body.rec-on .bezel::before{ opacity:1; animation:ledSpin 2.6s linear infinite; }
   @keyframes ledSpin{ to{ --ledA:360deg; } }
@@ -211,7 +211,7 @@ if('serviceWorker' in navigator){
   body.rec-done .bezel::before{
     opacity:.5;
     background:conic-gradient(from 0deg, rgba(47,191,131,.75), rgba(140,255,190,.8) 50%, rgba(47,191,131,.75));
-    filter:drop-shadow(0 0 5px rgba(47,191,131,.75)) drop-shadow(0 0 15px rgba(120,255,180,.45)) drop-shadow(0 0 26px rgba(140,255,190,.25));
+    filter:drop-shadow(0 0 5px rgba(47,191,131,.85)) drop-shadow(0 0 18px rgba(120,255,180,.6)) drop-shadow(0 0 34px rgba(140,255,190,.4)) drop-shadow(0 0 50px rgba(140,255,190,.22));
     animation:ledDone 1.6s ease-out forwards;
   }
   @keyframes ledDone{ 0%{opacity:0} 12%{opacity:.75} 30%{opacity:.2} 50%{opacity:.75} 70%{opacity:.35} 100%{opacity:.5} }
@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.73-beta</div>
+  <div class="splashver" id="splashVer">2.0.74-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
