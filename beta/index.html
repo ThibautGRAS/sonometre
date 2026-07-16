@@ -256,8 +256,8 @@ if('serviceWorker' in navigator){
 
   /* zone graphique fixe : les 3 affichages sont superposés, un seul visible */
   .graphzone{flex:1 1 auto;min-height:0;position:relative;margin-top:6px;border-top:1px solid var(--lcd-grid);padding-top:6px}
-  .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--ice);z-index:2;text-shadow:0 0 8px rgba(79,195,255,.4)}
-  .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2}
+  .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--ice);z-index:2;text-shadow:0 0 8px rgba(79,195,255,.4);max-width:56%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2;max-width:43%;white-space:nowrap;overflow:hidden;text-align:right}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
   .sg3dbtn{transition:opacity .35s ease;}
   .sg3dbtn.fade{opacity:.18 !important}
@@ -265,7 +265,7 @@ if('serviceWorker' in navigator){
   .sg3dbtn:active{opacity:1}
   .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:46px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.06em;border-radius:7px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
-  .sg3dbtn.on{background:rgba(79,195,255,.28);color:#EAF6FF}
+  .sg3dbtn.on{background:rgba(79,195,255,.5);color:#fff;border-color:#7FD8FF;box-shadow:0 0 9px rgba(79,195,255,.65), inset 0 0 6px rgba(79,195,255,.4);text-shadow:0 0 6px rgba(255,255,255,.5)}
   #emgBtn.on{background:rgba(255,180,84,.24);border-color:rgba(255,180,84,.65);color:#FFD9A0}
   #vibBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
   #avgBtn.on{background:rgba(79,195,255,.24);border-color:rgba(79,195,255,.65);color:#CFEBFF}
@@ -463,6 +463,21 @@ if('serviceWorker' in navigator){
   .key[disabled],.key.locked{opacity:.4;pointer-events:none;filter:saturate(.4)}
   .key.locked::after{content:"🔒";position:absolute;top:5px;right:7px;font-size:9px;opacity:.7}
   .key{position:relative}
+  /* ===== thème Néon : liseré lumineux sur les touches, couleur qui change à l'appui ===== */
+  body.th-neon .key{
+    border:1.5px solid rgba(79,195,255,.55);
+    box-shadow:0 0 11px rgba(79,195,255,.45), 0 3px 0 var(--key-edge), inset 0 1px 0 var(--key-hi), inset 0 -6px 10px rgba(0,0,0,.22);
+    transition:transform .05s, box-shadow .16s ease, border-color .16s ease, filter .09s;
+  }
+  body.th-neon .key .kf{color:#BFE3FF}
+  body.th-neon .key:active{
+    border-color:#FF3D6E;
+    box-shadow:0 0 20px rgba(255,61,110,.8), inset 0 2px 6px rgba(0,0,0,.5);
+    transform:translateY(2px);
+  }
+  body.th-neon .keypad{box-shadow:inset 0 2px 6px rgba(0,0,0,.6), 0 0 18px rgba(79,195,255,.18)}
+  body.th-neon .key.key-start{border-color:rgba(255,90,110,.7);box-shadow:0 0 13px rgba(239,51,70,.5),0 3px 0 var(--key-edge),inset 0 1px 0 var(--key-hi)}
+  body.th-neon .key.key-start:active{border-color:#fff;box-shadow:0 0 22px rgba(239,51,70,.85),inset 0 2px 6px rgba(0,0,0,.5)}
 
 
   /* popover CALIBRATION */
@@ -541,7 +556,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.54-beta</div>
+  <div class="splashver" id="splashVer">2.0.55-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4077,8 +4092,8 @@ function ui(){
   $('mainLbl').textContent='L'+S.weight+S.time;
   $('unitLbl').textContent='dB('+S.weight+')';
   $('gTitle').textContent=S.screen==='spec'
-    ? 'SPECTRE · '+(S.mode==='toct'?"TIERS D'OCTAVE":S.mode==='oct'?'OCTAVE':'BANDES FINES')+' · POND. '+S.weight
-    : S.screen==='sgram' ? 'SPECTROGRAMME · POND. '+S.weight
+    ? 'SPECTRE · '+(S.mode==='toct'?"1/3 OCT":S.mode==='oct'?'OCTAVE':'BANDE FINE')+' · '+S.weight
+    : S.screen==='sgram' ? 'SPECTROGRAMME · '+S.weight
     : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq'
     : S.screen==='menu' ? 'MODE EXPERT · TRAITEMENT DU SIGNAL'
     : S.screen==='cal' ? 'CALIBRATION · RÉFÉRENCE 0 dBFS' : 'VALEURS DE LA MESURE';
@@ -4235,7 +4250,7 @@ $('vibBtn').onclick=()=>{vibToggle();};
 $('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; savePrefs(); ui(); if(S.screen==='spec')drawSpectrum(); };
 $('lsnBtn').onclick=()=>{lsnToggle();};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
-const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['gameboy','Game Boy'],['matrix','Matrice']];
+const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['neon','Néon'],['gameboy','Game Boy'],['matrix','Matrice']];
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
@@ -4263,7 +4278,7 @@ function resetPrefs(){
   location.reload();
 }
 function applyTheme(){
-  document.body.classList.remove('th-acier','th-clair','th-oled','th-gameboy','th-matrix');
+  document.body.classList.remove('th-acier','th-clair','th-oled','th-neon','th-gameboy','th-matrix');
   SG._3dKey='';
   if(S.theme!=='marine')document.body.classList.add('th-'+S.theme);
   // le fond de la page (html) reprend le métal brossé de la robe du thème : continuité en bas (PWA)
