@@ -212,9 +212,9 @@ if('serviceWorker' in navigator){
     opacity:1;
     background:conic-gradient(from 0deg, rgba(47,191,131,.75), rgba(140,255,190,.8) 50%, rgba(47,191,131,.75));
     filter:drop-shadow(0 0 5px rgba(47,191,131,.7));
-    animation:ledDone 2.4s ease-out forwards;
+    animation:ledDone 1.5s ease-out forwards;
   }
-  @keyframes ledDone{ 0%{opacity:0} 10%{opacity:1} 45%{opacity:.55} 60%{opacity:1} 100%{opacity:0} }
+  @keyframes ledDone{ 0%{opacity:0} 8%{opacity:1} 25%{opacity:0} 42%{opacity:1} 60%{opacity:0} 62%{opacity:0} 100%{opacity:0} }
   /* accessibilité : pas d'animation → pulsation douce du liseré à la place */
   @media (prefers-reduced-motion:reduce){
     body.rec-on .bezel::before{ animation:ledPulse 1.8s ease-in-out infinite;
@@ -273,7 +273,7 @@ if('serviceWorker' in navigator){
   .sg3dbtn:active{opacity:1}
   .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:46px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.06em;border-radius:7px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
-  .sg3dbtn.on{background:rgba(79,195,255,.5);color:#fff;border-color:#7FD8FF;box-shadow:0 0 9px rgba(79,195,255,.65), inset 0 0 6px rgba(79,195,255,.4);text-shadow:0 0 6px rgba(255,255,255,.5)}
+  .sg3dbtn.on{background:rgba(47,191,131,.85);color:#04140C;border-color:#7CFFB0;box-shadow:0 0 11px rgba(47,191,131,.8), inset 0 0 6px rgba(140,255,190,.5);text-shadow:none;font-weight:800}
   #emgBtn.on{background:rgba(255,180,84,.24);border-color:rgba(255,180,84,.65);color:#FFD9A0}
   #vibBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
   #avgBtn.on{background:rgba(79,195,255,.24);border-color:rgba(79,195,255,.65);color:#CFEBFF}
@@ -391,7 +391,7 @@ if('serviceWorker' in navigator){
     box-shadow:inset 0 2px 6px rgba(0,0,0,.55), inset 0 -1px 0 rgba(255,255,255,.05), 0 1px 0 rgba(255,255,255,.06)}
   .krow{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
   .key{
-    border:0;border-radius:12px;min-height:41px;cursor:pointer;color:#fff;
+    border:0;border-radius:12px;min-height:38px;cursor:pointer;color:#fff;
     background:
       radial-gradient(130% 100% at 50% -10%, rgba(255,255,255,.13), transparent 48%),
       linear-gradient(180deg,var(--key-top) 0%,var(--key-mid) 45%,var(--key-bot) 100%);
@@ -402,7 +402,7 @@ if('serviceWorker' in navigator){
       inset 0 0 14px rgba(79,195,255,.09);
     transition:transform .05s, box-shadow .05s, filter .09s;
     will-change:transform,filter;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
     font-family:var(--font);
     overflow:hidden;
   }
@@ -417,10 +417,10 @@ if('serviceWorker' in navigator){
       inset 0 2px 4px rgba(0,0,0,.35), inset 0 -5px 8px rgba(0,0,0,.2),
       inset 0 0 18px rgba(99,205,255,.22)}
   .key:active::before{opacity:.5}
-  .key .kf{font-size:8px;letter-spacing:.14em;color:var(--key-lbl);font-weight:700;
+  .key .kf{font-size:7.5px;letter-spacing:.13em;color:var(--key-lbl);font-weight:700;
     text-shadow:0 1px 1px rgba(0,0,0,.35)}   /* légende */
   #kCalV{font-size:10.5px!important}
-  .key .kv{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--key-txt);
+  .key .kv{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--key-txt);
     text-shadow:0 1px 1px rgba(0,0,0,.3)}
   .key .kv small{font-size:10px;color:#B9C7E2}
   .key .dot{width:6px;height:6px;border-radius:50%;background:#31446e;margin-top:1px}
@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.60-beta</div>
+  <div class="splashver" id="splashVer">2.0.61-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -5037,7 +5037,7 @@ function stopMeasure(auto){
   if(wasReplay){ $('replBar').classList.remove('on'); REPL.i=0; }   // sortie du replay : barre masquée
   if(auto && !wasReplay){                                            // mesure terminée (durée atteinte) : anneau vert
     document.body.classList.add('rec-done');
-    clearTimeout(S._doneT); S._doneT=setTimeout(()=>document.body.classList.remove('rec-done'),2500);
+    clearTimeout(S._doneT); S._doneT=setTimeout(()=>document.body.classList.remove('rec-done'),1600);
   }
 }
 
