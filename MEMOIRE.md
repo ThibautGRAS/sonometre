@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.70-beta** : MOY/EMG toujours OFF + estompes au lancement. (1) defaut emgOn:true -> false. (2) 'emgOn' et 'specAvg' retires de PREF_FIELDS -> etat on/off non memorise, toujours off au demarrage (emgThr reste persiste). (3) DOMContentLoaded ajoute body.sgbtn-dim d'emblee (avant fadeWake au 1er lancement laissait les boutons visibles 3,5 s) -> boutons estompes des l'init, reveil a la 1re interaction.
+
 - **2.0.69-beta** : lisere LED (rouge rotation/pause, vert fin) = halo lumineux doux, triple drop-shadow (rayonnement leger) au lieu d'une seule ombre.
 
 - **2.0.68-beta** : fix estompage boutons overlay. Avant : classe 'fade' posee PAR bouton -> desync (EMG affiche seulement en bande fine reapparaissait sans fade, MOY pouvait se re-afficher seul). Maintenant : classe GLOBALE body.sgbtn-dim (fadeWake la bascule) + CSS body.sgbtn-dim .sg3dbtn{opacity .42}/.on{.9}. Tous les boutons s'estompent/reveillent ENSEMBLE, quel que soit le moment ou ils apparaissent ; plus de reactivation intempestive de MOY.
