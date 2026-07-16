@@ -209,12 +209,12 @@ if('serviceWorker' in navigator){
   @keyframes ledBlink{ 0%,100%{opacity:.22} 50%{opacity:.7} }
   /* FIN DE MESURE (durée atteinte) : le liseré devient un anneau VERT qui entoure l'écran puis s'estompe */
   body.rec-done .bezel::before{
-    opacity:1;
+    opacity:.5;
     background:conic-gradient(from 0deg, rgba(47,191,131,.75), rgba(140,255,190,.8) 50%, rgba(47,191,131,.75));
     filter:drop-shadow(0 0 5px rgba(47,191,131,.7));
-    animation:ledDone 1.5s ease-out forwards;
+    animation:ledDone 1.6s ease-out forwards;
   }
-  @keyframes ledDone{ 0%{opacity:0} 8%{opacity:1} 25%{opacity:0} 42%{opacity:1} 60%{opacity:0} 62%{opacity:0} 100%{opacity:0} }
+  @keyframes ledDone{ 0%{opacity:0} 12%{opacity:.75} 30%{opacity:.2} 50%{opacity:.75} 70%{opacity:.35} 100%{opacity:.5} }
   /* accessibilité : pas d'animation → pulsation douce du liseré à la place */
   @media (prefers-reduced-motion:reduce){
     body.rec-on .bezel::before{ animation:ledPulse 1.8s ease-in-out infinite;
@@ -569,7 +569,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.62-beta</div>
+  <div class="splashver" id="splashVer">2.0.63-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -5055,9 +5055,8 @@ function stopMeasure(auto){
   const badge=$('modeBadge');
   badge.textContent=wasReplay?(auto?'REPLAY FINI · Leq figé':'REPLAY ARRÊTÉ'):(auto?'FINI · Leq figé':'ARRÊTÉ');badge.className='badge';
   if(wasReplay){ $('replBar').classList.remove('on'); REPL.i=0; }   // sortie du replay : barre masquée
-  if(auto && !wasReplay){                                            // mesure terminée (durée atteinte) : anneau vert
+  if(auto && !wasReplay){                                            // mesure terminée (durée atteinte) : anneau vert maintenu jusqu'à la prochaine mesure
     document.body.classList.add('rec-done');
-    clearTimeout(S._doneT); S._doneT=setTimeout(()=>document.body.classList.remove('rec-done'),1600);
   }
 }
 
