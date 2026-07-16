@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.74-beta</div>
+  <div class="splashver" id="splashVer">2.0.75-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2830,9 +2830,9 @@ function drawSpectrum(avg,modeOverride){
       g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
       g.fillStyle=THEME.cursor;g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
       const emg=tonalEmergence(binPowEff,bi,wSel);
-      let clbl=fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+S.weight+((S.cursor.snap!==false&&S.peakInterp)?' ⟂':'');
-      if(emg) clbl+=' · émg +'+emg.dL.toFixed(1)+'dB';   // toujours affichée au curseur unique
-      cursorLabel(g,w,x,clbl,labY); labY+=19;
+      const lines=[fmtF(pk.f)+' Hz · '+fmt(L)+' dB'+S.weight+((S.cursor.snap!==false&&S.peakInterp)?' ⟂':'')];
+      if(emg) lines.push('émg +'+emg.dL.toFixed(1)+' dB');   // 2e ligne : émergence au curseur
+      const bh=cursorLabel(g,w,x,lines,labY); labY+=bh+4;
     }
     /* ===== ÉMERGENCE TONALE : encadré ORANGE =====
        Live : candidate confirmée temporellement (S._emgCand, hystérésis).
@@ -2856,8 +2856,8 @@ function drawSpectrum(avg,modeOverride){
       const x=x2(emgShow.fc);
       g.strokeStyle='#FFB454';g.lineWidth=1;g.setLineDash([2,3]);
       g.beginPath();g.moveTo(x,labY);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
-      labelBox(g,w,x,'émergence +'+emgShow.dL.toFixed(1)+' dB · '+fmtF(emgShow.fc)+'Hz',labY,'#3A2404','#FFB454','#FFD9A0');
-      labY+=19;
+      const bh=labelBox(g,w,x,['émg +'+emgShow.dL.toFixed(1)+' dB', fmtF(emgShow.fc)+' Hz'],labY,'#3A2404','#FFB454','#FFD9A0');
+      labY+=bh+4;
     }
     /* ===== curseur SUIVEUR DE MAX (tap à deux doigts) : max de la fenêtre zoomée ===== */
     if(S.maxCur && binPowEff && S.binHz && n){
@@ -2879,13 +2879,18 @@ function drawSpectrum(avg,modeOverride){
 }
 function labelBox(g,w,x,txt,y,bg,edge,ink){
   y=y||2;
+  const lines=Array.isArray(txt)?txt:[txt];
   g.font='bold 10px Arial';
-  const tw=g.measureText(txt).width+10;
+  let tw=0; for(const l of lines) tw=Math.max(tw,g.measureText(l).width);
+  tw+=10;
+  const lh=12, bh=lines.length*lh+4;
   let lx=Math.max(2,Math.min(w-tw-2,x-tw/2));
-  g.fillStyle=bg;g.fillRect(lx,y,tw,15);g.strokeStyle=edge;g.strokeRect(lx+0.5,y+0.5,tw-1,14);
-  g.fillStyle=ink;g.textAlign='left';g.fillText(txt,lx+5,y+11);
+  g.fillStyle=bg;g.fillRect(lx,y,tw,bh);g.strokeStyle=edge;g.strokeRect(lx+0.5,y+0.5,tw-1,bh-1);
+  g.fillStyle=ink;g.textAlign='left';
+  lines.forEach((l,i)=>g.fillText(l,lx+5,y+11+i*lh));
+  return bh;
 }
-function cursorLabel(g,w,x,txt,y){ labelBox(g,w,x,txt,y,'#08306B','rgba(79,195,255,.5)','#CFEBFF'); }
+function cursorLabel(g,w,x,txt,y){ return labelBox(g,w,x,txt,y,'#08306B','rgba(79,195,255,.5)','#CFEBFF'); }
 
 function drawHistory(){
   const c=CV.histCv; if(!c)return;

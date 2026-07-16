@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.75-beta** : etiquettes curseur bleu et emergence raccourcies et sur DEUX lignes. labelBox accepte un tableau de lignes + retourne sa hauteur (empilement labY dynamique). Curseur : L1 'freq Hz · niveau dBx ⟂', L2 'emg +x.x dB' (si emergence). Emergence : L1 'emg +x.x dB', L2 'freq Hz' ('emergence'->'emg').
+
 - **2.0.74-beta** : halo du lisere LED (rouge rotation/pause, vert fin) accentue : 4 drop-shadow (jusqu'a 48-50px de rayon) au lieu de 3, lueurs plus intenses.
 
 - **2.0.73-beta** : EMG actif = ambre PLEIN comme MOY (vert plein). Retrait de l'override #emgBtn.on translucide (.24) -> EMG utilise .sg3dbtn.on (ambre plein). MOY reste vert plein (#avgBtn.on).
