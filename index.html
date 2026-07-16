@@ -556,7 +556,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.56-beta</div>
+  <div class="splashver" id="splashVer">2.0.57-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1936,6 +1936,16 @@ function replBuildSgram(i){
     cols[x]=col;
   }
   SG.colSeq=Math.min(Wp,i+1); SG.vSeq=-1;   // force le re-blit couleur
+  /* mode auto (suivi du max) : suit le max de la colonne AU CURSEUR DE LECTURE (dernière colonne) */
+  if(S.sgCursor&&S.sgCursor.mode==='auto'){
+    const last=cols[Wp-1];
+    if(last){
+      const nfmin=Math.max(F_LOW(),S.fview.min), nfmax=Math.min(S.fview.max,nyq());
+      let bestR=-1,bestL=-Infinity;
+      for(let r=0;r<Hb;r++){ const fr=SG.flineHz[r]; if(fr<nfmin||fr>nfmax)continue; if(last[r]>bestL){bestL=last[r];bestR=r;} }
+      if(bestR>=0){ const rr=refineRow(last,bestR,Hb); S.sgCursor.f=rr.f; S.sgCursor.L=rr.L; S.sgCursor.col=Wp-1; }
+    }
+  }
 }
 /* affiche la trame d'index i : instantané au point + moyenne cumulée début→i */
 function renderReplayFrame(i){
@@ -3707,7 +3717,7 @@ function attachZoomPan(id,axis,opts){
       const onCursor = cu!=null && Math.abs(u0-cu)<0.05;
       if(onCursor && now-lastTap<300){ if(opts.onCursorRemove)opts.onCursorRemove(); mode=null; lastTap=0; return; } // double-tap SUR le curseur → l'enlever
       if(onCursor){ mode='cursor'; lastTap=now; return; }                     // contact sur le curseur → glissé
-      if(now-lastTap<300){resetView();mode=null;lastTap=0;return;}            // double-tap ailleurs → reset vue
+      if(now-lastTap<300){ if(opts.dblTapMax&&opts.onTap2){opts.onTap2();} else {resetView();} mode=null;lastTap=0;return;}            // double-tap ailleurs → reset vue (spectrogramme : suivi du max)
       lastTap=now;
     }
   },{passive:false});
@@ -3896,6 +3906,7 @@ function attachZoomPan(id,axis,opts){
     const r=cv.getBoundingClientRect();
     const cu=opts.getCursorU?opts.getCursorU():null, u0=Math.max(0,Math.min(1,uxOf(e,r)));
     if(cu!=null&&Math.abs(u0-cu)<0.05&&opts.onCursorRemove){ opts.onCursorRemove(); return; }  // sur le curseur → retirer
+    if(opts.dblTapMax&&opts.onTap2){ opts.onTap2(); return; }                                    // spectrogramme : double-clic → suivi du max
     resetView();                                                                                // ailleurs → reset vue
   });
   cv.addEventListener('click',e=>{
@@ -4021,8 +4032,8 @@ attachZoomPan('specCv','x',{
   window.addEventListener('mouseup',()=>{ mDn=false; });
   cv.addEventListener('click',e=>{ if(mMv){mMv=false;return;} if(Date.now()-_lt<700)return; const r=cv.getBoundingClientRect(); S.histCursor=Math.max(0,Math.min(1,((e.clientX-r.left)-padL)/Math.max(1,r.width-padL-4))); drawHistory(); });
 })();
-attachZoomPan('sgramCv','y',{time:true,padR:30,
-  onChange:()=>{if(!S.running||S.paused)drawSgram();},
+attachZoomPan('sgramCv','y',{time:true,padR:30,dblTapMax:true,
+  onChange:()=>{if(REPL.on)renderReplayFrame(REPL.i);else if(!S.running||S.paused)drawSgram();},
   onTap:(f,uy,ux)=>{                        // un doigt : viseur figé sur le max local d'une zone
     /* tap SUR le curseur existant (±5 % du cadre) = le fermer */
     if(S.sgCursor&&S.sgCursor.col!=null&&SG.Wp>1){
@@ -4033,16 +4044,16 @@ attachZoomPan('sgramCv','y',{time:true,padR:30,
       const uyTap=(TF(f)-V0)/Math.max(1e-6,V1-V0);
       if(Math.abs(ux-uxCur)<0.05 && Math.abs(uyTap-uyCur)<0.05){
         S.sgCursor=null;
-        if(!S.running||S.paused)drawSgram();
+        if(REPL.on)renderReplayFrame(REPL.i);else if(!S.running||S.paused)drawSgram();
         return;
       }
     }
     pinCursorAt(f,ux);
-    if(!S.running||S.paused)drawSgram();
+    if(REPL.on)renderReplayFrame(REPL.i);else if(!S.running||S.paused)drawSgram();
   },
-  onTap2:()=>{                              // deux doigts : suivi automatique du max global
+  onTap2:()=>{                              // deux doigts OU double-tap : suivi automatique du max
     S.sgCursor=(S.sgCursor&&S.sgCursor.mode==='auto')?null:{mode:'auto',f:0,L:-99,col:null};
-    if(!S.running||S.paused)drawSgram();
+    if(REPL.on)renderReplayFrame(REPL.i);else if(!S.running||S.paused)drawSgram();
   }
 });
 /* pose un viseur figé : max d'amplitude dans une fenêtre temps×fréquence autour du point tapé */
