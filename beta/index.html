@@ -272,7 +272,7 @@ if('serviceWorker' in navigator){
   .sg3dbtn.on.fade{opacity:.9 !important}   /* actif : reste bien visible même estompé */
   #sg3dBtn:active,#lsnBtn:active{opacity:1 !important}
   .sg3dbtn:active{opacity:1}
-  .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:46px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.06em;border-radius:7px;cursor:pointer}
+  .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:40px;height:22px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:10px;letter-spacing:.04em;border-radius:7px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
   .sg3dbtn.on{background:#FFA92E;color:#2A1400;border-color:#FFD08A;box-shadow:0 0 12px rgba(255,169,46,.85), inset 0 0 6px rgba(255,220,150,.6);text-shadow:none;font-weight:800}
   #avgBtn.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY actif = vert */
@@ -419,7 +419,7 @@ if('serviceWorker' in navigator){
       inset 0 2px 4px rgba(0,0,0,.35), inset 0 -5px 8px rgba(0,0,0,.2),
       inset 0 0 18px rgba(99,205,255,.22)}
   .key:active::before{opacity:.5}
-  .key .kf{font-size:7px;letter-spacing:.12em;color:var(--key-lbl);font-weight:700;
+  .key .kf{font-size:6.5px;letter-spacing:.1em;color:var(--key-lbl);font-weight:700;
     text-shadow:0 1px 1px rgba(0,0,0,.35)}   /* légende */
   #kCalV{font-size:10.5px!important}
   .key .kv{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--key-txt);
@@ -571,7 +571,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.66-beta</div>
+  <div class="splashver" id="splashVer">2.0.67-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -626,7 +626,7 @@ if('serviceWorker' in navigator){
     <div class="graphzone">
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
-      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="avgBtn">MOY</button><button class="sg3dbtn" id="emgBtn" style="right:60px">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="display:none">VIB</button></div>
+      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="avgBtn">MOY</button><button class="sg3dbtn" id="emgBtn" style="right:54px">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="display:none">VIB</button></div>
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">

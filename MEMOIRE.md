@@ -106,6 +106,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 
 ## 8. Journal des versions (V2)
 
+- **2.0.67-beta** : .kf 7->6.5px. Boutons overlay .sg3dbtn plus petits : 46x26 -> 40x22, font 11->10px ; emgBtn repositionne right 60->54px (sg3dBtn/lsnBtn restent a gauche via CSS). MOY actif vert, EMG ambre (inchange).
+
 - **2.0.66-beta** : .kf (sous-texte touches) 7.5->7px. Etat actif differencie par bouton : MOY (#avgBtn.on) = VERT vif #2FD98A ; EMG et autres restent ambre (.sg3dbtn.on).
 
 - **2.0.65-beta** : boutons overlay (MOY/EMG) plus reperables en mode estompe : .sg3dbtn.fade opacite .18 -> .42 ; bouton ACTIF reste bien visible meme estompe (.sg3dbtn.on.fade opacite .9).
