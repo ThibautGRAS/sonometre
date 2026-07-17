@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.82-beta</div>
+  <div class="splashver" id="splashVer">2.0.83-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -941,7 +941,7 @@ if('serviceWorker' in navigator){
 
       <h3>Calibration</h3>
       <p>Écran Calibration (menu expert). <b>Offset</b> : place un calibreur acoustique (94 ou 114 dB) sur le micro, saisis la référence, cale. <b>Correction fréquentielle</b> : balaye les tiers d'octave face à un sonomètre étalon pour bâtir une courbe, enregistrable en profil. La calibration est propre à chaque appareil.</p>
-      <p><b>Comment la correction est appliquée.</b> L'<i>offset</i> (dB constant) s'applique partout. Par défaut, l'app suppose <b>0 dBFS ≈ 130 dB SPL</b> (ordre de grandeur pour un micro d'iPhone — c'est une hypothèse, pas une mesure). Un calibreur remplace cette hypothèse par une valeur exacte : sans calibreur, un écart de référence se traduit par un décalage <b>uniforme</b> de tous les niveaux absolus (LAF, Leq, spectre), sans toucher aux grandeurs <b>relatives</b> (émergence, forme spectrale, comparaisons). La <i>correction fréquentielle</i>, elle, agit sur deux chaînes : (1) les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme) sont corrigés raie par raie ; (2) les <b>niveaux large bande</b> — LAF/LAS/LV, LAFmax, LCpeak <i>et</i> le <b>Leq</b> — passent par un <b>filtre temporel</b> qui reproduit la courbe (cascade de biquads), appliqué au signal <i>avant</i> les pondérations A/C. Ainsi tout est cohérent, sans latence. Quand la correction est sur <b>Off</b>, le comportement d'origine est conservé (Leq issu de la FFT). Courbe douce (type MEMS) : fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz.</p>
+      <p><b>Comment la correction est appliquée.</b> L'<i>offset</i> (dB constant) s'applique partout. Par défaut, l'app suppose <b>0 dBFS ≈ 130 dB SPL</b> (ordre de grandeur pour un micro d'iPhone — c'est une hypothèse, pas une mesure). Un calibreur remplace cette hypothèse par une valeur exacte : sans calibreur, un écart de référence se traduit par un décalage <b>uniforme</b> de tous les niveaux absolus (LAF, Leq, spectre), sans toucher aux grandeurs <b>relatives</b> (émergence, forme spectrale, comparaisons). La <i>correction fréquentielle</i>, elle, agit sur deux chaînes : (1) les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme) sont corrigés raie par raie ; (2) les <b>niveaux large bande</b> — LAF/LAS/LV, LAFmax, LCpeak <i>et</i> le <b>Leq</b> — passent par un <b>filtre temporel</b> qui reproduit la courbe (cascade de biquads), appliqué au signal <i>avant</i> les pondérations A/C. La courbe est une <b>forme normalisée à 0 dB à 1 kHz</b> (le niveau global reste porté par l'offset, pas par la courbe). Ainsi tout est cohérent, sans latence. Quand la correction est sur <b>Off</b>, le comportement d'origine est conservé (Leq issu de la FFT). Courbe douce (type MEMS) : fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz.</p>
 
       <h3>Tiers d'octave : FFT ou filtres IEC</h3>
       <p>Deux méthodes commutables dans le menu expert. <b>Synthèse FFT</b> : rapide, somme d'énergie des raies. <b>Filtres IEC 61260</b> : banc de filtres Butterworth par bande, plus fidèle au gabarit normalisé (surtout en basses fréquences), coût de calcul un peu plus élevé.</p>
@@ -1085,6 +1085,17 @@ function interpCurve(curve,f){
   }
   return 0;
 }
+/* Courbe de correction ACTIVE (générique ou profil), NORMALISÉE à 0 dB en médium (1 kHz) :
+   une correction est une FORME relative au médium ; tout niveau global appartient à l'offset
+   (référence 0 dBFS, 130 dB par défaut iPhone), pas à la courbe. Renvoie null si correction Off. */
+function activeCorrCurve(){
+  const c = S.corr==='profile'&&S.corrCurve ? S.corrCurve
+          : S.corr==='generic' ? (GENERIC[S.device]||GENERIC.iphone)
+          : null;
+  if(!c || !c.fc || !c.fc.length) return null;
+  const m = interpCurve(c,1000);                 // valeur en médium
+  return {fc:c.fc.slice(), g:(c.g||c.gain_dB).map(v=>v-m)};   // recalée : 0 dB à 1 kHz
+}
 const WINS={
   rect:{name:'Rectangulaire',f:(i,N)=>1},
   hann:{name:'Hann',f:(i,N)=>0.5-0.5*Math.cos(2*Math.PI*i/(N-1))},
@@ -1199,8 +1210,9 @@ function designCorrFilter(fs,curve){
   return {sections:secs, maxErr};
 }
 function buildCorrFilter(fs){
-  if(S.corr==='off'||!S.corrCurve)return null;
-  try{ const r=designCorrFilter(fs,S.corrCurve); S._corrMaxErr=r.maxErr; return r.sections; }
+  const curve=activeCorrCurve();                 // générique OU profil, recalée 0 dB à 1 kHz
+  if(!curve)return null;
+  try{ const r=designCorrFilter(fs,curve); S._corrMaxErr=r.maxErr; return r.sections; }
   catch(e){ S._corrMaxErr=null; return null; }
 }
 /* ===== détecteur de niveau LARGE BANDE, pondération temporelle exacte (Option 2) =====
@@ -1662,9 +1674,7 @@ function configureAnalyser(){
   S.K=0;
   S.binHz=S.ctx.sampleRate/N;
   S.freqs=new Float32Array(n); S.wA=new Float32Array(n); S.wC=new Float32Array(n); S.compGain=new Float32Array(n);
-  const curve = S.corr==='profile'&&S.corrCurve ? S.corrCurve
-              : S.corr==='generic' ? GENERIC[S.device]||GENERIC.iphone
-              : null;
+  const curve = activeCorrCurve();     // générique ou profil, recalée 0 dB à 1 kHz (null si Off)
   for(let i=0;i<n;i++){
     const f=i*S.binHz; S.freqs[i]=f;
     S.wA[i]=Math.pow(10,aWeight(f)/10);
@@ -4759,9 +4769,7 @@ function drawCurve(){
   // courbe active + écart d'offset par rapport à la référence usine (120 dB)
   const OFF0=120.0, off=S.offset-OFF0;
   const hasOff=Math.abs(off)>=0.05;
-  const curve = S.corr==='profile'&&S.corrCurve ? S.corrCurve
-              : S.corr==='generic' ? (GENERIC[S.device]||GENERIC.iphone)
-              : null;
+  const curve = activeCorrCurve();     // recalée 0 dB à 1 kHz (cohérent avec compGain et le filtre temporel)
   const offTxt=(off>=0?'+':'')+off.toFixed(1)+' dB';
   $('curveTitle').textContent = (S.corr==='profile'?('Profil : '+(S.corrName||'—'))
                               : S.corr==='generic'?('Générique '+S.device)

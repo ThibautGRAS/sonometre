@@ -18,7 +18,7 @@ function grab(name){
   return m[0];
 }
 const NAMES = ['interpCurve','rbjPeak','rbjLowShelf','rbjHighShelf','biqMagDb',
-               'cascadeMagDb','solveNormal','designCorrFilter','buildCorrFilter',
+               'cascadeMagDb','solveNormal','designCorrFilter','activeCorrCurve','buildCorrFilter',
                'designAWeight','designCWeight','runBq'];
 eval(NAMES.map(grab).join('\n'));
 
