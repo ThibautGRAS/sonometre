@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.79-beta</div>
+  <div class="splashver" id="splashVer">2.0.80-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -658,6 +658,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mSpecFrames"><span>Moyennage spectre (trames)</span><b>4</b></div>
           <div class="mrow" id="mSpecSmooth"><span>Lissage fréquentiel (bande fine)</span><b>1/12 oct</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
+          <div class="mrow" id="mLvlSrc"><span>Niveaux temps réel (LAF…, Leq)</span><b>Temporel IIR</b></div>
           <div class="mrow" id="mSg3dSmooth"><span>Lissage / perf. 3D</span><b>Lisse</b></div>
           <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
           <div class="mrow" id="mLsnGain"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
@@ -976,7 +977,8 @@ if('serviceWorker' in navigator){
       <p><b>Raie tonale en bande fine.</b> Une fenêtre étale un ton sur quelques raies (largeur ENBW). L'<b>énergie intégrée</b> (bande, Leq) reste exacte, mais le <b>sommet tracé</b> d'une raie est sous-estimé d'environ <b>−10·log10(ENBW)</b> (≈ −2,4 dB en Blackman) — intrinsèque à toute FFT fenêtrée. La <b>lecture au curseur</b>, elle, est corrigée : accroche au maximum (snap) puis <b>interpolation parabolique du sommet</b> → vraie fréquence et vrai niveau du ton (repère ⟂).</p>
       <p><b>Chaîne temporelle (échantillon par échantillon).</b> Elle calcule les <b>niveaux large bande</b> : pondérations <b>A/C</b> par biquads IEC 61672 (validées ≤ ±0,65 dB de 16 Hz à 12,5 kHz), intégrateurs exponentiels <b>Fast/Slow/V-Slow</b>, et vraie crête pondérée C (<b>LCpeak</b>). Réponse temporelle exacte, sans latence de fenêtre FFT.</p>
       <p><b>Correction micro.</b> L'<i>offset</i> (dB constant) s'applique partout. La <i>courbe de correction</i> agit sur les deux chaînes : les spectres sont corrigés raie par raie ; les niveaux (LAF/LAS/LV, LCpeak <i>et</i> Leq) passent par un <b>filtre temporel</b> qui reproduit la courbe — une cascade de biquads (low-shelf + peaks ~½ octave + high-shelf) ajustée par moindres carrés, appliquée <b>avant</b> les pondérations A/C. Fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz sur une courbe douce (type MEMS). Le Leq est alors dérivé du <b>signal corrigé</b> (cohérent avec le temps réel). Correction sur Off : comportement d'origine (Leq issu de la FFT).</p>
-      <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
+      <p><b>Sélecteur (diagnostic).</b> Menu Expert ▸ <b>Niveaux temps réel</b> : <i>Temporel IIR</i> (défaut recommandé — pondérations A/C par biquads, réponse temporelle exacte) ou <i>Dérivé FFT</i> (niveaux lissés à partir du spectre, pour comparer au banc). Le mode Dérivé FFT réintroduit la latence de fenêtre et n'exploite pas le filtre de correction temporel ; il est réservé à la comparaison. Verrouillé pendant une mesure.</p>
+      <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -1047,7 +1049,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', lvlSrc:'iir', iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -2284,6 +2286,7 @@ function resetMeasure(){
   S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0}; S.pV={A:0,C:0,Z:0};
   S.lvlDet=null;                       // détecteur temporel : reconstruit + re-calé au prochain bloc
   S.welch=null;                        // moyennage spectre (Welch) : repart propre
+  S._fft=null;                         // état lissage FFT (mode diagnostic) : repart propre
   document.body.classList.remove('rec-done');
   S.eq={A:0,C:0,Z:0}; S.eqT=0;
   S.lafMax=-Infinity; S.lafMin=Infinity;
@@ -2425,7 +2428,7 @@ function loop(ts){
   /* Leq (énergie). Correction micro ACTIVE → dérivé du signal TEMPOREL corrigé (bloc lvlDet
      plus bas, Option 1) pour cohérence exacte avec LAF/LCpeak. Correction Off → FFT/Parseval
      (comportement historique inchangé). */
-  const tdLeq = (S.corr!=='off') && !REPL.on;
+  const tdLeq = (S.corr!=='off') && !REPL.on && S.lvlSrc!=='fft';
   for(const k of ['A','C','Z']){ const p=k==='A'?pA:k==='C'?pC:pZ; if(!idle && !tdLeq) S.eq[k]+=p*dt; }
   if(!idle && !tdLeq) S.eqT+=dt;
   const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
@@ -2492,6 +2495,13 @@ function loop(ts){
       det.cPeak=0;                                // crête ré-évaluée bloc par bloc
       if(S.toctSrc==='iir'){ if(!S.iirBank)S.iirBank=buildIirBank(); if(S.iirBank)iirBankRun(S.iirBank,fresh); }
     }
+  }
+  if(S.lvlSrc==='fft'){    // DIAGNOSTIC : niveaux instantanés dérivés de la FFT (lissage exponentiel F/S/V), au lieu du temporel IIR
+    let f=S._fft; if(!f){ f=S._fft={F:{A:pA,C:pC,Z:pZ},S:{A:pA,C:pC,Z:pZ},V:{A:pA,C:pC,Z:pZ}}; }
+    f.F.A=aF*f.F.A+(1-aF)*pA; f.S.A=aS*f.S.A+(1-aS)*pA; f.V.A=aV*f.V.A+(1-aV)*pA;
+    f.F.C=aF*f.F.C+(1-aF)*pC; f.S.C=aS*f.S.C+(1-aS)*pC; f.V.C=aV*f.V.C+(1-aV)*pC;
+    f.F.Z=aF*f.F.Z+(1-aF)*pZ; f.S.Z=aS*f.S.Z+(1-aS)*pZ; f.V.Z=aV*f.V.Z+(1-aV)*pZ;
+    S.pF.A=f.F.A;S.pF.C=f.F.C;S.pF.Z=f.F.Z; S.pS.A=f.S.A;S.pS.C=f.S.C;S.pS.Z=f.S.Z; S.pV.A=f.V.A;S.pV.C=f.V.C;S.pV.Z=f.V.Z;
   }
   const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
   const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
@@ -3384,7 +3394,7 @@ function clearRunVisuals(){
   resetSg3d();
 }
 function beginRun(){
-  S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;
+  S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;S._fft=null;
   S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;S.lcPeak=-Infinity;
   S.L10=-99;S.L50=-99;S.L90=-99;S.statT=0;
   if(S.bandPeak)S.bandPeak.fill(-99);
@@ -4223,6 +4233,7 @@ function ui(){
   $('mEmgThr').querySelector('b').textContent=(S.emgThr||10)+' dB';
   $('mEmgThr').style.opacity='1';   // le seuil sert toujours (tableau de valeurs), même bouton ÉMG éteint
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
+  $('mLvlSrc').querySelector('b').textContent=S.lvlSrc==='fft'?'Dérivé FFT':'Temporel IIR';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
   $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
   { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=String(S.lsnGain||0); }
@@ -4356,7 +4367,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
-                   'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
+                   'peakInterp','sgInterp','toctSrc','lvlSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
                    'trigDelay','trigLevel','offset','corr','corrName','emgThr','specFrames','specSmooth','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
@@ -4468,6 +4479,12 @@ loadPrefs(); applyTheme(); _prefsReady=true; applyInputHints();
 $('mToctSrc').onclick=()=>{
   S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
   S.iirBank=null;                                        // (re)construit au prochain passage
+  ui();
+};
+$('mLvlSrc').onclick=()=>{
+  if(S.running&&!REPL.on)return;                          // pas de bascule pendant une mesure (mélangerait les Leq)
+  S.lvlSrc=S.lvlSrc==='fft'?'iir':'fft';
+  S._fft=null;                                           // réinitialise l'état de lissage FFT
   ui();
 };
 /* ===== Popover ÉCHELLES / DYNAMIQUE (affichage seul, réglable en temps réel) ===== */
@@ -4990,6 +5007,7 @@ function setLocks(){
   $('kT').classList.toggle('locked',mic);
   $('kCal').classList.toggle('locked',mic);
   $('kDur').classList.toggle('locked',mic||REPL.on);   // durée sans objet en replay
+  $('mLvlSrc').classList.toggle('locked',mic);          // méthode des niveaux figée pendant la mesure
 }
 
 /* icônes transport universelles */
@@ -5611,6 +5629,9 @@ const TR={
  'MODE EXPERT · TRAITEMENT DU SIGNAL':{en:'EXPERT MODE · SIGNAL PROCESSING',es:'MODO EXPERTO · PROCESADO DE SEÑAL'},
  'CALIBRATION':{en:'CALIBRATION',es:'CALIBRACIÓN'},
  'Synthèse FFT':{en:'FFT synthesis',es:'Síntesis FFT'},
+ 'Temporel IIR':{en:'Time-domain IIR',es:'Temporal IIR'},
+ 'Dérivé FFT':{en:'FFT-derived',es:'Derivado FFT'},
+ 'Niveaux temps réel (LAF…, Leq)':{en:'Real-time levels (LAF…, Leq)',es:'Niveles en tiempo real (LAF…, Leq)'},
  'Filtres IEC 61260':{en:'IEC 61260 filters',es:'Filtros IEC 61260'},
  'Oui':{en:'Yes',es:'Sí'},'Non':{en:'No',es:'No'},
  'activer':{en:'enable',es:'activar'},'désactiver':{en:'disable',es:'desactivar'},
@@ -5740,7 +5761,8 @@ const HELP_EN=`
 <p><b>Tonal line (narrowband).</b> A window spreads a tone over a few bins (ENBW). <b>Integrated energy</b> (band, Leq) stays exact, but the <b>drawn peak</b> is underestimated by ≈ <b>−10·log10(ENBW)</b> (~−2.4 dB with Blackman) — inherent to any windowed FFT. The <b>cursor reading</b> is corrected: snap to the local max then <b>parabolic peak interpolation</b> → true tone frequency and level (⟂ marker).</p>
 <p><b>Time chain (sample by sample).</b> Broadband levels: <b>A/C</b> weightings via IEC 61672 biquads, exponential <b>Fast/Slow/V-Slow</b> integrators, and true C-weighted peak (<b>LCpeak</b>). Exact time response, no FFT-window latency.</p>
 <p><b>Mic correction.</b> The <i>offset</i> (constant dB) applies everywhere. The <i>correction curve</i> acts on both chains: spectra corrected bin by bin; levels (LAF/LAS/LV, LCpeak <i>and</i> Leq) pass through a <b>time-domain filter</b> reproducing the curve — a biquad cascade (low-shelf + ~½-octave peaks + high-shelf) least-squares fitted, applied <b>before</b> A/C weighting. Fidelity &lt; ~0.5 dB from 50 Hz to 12.5 kHz on a smooth (MEMS-like) curve. Leq is then derived from the <b>corrected signal</b> (consistent with real time). Correction Off: original behaviour (FFT-based Leq).</p>
-<p><b>Validation.</b> Processing is checked offline against analytic and normative references (IEC 61672-1, IEC 61260-1, Parseval); the correction filter has its own test routine (fidelity, real gain on tones, energy coherence, stability).</p>
+<p><b>Selector (diagnostic).</b> Expert menu ▸ <b>Real-time levels</b>: <i>Time-domain IIR</i> (recommended default — A/C via biquads, exact time response) or <i>FFT-derived</i> (levels smoothed from the spectrum, for bench comparison). FFT-derived reintroduces window latency and does not use the time-domain correction filter; use it only to compare. Locked during a measurement.</p>
+<p><b>Validation.</b> Processing is checked offline against analytic and normative references (IEC 61672-1, IEC 61260-1, Parseval); A/C weightings meet <b>class 1</b> from 16 Hz to 12.5 kHz. The correction filter has its own test routine (fidelity, real gain on tones, energy coherence, stability).</p>
 <div class="helpfoot">CETIM · Sound level meter — built-in help<br>Author: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 const HELP_ES=`
 <h3>Primeros pasos</h3>
@@ -5788,7 +5810,8 @@ const HELP_ES=`
 <p><b>Raya tonal (banda fina).</b> Una ventana extiende un tono sobre varias rayas (ENBW). La <b>energía integrada</b> (banda, Leq) es exacta, pero el <b>pico dibujado</b> se subestima en ≈ <b>−10·log10(ENBW)</b> (~−2,4 dB con Blackman) — inherente a toda FFT enventanada. La <b>lectura con cursor</b> se corrige: enganche al máximo e <b>interpolación parabólica del pico</b> → frecuencia y nivel reales del tono (marca ⟂).</p>
 <p><b>Cadena temporal (muestra a muestra).</b> Niveles de banda ancha: ponderaciones <b>A/C</b> con biquads IEC 61672, integradores exponenciales <b>Fast/Slow/V-Slow</b> y verdadero pico C (<b>LCpeak</b>). Respuesta temporal exacta, sin latencia de ventana FFT.</p>
 <p><b>Corrección del micro.</b> El <i>offset</i> (dB constante) se aplica en todo. La <i>curva de corrección</i> actúa en ambas cadenas: espectros corregidos raya por raya; niveles (LAF/LAS/LV, LCpeak <i>y</i> Leq) pasan por un <b>filtro temporal</b> que reproduce la curva — una cascada de biquads (low-shelf + peaks ~½ octava + high-shelf) ajustada por mínimos cuadrados, aplicada <b>antes</b> de las ponderaciones A/C. Fidelidad &lt; ~0,5 dB de 50 Hz a 12,5 kHz en curva suave (tipo MEMS). El Leq se deriva entonces de la <b>señal corregida</b>. Corrección Off: comportamiento original (Leq por FFT).</p>
-<p><b>Validación.</b> El tratamiento se verifica sin conexión contra referencias analíticas y normativas (IEC 61672-1, IEC 61260-1, Parseval); el filtro de corrección tiene su propia rutina de test.</p>
+<p><b>Selector (diagnóstico).</b> Menú experto ▸ <b>Niveles en tiempo real</b>: <i>Temporal IIR</i> (predeterminado recomendado — A/C con biquads, respuesta temporal exacta) o <i>Derivado FFT</i> (niveles suavizados desde el espectro, para comparar). El modo Derivado FFT reintroduce latencia de ventana y no usa el filtro de corrección temporal; úsalo solo para comparar. Bloqueado durante una medida.</p>
+<p><b>Validación.</b> El tratamiento se verifica sin conexión contra referencias analíticas y normativas (IEC 61672-1, IEC 61260-1, Parseval); las ponderaciones A/C cumplen <b>clase 1</b> de 16 Hz a 12,5 kHz. El filtro de corrección tiene su propia rutina de test.</p>
 <div class="helpfoot">CETIM · Sonómetro — ayuda integrada<br>Autor: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 if(I18.lang!=='fr')setLang(I18.lang); else translatePass();
 
