@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.80-beta</div>
+  <div class="splashver" id="splashVer">2.0.81-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -706,8 +706,8 @@ if('serviceWorker' in navigator){
               <button class="cbtn go" id="calDo1k">Caler offset</button>
             </div>
             <div class="crow2">
-              <span class="cunit" id="offView" style="flex:1">Offset actuel : 120.0 dB</span>
-              <button class="cbtn" id="offReset">Réinit. offset (120 dB)</button>
+              <span class="cunit" id="offView" style="flex:1">Offset actuel : 130.0 dB</span>
+              <button class="cbtn" id="offReset">Réinit. offset (130 dB)</button>
             </div>
             <div class="msub">BALAYAGE TIERS D'OCTAVE (manuel)</div>
             <div class="sweepgrid" id="sweepGrid"></div>
@@ -771,7 +771,7 @@ if('serviceWorker' in navigator){
     <div class="cp-presets" id="cpPresets"></div>
     <div class="cp-fine">
       <button id="cpMinus">−0.5</button>
-      <span id="cpOff">120.0 dB</span>
+      <span id="cpOff">130.0 dB</span>
       <button id="cpPlus">+0.5</button>
     </div>
     <button class="cp-full" id="cpFull">Calibration avancée (profils, balayage…)</button>
@@ -941,7 +941,7 @@ if('serviceWorker' in navigator){
 
       <h3>Calibration</h3>
       <p>Écran Calibration (menu expert). <b>Offset</b> : place un calibreur acoustique (94 ou 114 dB) sur le micro, saisis la référence, cale. <b>Correction fréquentielle</b> : balaye les tiers d'octave face à un sonomètre étalon pour bâtir une courbe, enregistrable en profil. La calibration est propre à chaque appareil.</p>
-      <p><b>Comment la correction est appliquée.</b> L'<i>offset</i> (dB constant) s'applique partout. La <i>correction fréquentielle</i>, elle, agit sur deux chaînes : (1) les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme) sont corrigés raie par raie ; (2) les <b>niveaux large bande</b> — LAF/LAS/LV, LAFmax, LCpeak <i>et</i> le <b>Leq</b> — passent par un <b>filtre temporel</b> qui reproduit la courbe (cascade de biquads), appliqué au signal <i>avant</i> les pondérations A/C. Ainsi tout est cohérent, sans latence. Quand la correction est sur <b>Off</b>, le comportement d'origine est conservé (Leq issu de la FFT). Courbe douce (type MEMS) : fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz.</p>
+      <p><b>Comment la correction est appliquée.</b> L'<i>offset</i> (dB constant) s'applique partout. Par défaut, l'app suppose <b>0 dBFS ≈ 130 dB SPL</b> (ordre de grandeur pour un micro d'iPhone — c'est une hypothèse, pas une mesure). Un calibreur remplace cette hypothèse par une valeur exacte : sans calibreur, un écart de référence se traduit par un décalage <b>uniforme</b> de tous les niveaux absolus (LAF, Leq, spectre), sans toucher aux grandeurs <b>relatives</b> (émergence, forme spectrale, comparaisons). La <i>correction fréquentielle</i>, elle, agit sur deux chaînes : (1) les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme) sont corrigés raie par raie ; (2) les <b>niveaux large bande</b> — LAF/LAS/LV, LAFmax, LCpeak <i>et</i> le <b>Leq</b> — passent par un <b>filtre temporel</b> qui reproduit la courbe (cascade de biquads), appliqué au signal <i>avant</i> les pondérations A/C. Ainsi tout est cohérent, sans latence. Quand la correction est sur <b>Off</b>, le comportement d'origine est conservé (Leq issu de la FFT). Courbe douce (type MEMS) : fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz.</p>
 
       <h3>Tiers d'octave : FFT ou filtres IEC</h3>
       <p>Deux méthodes commutables dans le menu expert. <b>Synthèse FFT</b> : rapide, somme d'énergie des raies. <b>Filtres IEC 61260</b> : banc de filtres Butterworth par bande, plus fidèle au gabarit normalisé (surtout en basses fréquences), coût de calcul un peu plus élevé.</p>
@@ -1032,7 +1032,7 @@ if('serviceWorker' in navigator){
 /* ================= État ================= */
 const S = {
   running:false, paused:false, screen:'spec',           // spec | hist | val
-  weight:'A', time:'F', mode:'toct', duration:0, offset:120.0, comp:false,
+  weight:'A', time:'F', mode:'toct', duration:0, offset:130.0, comp:false,
   ctx:null, analyser:null, stream:null, raf:0, wake:null,
   fftDb:null, td:null, K:0, freqs:null, binHz:0,
   wA:null, wC:null, compGain:null,
@@ -4244,7 +4244,7 @@ function ui(){
   $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':S.mode==='oct'?'1/1 oct':'FFT';
   $('kDurV').textContent=durLabel(S.duration);
-  const offd=Math.abs(S.offset-120.0)>=0.05;
+  const offd=Math.abs(S.offset-130.0)>=0.05;
   $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
   const badge=$('modeBadge');
   if(REPL.on){ badge.textContent=REPL.playing?'REPLAY':'REPLAY · PAUSE'; badge.className=REPL.playing?'badge replay':'badge'; }
@@ -4895,7 +4895,7 @@ $('cImport').onclick=()=>{
 function afterOffsetChange(){ui();drawActive();if(S.screen==='cal')renderCal();}
 /* le doigt posé sur la courbe ne doit pas faire défiler le menu de calibration */
 $('curveCv').addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
-$('offReset').onclick=()=>{S.offset=120.0;afterOffsetChange();};
+$('offReset').onclick=()=>{S.offset=130.0;afterOffsetChange();};
 /* calibreur 1 kHz : cale l'offset pour que la lecture large bande = référence à 1 kHz */
 $('calDo1k').onclick=()=>{
   if(!S.running){alert('Démarre la mesure (▶) et présente le calibreur 1 kHz.');return;}
