@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.87-beta</div>
+  <div class="splashver" id="splashVer">2.0.88-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -3456,7 +3456,7 @@ function drawSgram3D(){
      continu ne sert que pour les fenêtres bornées 3/5/10 s. */
   const isTout = S.tview.x0<=1e-3 && S.tview.x1>=0.999;
   /* plafond de cadence (~43 FPS) uniquement pour le glissement borné (pas en « Tout ») */
-  if(S.running && !S.paused && !isTout){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<10)return; SG._3dLast=_tn; }  // ~60 FPS (pas de glissement plus petits → moins de scintillement)
+  if(S.running && !S.paused && !isTout){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<28)return; SG._3dLast=_tn; }  // ~35 FPS : le glissement est interpolé (phase fractionnaire), donc fluide, et la charge GPU/GC chute (évite l'échauffement qui faisait laguer au bout d'un moment)
   /* fenêtre de temps (réglage TEMPS du popover ÉCHELLES), en colonnes */
   const winCols=Math.min(seq, Wp, Math.max(8, Math.round((S.tview.x1-S.tview.x0)*Wp)));
   const winSec = Math.max(0.3,(S.tview.x1-S.tview.x0)*sgBufDur());
@@ -3629,7 +3629,7 @@ function drawSgram3D(){
     /* couleur en DÉGRADÉ le long de la courbe (interpolation RGB entre points) au lieu
        d'une couleur figée par segment → plus de sauts de couleur marqués aux pics. */
     const gr=g.createLinearGradient(px(j,0),0,px(j,nF-1),0);
-    for(let i=0;i<nF;i+=2){
+    for(let i=0;i<nF;i+=4){   // pas de couleur allégé (4 au lieu de 2) : moitié moins de stops, rendu identique à l'œil
       const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
       gr.addColorStop(Math.min(1,i/(nF-1)),'rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')');
     }
