@@ -360,7 +360,7 @@ if('serviceWorker' in navigator){
   .curvebox{background:#050F26;border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:5px 6px 2px;position:relative}
   .curvelbl{display:flex;justify-content:space-between;font-size:8.5px;font-weight:700;color:var(--lcd-dim);font-family:var(--mono);padding-bottom:2px}
   .curvelbl span:first-child{color:var(--ice)}
-  #curveCv{width:100%;height:80px;display:block;touch-action:none}
+  #curveCv{width:100%;height:80px;display:block}
   .calbody{overscroll-behavior:contain}
   .menu{overscroll-behavior:contain}
 
@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.84-beta</div>
+  <div class="splashver" id="splashVer">2.0.85-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4895,7 +4895,7 @@ $('cImport').onclick=()=>{
 /* tout changement d'offset s'applique immédiatement : graphes + courbe de calibration */
 function afterOffsetChange(){ui();drawActive();if(S.screen==='cal')renderCal();}
 /* le doigt posé sur la courbe ne doit pas faire défiler le menu de calibration */
-$('curveCv').addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+/* graphe = affichage seul : on laisse le doigt faire défiler le menu (pas de preventDefault) */
 $('offReset').onclick=()=>{S.offset=130.0;afterOffsetChange();};
 /* calibreur 1 kHz : cale l'offset pour que la lecture large bande = référence à 1 kHz */
 $('calDo1k').onclick=()=>{

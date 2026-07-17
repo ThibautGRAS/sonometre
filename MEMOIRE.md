@@ -135,6 +135,8 @@ Deux chaînes parallèles à partir du même signal micro :
 
 ## 8. Journal des versions (V2)
 
+- **2.0.85-beta** : le graphe de correction (#curveCv, affichage seul) bloquait le defilement du menu Calibration quand le doigt passait dessus. Retire `touch-action:none` (CSS) et le listener `touchmove preventDefault` -> le doigt fait desormais defiler le menu normalement au-dessus du graphe.
+
 - **2.0.84-beta** : graphe de la courbe de correction — retrait TOTAL de l'offset. Avant, drawCurve tracait courbe+offset avec une base usine `OFF0=120` -> a 130 dBFS il affichait une ligne 'offset +10.0 dB' (130-120) et decalait toute la courbe vers le haut. Desormais le graphe montre UNIQUEMENT la forme (activeCorrCurve, 0 dB a 1 kHz) : plus de ligne pointillee d'offset, plus de suffixe 'offset recale' dans le titre, bornes/points/trace sans +off. L'offset (scalaire, reference 0 dBFS) reste visible ailleurs (bouton CALIB, ecran offset) mais ne deforme plus la courbe.
 
 - **2.0.83-beta** : la courbe de correction est desormais NORMALISEE a 0 dB en medium (1 kHz). Nouveau helper `activeCorrCurve()` = courbe active (generique OU profil) recalee g-=g(1kHz), renvoie null si Off. Branche sur compGain (spectre), buildCorrFilter (filtre temporel) ET le graphe -> les deux chaines voient la meme forme, 0 dB a 1 kHz. IMPORTANT : corrige aussi une incoherence : en mode 'generic', S.corrCurve etant null, buildCorrFilter renvoyait null -> les NIVEAUX n'etaient PAS corriges (seul le spectre l'etait) ; desormais le mode generique corrige les deux chaines (Option 1). Le niveau global reste porte par l'offset (130 dBFS par defaut), jamais par la courbe. Aide MAJ (forme normalisee 0 dB a 1 kHz).
