@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.76-beta</div>
+  <div class="splashver" id="splashVer">2.0.77-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -940,6 +940,7 @@ if('serviceWorker' in navigator){
 
       <h3>Calibration</h3>
       <p>Écran Calibration (menu expert). <b>Offset</b> : place un calibreur acoustique (94 ou 114 dB) sur le micro, saisis la référence, cale. <b>Correction fréquentielle</b> : balaye les tiers d'octave face à un sonomètre étalon pour bâtir une courbe, enregistrable en profil. La calibration est propre à chaque appareil.</p>
+      <p><b>Comment la correction est appliquée.</b> L'<i>offset</i> (dB constant) s'applique partout. La <i>correction fréquentielle</i>, elle, agit sur deux chaînes : (1) les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme) sont corrigés raie par raie ; (2) les <b>niveaux large bande</b> — LAF/LAS/LV, LAFmax, LCpeak <i>et</i> le <b>Leq</b> — passent par un <b>filtre temporel</b> qui reproduit la courbe (cascade de biquads), appliqué au signal <i>avant</i> les pondérations A/C. Ainsi tout est cohérent, sans latence. Quand la correction est sur <b>Off</b>, le comportement d'origine est conservé (Leq issu de la FFT). Courbe douce (type MEMS) : fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz.</p>
 
       <h3>Tiers d'octave : FFT ou filtres IEC</h3>
       <p>Deux méthodes commutables dans le menu expert. <b>Synthèse FFT</b> : rapide, somme d'énergie des raies. <b>Filtres IEC 61260</b> : banc de filtres Butterworth par bande, plus fidèle au gabarit normalisé (surtout en basses fréquences), coût de calcul un peu plus élevé.</p>
@@ -1140,37 +1141,91 @@ function designAWeight(fs){
   const g=1/H([s1,s2,s3],1000); s1.b0*=g;s1.b1*=g;s1.b2*=g;
   return [s1,s2,s3];
 }
+/* ===== FILTRE DE CORRECTION MICRO dans le domaine TEMPOREL (Option 1) =====
+   Réalise la courbe de correction dB(f) sous forme d'une cascade de biquads (RBJ) :
+   low-shelf grave + peaks (maillage ~1/2 octave) + high-shelf aigu, gains résolus par
+   moindres carrés linéarisés (2-5 itérations sur le résidu réel). Appliqué aux échantillons
+   AVANT les pondérations A/C dans lvlDet → LAF/LAS/LV, LCpeak ET Leq reflètent la correction,
+   sans latence. Courbe douce (type MEMS) : erreur < ~0,5 dB de 50 Hz à 12,5 kHz. Repli FIR
+   non nécessaire pour ces courbes (garde-fou : maxErr documenté). Neutre si correction = Off. */
+function rbjPeak(fs,fc,Q,gDb){const A=Math.pow(10,gDb/40),w=2*Math.PI*fc/fs,c=Math.cos(w),s=Math.sin(w),al=s/(2*Q);
+  const a0=1+al/A;return{b0:(1+al*A)/a0,b1:(-2*c)/a0,b2:(1-al*A)/a0,a1:(-2*c)/a0,a2:(1-al/A)/a0,z1:0,z2:0};}
+function rbjLowShelf(fs,fc,gDb,S){S=S||0.9;const A=Math.pow(10,gDb/40),w=2*Math.PI*fc/fs,c=Math.cos(w),s=Math.sin(w),al=s/2*Math.sqrt((A+1/A)*(1/S-1)+2),ap=2*Math.sqrt(A)*al;
+  const a0=(A+1)+(A-1)*c+ap;return{b0:A*((A+1)-(A-1)*c+ap)/a0,b1:2*A*((A-1)-(A+1)*c)/a0,b2:A*((A+1)-(A-1)*c-ap)/a0,a1:-2*((A-1)+(A+1)*c)/a0,a2:((A+1)+(A-1)*c-ap)/a0,z1:0,z2:0};}
+function rbjHighShelf(fs,fc,gDb,S){S=S||0.9;const A=Math.pow(10,gDb/40),w=2*Math.PI*fc/fs,c=Math.cos(w),s=Math.sin(w),al=s/2*Math.sqrt((A+1/A)*(1/S-1)+2),ap=2*Math.sqrt(A)*al;
+  const a0=(A+1)-(A-1)*c+ap;return{b0:A*((A+1)+(A-1)*c+ap)/a0,b1:-2*A*((A-1)+(A+1)*c)/a0,b2:A*((A+1)+(A-1)*c-ap)/a0,a1:2*((A-1)-(A+1)*c)/a0,a2:((A+1)-(A-1)*c-ap)/a0,z1:0,z2:0};}
+function biqMagDb(s,f,fs){const w=2*Math.PI*f/fs;
+  const nR=s.b0+s.b1*Math.cos(w)+s.b2*Math.cos(2*w),nI=-s.b1*Math.sin(w)-s.b2*Math.sin(2*w);
+  const dR=1+s.a1*Math.cos(w)+s.a2*Math.cos(2*w),dI=-s.a1*Math.sin(w)-s.a2*Math.sin(2*w);
+  return 20*Math.log10(Math.hypot(nR,nI)/Math.hypot(dR,dI));}
+function cascadeMagDb(secs,f,fs){let m=0;for(const s of secs)m+=biqMagDb(s,f,fs);return m;}
+function solveNormal(M,t,lam){const m=M.length,n=M[0].length,A=[],b=new Array(n).fill(0);
+  for(let i=0;i<n;i++)A.push(new Array(n).fill(0));
+  for(let i=0;i<n;i++){for(let j=0;j<n;j++){let s=0;for(let r=0;r<m;r++)s+=M[r][i]*M[r][j];A[i][j]=s+(i===j?lam:0);}let s=0;for(let r=0;r<m;r++)s+=M[r][i]*t[r];b[i]=s;}
+  for(let cI=0;cI<n;cI++){let p=cI;for(let r=cI+1;r<n;r++)if(Math.abs(A[r][cI])>Math.abs(A[p][cI]))p=r;
+    const tA=A[cI];A[cI]=A[p];A[p]=tA;const tb=b[cI];b[cI]=b[p];b[p]=tb;const d=A[cI][cI]||1e-9;
+    for(let j=cI;j<n;j++)A[cI][j]/=d;b[cI]/=d;
+    for(let r=0;r<n;r++)if(r!==cI){const f=A[r][cI];for(let j=cI;j<n;j++)A[r][j]-=f*A[cI][j];b[r]-=f*b[cI];}}
+  return b;}
+function designCorrFilter(fs,curve){
+  const nyq=fs/2;
+  const CENTERS=[31.5,50,80,125,200,315,500,800,1250,2000,3150,5000,8000].filter(f=>f<nyq*0.9);
+  const loFc=20, hiFc=Math.min(10000,nyq*0.85);
+  const NS=140, fmin=16, fmax=Math.min(20000,nyq*0.98), samp=[];
+  for(let i=0;i<NS;i++)samp.push(fmin*Math.pow(fmax/fmin,i/(NS-1)));
+  const target=samp.map(f=>interpCurve(curve,f));
+  const REF=6, proto=[{type:'ls',fc:loFc}];
+  for(const fc of CENTERS)proto.push({type:'pk',fc,Q:2.4});
+  proto.push({type:'hs',fc:hiFc});
+  const mk=(p,g)=>p.type==='ls'?rbjLowShelf(fs,p.fc,g):p.type==='hs'?rbjHighShelf(fs,p.fc,g):rbjPeak(fs,p.fc,p.Q,g);
+  const M=samp.map(f=>proto.map(p=>biqMagDb(mk(p,REF),f,fs)/REF));
+  let gains=solveNormal(M,target,0.15);
+  for(let it=0;it<5;it++){const secs=proto.map((p,j)=>mk(p,gains[j]));
+    const resid=samp.map((f,i)=>target[i]-cascadeMagDb(secs,f,fs));
+    const dg=solveNormal(M,resid,0.15);for(let j=0;j<gains.length;j++)gains[j]+=dg[j];}
+  const secs=proto.map((p,j)=>mk(p,gains[j]));
+  let maxErr=0;for(let i=0;i<NS;i++){if(samp[i]<20||samp[i]>12500)continue;const e=Math.abs(cascadeMagDb(secs,samp[i],fs)-target[i]);if(e>maxErr)maxErr=e;}
+  return {sections:secs, maxErr};
+}
+function buildCorrFilter(fs){
+  if(S.corr==='off'||!S.corrCurve)return null;
+  try{ const r=designCorrFilter(fs,S.corrCurve); S._corrMaxErr=r.maxErr; return r.sections; }
+  catch(e){ S._corrMaxErr=null; return null; }
+}
 /* ===== détecteur de niveau LARGE BANDE, pondération temporelle exacte (Option 2) =====
-   Filtre Z (aucun) / A / C sur chaque échantillon, carré, puis intégrateurs exponentiels
-   par échantillon aux constantes Fast/Slow/V-Slow. Réponse conforme IEC sans latence de
-   fenêtre FFT. Suit aussi la vraie crête pondérée C (LCpeak). */
+   Filtre de CORRECTION micro (si actif) → Z (aucun) / A / C sur chaque échantillon, carré,
+   puis intégrateurs exponentiels Fast/Slow/V-Slow, crête C, et énergies cumulées (Leq). */
 function buildLvlDet(fs){
-  return {fs, A:designAWeight(fs), C:designCWeight(fs),
+  return {fs, A:designAWeight(fs), C:designCWeight(fs), corr:buildCorrFilter(fs),
     aF:Math.exp(-1/(TAU.F*fs)), aS:Math.exp(-1/(TAU.S*fs)), aV:Math.exp(-1/(TAU.V*fs)),
-    cPeak:0, seeded:false, F:{A:0,C:0,Z:0}, S:{A:0,C:0,Z:0}, V:{A:0,C:0,Z:0}};
+    cPeak:0, seeded:false, F:{A:0,C:0,Z:0}, S:{A:0,C:0,Z:0}, V:{A:0,C:0,Z:0},
+    eqA:0, eqC:0, eqZ:0, eqN:0 };   // énergies cumulées (signal CORRIGÉ) → Leq domaine temporel
 }
 function runBq(secs,v){           // cascade de biquads (Direct Form II transposée), état en place
   for(let j=0;j<secs.length;j++){ const s=secs[j];
     const y=s.b0*v+s.z1; s.z1=s.b1*v+s.z2-s.a1*y; s.z2=s.b2*v-s.a2*y; v=y; }
   return v;
 }
-function lvlDetRun(det,x){
-  const A=det.A,C=det.C,aF=det.aF,aS=det.aS,aV=det.aV,bF=1-aF,bS=1-aS,bV=1-aV;
+function lvlDetRun(det,x,acc){
+  const A=det.A,C=det.C,cr=det.corr,aF=det.aF,aS=det.aS,aV=det.aV,bF=1-aF,bS=1-aS,bV=1-aV;
   const F=det.F,Sl=det.S,V=det.V; let cpk=det.cPeak; const n=x.length;
   if(!det.seeded){                 // 1er bloc : cale les intégrateurs sur la moyenne (pas de rampe depuis 0)
     let sz=0,sa=0,sc=0;
-    for(let i=0;i<n;i++){const v=x[i],a=runBq(A,v),c=runBq(C,v);sz+=v*v;sa+=a*a;sc+=c*c;const ac=c<0?-c:c;if(ac>cpk)cpk=ac;}
+    for(let i=0;i<n;i++){const vc=cr?runBq(cr,x[i]):x[i],a=runBq(A,vc),c=runBq(C,vc);sz+=vc*vc;sa+=a*a;sc+=c*c;const ac=c<0?-c:c;if(ac>cpk)cpk=ac;}
     const mz=n?sz/n:0,ma=n?sa/n:0,mc=n?sc/n:0;
     F.Z=Sl.Z=V.Z=mz; F.A=Sl.A=V.A=ma; F.C=Sl.C=V.C=mc; det.seeded=true; det.cPeak=cpk; return;
   }
+  let eA=0,eC=0,eZ=0;
   for(let i=0;i<n;i++){
-    const v=x[i], a=runBq(A,v), c=runBq(C,v), z2=v*v, a2=a*a, c2=c*c;
+    const vc=cr?runBq(cr,x[i]):x[i], a=runBq(A,vc), c=runBq(C,vc), z2=vc*vc, a2=a*a, c2=c*c;
     F.Z=aF*F.Z+bF*z2; Sl.Z=aS*Sl.Z+bS*z2; V.Z=aV*V.Z+bV*z2;
     F.A=aF*F.A+bF*a2; Sl.A=aS*Sl.A+bS*a2; V.A=aV*V.A+bV*a2;
     F.C=aF*F.C+bF*c2; Sl.C=aS*Sl.C+bS*c2; V.C=aV*V.C+bV*c2;
     const ac=c<0?-c:c; if(ac>cpk)cpk=ac;
+    if(acc){ eA+=a2; eC+=c2; eZ+=z2; }        // énergie du signal CORRIGÉ (pour le Leq temporel)
   }
   det.cPeak=cpk;
+  if(acc){ det.eqA+=eA; det.eqC+=eC; det.eqZ+=eZ; det.eqN+=n; }
 }
 /* ===== banc de filtres TIERS D'OCTAVE IEC 61260 (option expert) =====
    Butterworth passe-bande ordre 6 (3 biquads) par bande : prototype passe-bas
@@ -1605,6 +1660,7 @@ function configureAnalyser(){
     S.wC[i]=Math.pow(10,cWeight(f)/10);
     S.compGain[i]=curve?Math.pow(10,interpCurve(curve,f)/10):1;
   }
+  if(S.lvlDet) S.lvlDet.corr=buildCorrFilter(S.ctx.sampleRate);   // filtre de correction temporel suit la courbe (Option 1), sans reset des intégrateurs
   S.bands=[]; S.bandBins=[];
   for(const fc of NOMS){
     if(fc*Math.pow(2,1/6) > S.ctx.sampleRate/2) break;
@@ -2357,8 +2413,12 @@ function loop(ts){
   /* Leq (énergie) : toujours dérivé du spectre FFT — moyenne longue, insensible à la latence
      de fenêtre. Les niveaux INSTANTANÉS A/C/Z (S.pF/pS/pV) sont désormais calculés dans le
      domaine temporel (voir bloc « NIVEAU LARGE BANDE » plus bas), pas ici. */
-  for(const k of ['A','C','Z']){ const p=k==='A'?pA:k==='C'?pC:pZ; if(!idle) S.eq[k]+=p*dt; }
-  if(!idle) S.eqT+=dt;
+  /* Leq (énergie). Correction micro ACTIVE → dérivé du signal TEMPOREL corrigé (bloc lvlDet
+     plus bas, Option 1) pour cohérence exacte avec LAF/LCpeak. Correction Off → FFT/Parseval
+     (comportement historique inchangé). */
+  const tdLeq = (S.corr!=='off') && !REPL.on;
+  for(const k of ['A','C','Z']){ const p=k==='A'?pA:k==='C'?pC:pZ; if(!idle && !tdLeq) S.eq[k]+=p*dt; }
+  if(!idle && !tdLeq) S.eqT+=dt;
   const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
   /* Spectre : moyennage temporel de type WELCH — on empile la trame FFT courante dans un tampon
      puis on l'agrège (moyenne des N derniers périodogrammes) à PAS FIXE = fenêtre·(1−overlap).
@@ -2412,10 +2472,11 @@ function loop(ts){
     k=Math.max(0,Math.min(S.tap.length,k));
     if(k>0){
       const fresh=S.tap.subarray(S.tap.length-k);
-      lvlDetRun(det,fresh);                       // A/C/Z Fast/Slow/V-Slow + crête C
+      lvlDetRun(det,fresh,!idle);                 // A/C/Z Fast/Slow/V-Slow + crête C + énergie Leq (si mesure)
       S.pF.A=det.F.A; S.pF.C=det.F.C; S.pF.Z=det.F.Z;
       S.pS.A=det.S.A; S.pS.C=det.S.C; S.pS.Z=det.S.Z;
       S.pV.A=det.V.A; S.pV.C=det.V.C; S.pV.Z=det.V.Z;
+      if(tdLeq && det.eqN>0){ S.eq.A=det.eqA/fs; S.eq.C=det.eqC/fs; S.eq.Z=det.eqZ/fs; S.eqT=det.eqN/fs; }  // Leq domaine temporel corrigé
       if(!warm && S.delayT<=0 && !S.trigWait && det.cPeak>0){
         const Lp=20*Math.log10(det.cPeak)+S.offset; if(Lp>S.lcPeak)S.lcPeak=Lp;
       }

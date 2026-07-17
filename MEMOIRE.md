@@ -98,6 +98,29 @@ Convention **enregistreur** (comme le Dictaphone iOS) : bouton principal **rouge
 Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP** :
 `node extract_dsp.js` (extrait les fonctions depuis `index.html` → on teste le code déployé) puis `node run_tests.js` (61 tests vs références analytiques/normatives IEC 61672-1, IEC 61260-1, Parseval ; sortie console + `results.json`, code retour 0 = OK). Rapport détaillé : `make_report.js` → docx format CETIM (réf. SONO-VAL-001). Écarts documentés : pondération C **+0,65 dB à 8 kHz** (bilinéaire, fs=48k, sans effet sur LCpeak) ; **sommet de raie fine −10·log10(ENBW)** (normalisation Parseval : bandes et globaux exacts, sommet ponctuel étalé). Hors périmètre : chaîne micro iOS, calibration absolue, émergence ISO 1996-2 complète (validation sur appareil).
 
+**Ajouts à valider (filtre de correction micro temporel, Option 1) :**
+1. **Fidélité du filtre** : pour un profil de correction donné, comparer la magnitude de la cascade de biquads (`designCorrFilter`) à la courbe cible sur 16 Hz–Nyquist. Critère : **≤ ~0,5 dB de 50 Hz à 12,5 kHz**, ≤ ~1 dB au coin extrême grave (~31 Hz), bord >16 kHz non contraint (hors bande A/C). (Courbe MEMS type +10 dB grave→plat→chute HF : validé maxErr bande utile 1,03 dB @31 Hz, <0,5 dB 50 Hz–12,5 kHz, fs 44,1/48 k.)
+2. **Cohérence niveaux ↔ Leq** : WAV de référence (bruit rose + tons) passé dans la chaîne temporelle corrigée ; vérifier LAF/LAS/LV, LCpeak et **LAeq/LCeq/LZeq** vs valeurs théoriques (spectre corrigé). LAF ↔ LAeq doivent concorder (même signal filtré).
+3. **Cohérence spectre ↔ niveaux** : le spectre (corrigé par `compGain` en fréquence) et les niveaux (corrigés par filtre en temps) doivent donner le même écart global vs non corrigé (à la fuite spectrale près).
+4. **Neutralité Off** : correction=Off → LAF/LCpeak/Leq **identiques** au comportement historique (filtre=identité, Leq=FFT/Parseval).
+
+## 7ter. Chaîne de traitement du signal (V2) — schéma de référence
+
+Deux chaînes parallèles à partir du même signal micro :
+
+- **Chaîne FFT (fréquentielle)** : `ring` fenêtré → FFT → `mag[]`. Correction micro appliquée **raie par raie** (`compGain[i]`, si corr≠Off). Sert : **spectres** (bande fine `binPowD`, tiers/octave `bandPowD`, spectrogramme), l'**émergence**, et le **Leq quand correction=Off** (sommes pondérées `pA/pC/pZ` recalées par **Parseval** `K=Pt/pZ` sur le RMS temporel brut).
+- **Chaîne temporelle (échantillon par échantillon, `lvlDet`)** : échantillons neufs → **filtre de correction** (cascade biquads `designCorrFilter`, si corr≠Off) → pondération **A/C** (biquads IEC 61672) → carré → intégrateurs exponentiels **Fast/Slow/V-Slow** + **crête C** (LCpeak). Sert : **niveaux instantanés** LAF/LAS/LV, LAFmax, LCpeak, **et le Leq quand correction≠Off** (énergies cumulées du signal **corrigé** : `det.eqA/eqC/eqZ/eqN` → `S.eq`).
+
+**Application de la correction — récapitulatif :**
+| Correction | Spectres | Leq (LAeq/LCeq/LZeq) | Niveaux temps réel (LAF…, LCpeak) |
+|---|---|---|---|
+| **Off** | non | FFT + Parseval (Z=RMS brut) | temporel brut |
+| **Active** | oui (compGain, par raie) | **temporel corrigé** (signal filtré) | **temporel corrigé** (signal filtré) |
+
+**Offset scalaire** (calibreur) : appliqué partout, dans tous les cas (`S.offset`).
+
+**Détails d'implémentation** : filtre de correction reconstruit dans `configureAnalyser` (en place, `S.lvlDet.corr=buildCorrFilter(fs)`, sans reset des intégrateurs) à chaque changement de courbe/corr ; `lvlDetRun(det,x,acc)` accumule le Leq seulement si `acc=!idle` ; bascule FFT↔temporel via `tdLeq=(S.corr!=='off')&&!REPL.on`. Replay : Leq issu des cumuls stockés (`F.cumA/C/Z`), chaîne inchangée. Correction verrouillée pendant la mesure (pas de bascule à chaud). Repli FIR (courbe très accidentée, `maxErr` élevé) : non implémenté — les courbes MEMS visées restent dans le domaine des biquads.
+
 ## 3bis. Branche V2 (chantier enregistrement/replay)
 
 - **Branches** : `main` = V1 stable (1.35.x), PWA du quotidien, intouchée. **`V2`** = développement enregistrement audio + replay, versions **2.0.x-beta**. Fusion V2→main seulement si le replay fait ses preuves ; critère objectif = banc `tests/` + WAV de référence bout en bout (chantier 5).
@@ -105,6 +128,8 @@ Dossier `tests/` du dépôt — **à rejouer après toute évolution du code DSP
 - **Plan V2** : ① capture PCM + WAV (fait, 2.0.1) → ② bibliothèque IndexedDB (fait, 2.0.2) → ③ moteur de replay via AudioBufferSourceNode→analyser (fait, 2.0.3) → ④ timeline/scrub (fait, 2.0.4 ; vitesse variable écartée : fausserait l'analyse) → ⑤ WAV de référence dans le banc.
 
 ## 8. Journal des versions (V2)
+
+- **2.0.77-beta** : CORRECTION MICRO EN TEMPS REEL (Option 1). Nouvelle chaine : filtre de correction TEMPOREL (cascade de biquads RBJ : low-shelf + peaks ~1/2 oct + high-shelf, gains par moindres carres linearises, 5 iterations sur residu ; designCorrFilter/buildCorrFilter). Insere dans lvlDet AVANT A/C -> LAF/LAS/LV, LAFmax, LCpeak ET Leq refletent la correction, sans latence. Leq desormais derive du SIGNAL TEMPOREL CORRIGE quand corr!=Off (det.eqA/eqC/eqZ/eqN -> S.eq ; bascule tdLeq=(corr!=off)&&!REPL.on) ; corr=Off inchange (FFT/Parseval). Filtre reconstruit en place dans configureAnalyser (sans reset integrateurs). Fidelite courbe MEMS : maxErr bande utile 1,03 dB @31 Hz, <0,5 dB de 50 Hz a 12,5 kHz (valide Node fs 44,1/48k). Repli FIR non implemente (hors domaine des courbes MEMS). Aide (Calibration) + MEMOIRE (sections 7bis validation + 7ter chaine de traitement) mises a jour. Spectres inchanges (compGain par raie).
 
 - **2.0.76-beta** : pendant l'INIT micro (S.running && warmT>0 && !REPL.on), AUCUNE courbe affichee. drawSpectrum : grille vide + axes puis return. sgTick : return avant d'ajouter des colonnes (spectrogramme vide aussi). La courbe apparait quand la mesure demarre reellement.
 
