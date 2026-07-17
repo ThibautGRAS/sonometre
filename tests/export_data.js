@@ -4,8 +4,8 @@ function grab(n){const m=src.match(new RegExp('function\\s+'+n+'\\b[\\s\\S]*?\\n
 var TAU={F:0.125,S:1,V:10};
 var S={corr:'off',corrCurve:null,device:'iphone'};
 var GENERIC={iphone:{fc:[20],g:[0]}};
-eval(['interpCurve','activeCorrCurve','rbjPeak','rbjLowShelf','rbjHighShelf','biqMagDb','cascadeMagDb',
-      'solveNormal','designCorrFilter','buildCorrFilter','designAWeight','designCWeight','runBq',
+eval(['interpCurve','activeCorrCurve','rbjPeak','rbjLowShelf','rbjHighShelf','rbjHP','rbjLP','biqMagDb','cascadeMagDb',
+      'solveNormal','designCorrFilter','buildCorrFilter','buildBandLimit','designAWeight','designCWeight','runBq',
       'buildLvlDet','lvlDetRun','aWeight','cWeight','fft'].map(grab).join('\n'));
 const FS=48000;
 const CURVE_MEMS={fc:[20,50,100,200,500,1000,2000,4000,8000,16000,20000],g:[10,8,5,2,0.5,0,-0.5,-2,-6,-14,-18]};
@@ -42,5 +42,9 @@ for(const f of SW){const sig=mkTone(f,FS,2,0.2);const iir=iirLevels(sig,FS),fw=f
   const ms=0.02,cd=corrDbAt(f);
   D.rtA.iir.push(+dbp(iir.A).toFixed(2));D.rtA.fft.push(+dbp(fw.A).toFixed(2));D.rtA.theo.push(+dbp(ms*Math.pow(10,(aWeight(f)+cd)/10)).toFixed(2));
   D.rtZ.iir.push(+dbp(iir.Z).toFixed(2));D.rtZ.fft.push(+dbp(fw.Z).toFixed(2));D.rtZ.theo.push(+dbp(ms*Math.pow(10,cd/10)).toFixed(2));}
+// limitation de bande (défauts : HP 10 Hz, LP 22 kHz)
+const HPfc=10, LPfc=22000, HP=rbjHP(FS,HPfc,0.7071), LP=rbjLP(FS,LPfc,0.7071);
+D.blHP=HPfc; D.blLP=LPfc; D.blResp=[];
+for(let i=0;i<=180;i++){const f=2*Math.pow(24000/2,i/180);D.blResp.push([+f.toFixed(2),+(biqMagDb(HP,f,FS)+biqMagDb(LP,f,FS)).toFixed(3)]);}
 fs_.writeFileSync('datasets.json',JSON.stringify(D));
-console.log('datasets.json écrit — aC1='+D.aC1+' cC1='+D.cC1+' corrErr='+D.corrErr);
+console.log('datasets.json écrit — aC1='+D.aC1+' cC1='+D.cC1+' corrErr='+D.corrErr+' bande HP'+HPfc+'/LP'+LPfc);

@@ -72,4 +72,14 @@ def rt_chart(d,name,title,yl):
     save(fig,name)
 rt_chart(D['rtA'],'fig_rtA.png','Temps réel LAeq par ton — correction MEMS','L_Aeq (dB re 0 dBFS)')
 rt_chart(D['rtZ'],'fig_rtZ.png','Temps réel LZeq par ton — cancellation de Parseval (FFT)','L_Zeq (dB re 0 dBFS)')
+# 6) limitation de bande
+fig,ax=plt.subplots(figsize=(6.6,2.7))
+bf=[p[0] for p in D['blResp']]; bg=[p[1] for p in D['blResp']]
+ax.axhline(0,color='#9db2c8',lw=0.8)
+ax.axhline(-3.01,color='#9db2c8',lw=0.8,ls=':')
+ax.plot(bf,bg,color=RED,lw=2,label=f"HP {D['blHP']} Hz + LP {int(D['blLP']/1000)} kHz")
+ax.axvline(D['blHP'],color=GREEN,lw=1,ls='--'); ax.axvline(D['blLP'],color=GREEN,lw=1,ls='--')
+ax.set_ylim(-40,3); ax.set_ylabel('gain (dB)'); ax.set_title('Limitation de bande — réponse (Butterworth 2e ordre, −3 dB aux coupures)',color=NAVY,fontweight='bold',fontsize=10)
+logx(ax); ax.set_xlim(2,24000); ax.legend(loc='lower center',fontsize=8)
+save(fig,'fig_bl.png')
 print('OK')
