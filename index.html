@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.86-beta</div>
+  <div class="splashver" id="splashVer">2.0.87-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -977,7 +977,7 @@ if('serviceWorker' in navigator){
       <p><b>Raie tonale en bande fine.</b> Une fenêtre étale un ton sur quelques raies (largeur ENBW). L'<b>énergie intégrée</b> (bande, Leq) reste exacte, mais le <b>sommet tracé</b> d'une raie est sous-estimé d'environ <b>−10·log10(ENBW)</b> (≈ −2,4 dB en Blackman) — intrinsèque à toute FFT fenêtrée. La <b>lecture au curseur</b>, elle, est corrigée : accroche au maximum (snap) puis <b>interpolation parabolique du sommet</b> → vraie fréquence et vrai niveau du ton (repère ⟂).</p>
       <p><b>Chaîne temporelle (échantillon par échantillon).</b> Elle calcule les <b>niveaux large bande</b> : pondérations <b>A/C</b> par biquads IEC 61672 (validées ≤ ±0,65 dB de 16 Hz à 12,5 kHz), intégrateurs exponentiels <b>Fast/Slow/V-Slow</b>, et vraie crête pondérée C (<b>LCpeak</b>). Réponse temporelle exacte, sans latence de fenêtre FFT.</p>
       <p><b>Correction micro.</b> L'<i>offset</i> (dB constant) s'applique partout. La <i>courbe de correction</i> agit sur les deux chaînes : les spectres sont corrigés raie par raie ; les niveaux (LAF/LAS/LV, LCpeak <i>et</i> Leq) passent par un <b>filtre temporel</b> qui reproduit la courbe — une cascade de biquads (low-shelf + peaks ~½ octave + high-shelf) ajustée par moindres carrés, appliquée <b>avant</b> les pondérations A/C. Fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz sur une courbe douce (type MEMS). Le Leq est alors dérivé du <b>signal corrigé</b> (cohérent avec le temps réel). Correction sur Off : comportement d'origine (Leq issu de la FFT).</p>
-      <p><b>Sélecteur (diagnostic).</b> Menu Expert ▸ <b>Niveaux temps réel</b> : <i>Temporel IIR</i> (défaut recommandé — pondérations A/C par biquads, réponse temporelle exacte) ou <i>Dérivé FFT</i> (niveaux lissés à partir du spectre, pour comparer au banc). Le mode Dérivé FFT réintroduit la latence de fenêtre et n'exploite pas le filtre de correction temporel ; il est réservé à la comparaison. Verrouillé pendant une mesure.</p>
+      <p><b>Sélecteur (diagnostic).</b> Menu Expert ▸ <b>Niveaux temps réel</b> : <i>Temporel IIR</i> (défaut recommandé — pondérations A/C par biquads, réponse temporelle exacte) ou <i>Dérivé FFT</i> (niveaux lissés à partir du spectre, pour comparer au banc). En mode Dérivé FFT, la latence de fenêtre réapparaît et, <b>lorsqu'une correction est active</b>, le recalage de Parseval annule la contribution globale de la courbe : le niveau absolu perd la correction (l'écart peut atteindre plusieurs dB en grave). C'est pourquoi, correction active, le mode <i>Temporel IIR</i> (Option 1) est le seul exact — le mode FFT est réservé à la comparaison. Verrouillé pendant une mesure.</p>
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
