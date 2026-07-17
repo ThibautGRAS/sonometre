@@ -121,6 +121,8 @@ Deux chaînes parallèles à partir du même signal micro :
 
 **Offset scalaire** (calibreur) : appliqué partout, dans tous les cas (`S.offset`).
 
+**Amplitude FFT & fenêtre.** L'amplitude spectrale est recalée par **identité de Parseval** : `K=Pt/pZ` (Pt = RMS temporel du bloc **fenêtré**, pZ = somme des raies). Numérateur et dénominateur portant la même fenêtre, la perte de puissance de la fenêtre **s'annule** → niveau juste quelle que soit la fenêtre (pas de constante par fenêtre). Conséquence : niveaux de **bande / tiers / Leq exacts** (énergie intégrée). **Raie tonale en bande fine** : le sommet tracé est sous-estimé de `−10·log10(ENBW)` (≈ −2,4 dB Blackman) car le lobe étale le ton ; la **lecture au curseur** est corrigée (snap au max + interpolation parabolique du sommet → vraie fréquence/niveau). **Tiers d'octave** : synthèse FFT (somme d'énergie, exacte via Parseval) OU banc IEC 61260 (filtres Butterworth par bande, sans fenêtre).
+
 **Détails d'implémentation** : filtre de correction reconstruit dans `configureAnalyser` (en place, `S.lvlDet.corr=buildCorrFilter(fs)`, sans reset des intégrateurs) à chaque changement de courbe/corr ; `lvlDetRun(det,x,acc)` accumule le Leq seulement si `acc=!idle` ; bascule FFT↔temporel via `tdLeq=(S.corr!=='off')&&!REPL.on`. Replay : Leq issu des cumuls stockés (`F.cumA/C/Z`), chaîne inchangée. Correction verrouillée pendant la mesure (pas de bascule à chaud). Repli FIR (courbe très accidentée, `maxErr` élevé) : non implémenté — les courbes MEMS visées restent dans le domaine des biquads.
 
 ## 3bis. Branche V2 (chantier enregistrement/replay)
@@ -130,6 +132,8 @@ Deux chaînes parallèles à partir du même signal micro :
 - **Plan V2** : ① capture PCM + WAV (fait, 2.0.1) → ② bibliothèque IndexedDB (fait, 2.0.2) → ③ moteur de replay via AudioBufferSourceNode→analyser (fait, 2.0.3) → ④ timeline/scrub (fait, 2.0.4 ; vitesse variable écartée : fausserait l'analyse) → ⑤ WAV de référence dans le banc.
 
 ## 8. Journal des versions (V2)
+
+- **2.0.79-beta** : (1) aide in-app — nouvelle rubrique **Traitement du signal (avance)** (FR/EN/ES, 17e section) : 2 chaines FFT/temporelle, Parseval+fenetre, raie tonale (-10log10 ENBW + interpolation curseur), tiers FFT vs IEC 61260, ponderations A/C IEC 61672, filtre de correction biquads, Leq corrige, validation. Rangee dans le groupe 'Analyse spectre' (HELP_GROUP_OF 17 entrees ; Precision->groupe 0). (2) bouton '?' d'aide qui chevauchait le mot SONOMETRE : interlettrage .16->.11em + margin-right 8px sur .wordmark + margin-left 2px sur .helpbtn. (3) doc GitHub (MEMOIRE 7ter) completee : amplitude FFT/fenetre/Parseval + raie tonale.
 
 - **2.0.78-beta** : routine de test du filtre de correction (`tests/test_corr.js`, versionnee dans le depot V2) + AFFINAGE du fit. designCorrFilter : maillage revu (low-shelf 22 Hz + peaks 31,5 Hz->15 kHz ~1/2 oct avec HF densifie 10k/12,5k/15k + high-shelf 15 kHz), **Q=1,4** (recouvrement large -> fit lisse, faible ondulation), ridge 0,06, 8 iterations, 22 biquads. Fidelite (validee Node, fs 44,1/48k) : MEMS **0,18 dB**, boost 0,08 dB, courbe extreme 0,41 dB sur 50 Hz-12,5 kHz (avant ~1 dB). test_corr.js : 49 controles OK (fidelite 4 courbes, neutralite Off, gain reel sur tons purs, coherence energetique Z, coherence chaine corr->A, stabilite bruit blanc, reference A). A rejouer apres toute evolution du filtre.
 
