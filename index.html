@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.83-beta</div>
+  <div class="splashver" id="splashVer">2.0.84-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4766,51 +4766,42 @@ function drawCurve(){
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   const w=r.width,h=r.height,padL=22,padB=12;
   g.fillStyle=THEME.bg;g.fillRect(0,0,w,h);
-  // courbe active + écart d'offset par rapport à la référence usine (120 dB)
-  const OFF0=120.0, off=S.offset-OFF0;
-  const hasOff=Math.abs(off)>=0.05;
+  // le graphe montre UNIQUEMENT la FORME de correction (0 dB à 1 kHz). L'offset (référence
+  // 0 dBFS, scalaire) est indépendant et n'apparaît pas ici — il ne déforme pas la courbe.
   const curve = activeCorrCurve();     // recalée 0 dB à 1 kHz (cohérent avec compGain et le filtre temporel)
-  const offTxt=(off>=0?'+':'')+off.toFixed(1)+' dB';
-  $('curveTitle').textContent = (S.corr==='profile'?('Profil : '+(S.corrName||'—'))
+  $('curveTitle').textContent = S.corr==='profile'?('Profil : '+(S.corrName||'—'))
                               : S.corr==='generic'?('Générique '+S.device)
-                              : 'Sans courbe')
-                              + (hasOff?' · offset recalé '+offTxt:'');
+                              : 'Sans courbe';
   const fmin=20,fmax=20000;
   const x2=f=>padL+(Math.log(f/fmin)/Math.log(fmax/fmin))*(w-padL-4);
-  // bornes dB dynamiques : incluent la courbe TOTALE (courbe + offset)
-  let gmin=Math.min(-3,off-1),gmax=Math.max(3,off+1);
-  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){if(v+off<gmin)gmin=v+off;if(v+off>gmax)gmax=v+off;}}
+  // bornes dB dynamiques d'après la forme seule
+  let gmin=-3,gmax=3;
+  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){if(v<gmin)gmin=v;if(v>gmax)gmax=v;}}
   gmin=Math.floor((gmin-1)/2)*2; gmax=Math.ceil((gmax+1)/2)*2;
   const y2=v=>(1-(v-gmin)/(gmax-gmin))*(h-padB-2)+2;
   // grille + libellés
   g.strokeStyle=THEME.grid;g.fillStyle=THEME.axis;g.font='7px Arial';g.lineWidth=1;
   g.textAlign='right';
   for(let v=gmin;v<=gmax;v+= (gmax-gmin)>12?4:2){const y=y2(v);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText((v>0?'+':'')+v,padL-2,y+2.5);}
-  // ligne 0 dB accentuée
+  // ligne 0 dB accentuée (= médium, référence de la forme)
   g.strokeStyle='rgba(127,216,255,.35)';g.beginPath();g.moveTo(padL,y2(0));g.lineTo(w-2,y2(0));g.stroke();
-  // ligne pointillée = décalage d'offset seul (recalage 1 kHz / ±0,5)
-  if(hasOff){
-    g.strokeStyle='#FFB454';g.setLineDash([4,3]);g.beginPath();g.moveTo(padL,y2(off));g.lineTo(w-2,y2(off));g.stroke();g.setLineDash([]);
-    g.fillStyle='#FFB454';g.textAlign='left';g.font='bold 7.5px Arial';
-    g.fillText('offset '+offTxt,padL+3,y2(off)-3);
-  }
   g.textAlign='center';g.fillStyle=THEME.axis;g.font='7px Arial';
   for(const f of [31.5,125,500,2000,8000]){g.fillText(f>=1000?(f/1000)+'k':f,x2(f),h-3);}
-  if(!curve&&!hasOff){g.fillStyle=THEME.axis;g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);$('curveRange').textContent=gmin+'…+'+gmax+' dB';return;}
-  // courbe TOTALE effective (fréquentielle + offset), telle qu'appliquée réellement
+  if(!curve){g.fillStyle=THEME.axis;g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);$('curveRange').textContent=gmin+'…+'+gmax+' dB';return;}
+  // courbe de correction (forme fréquentielle, 0 dB à 1 kHz)
   g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.6;
   let st=false;
   for(let px=padL;px<=w-2;px+=2){
     const f=fmin*Math.pow(fmax/fmin,(px-padL)/(w-padL-4));
-    const y=y2((curve?interpCurve(curve,f):0)+off);
+    const y=y2(interpCurve(curve,f));
     st?g.lineTo(px,y):g.moveTo(px,y);st=true;
   }
   g.stroke();
-  // points de mesure du profil (positionnés sur la courbe totale)
-  if(curve){
+  // points de mesure du profil
+  {
     const fc=curve.fc, gg=curve.g||curve.gain_dB;
     g.fillStyle='#7FE9B8';
-    for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(gg[i]+off),2.2,0,7);g.fill();}}
+    for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(gg[i]),2.2,0,7);g.fill();}}
   }
   $('curveRange').textContent=gmin+'…+'+gmax+' dB';
 }
