@@ -135,6 +135,8 @@ Deux chaînes parallèles à partir du même signal micro :
 
 ## 8. Journal des versions (V2)
 
+- **2.0.86-beta** : correctif reel du defilement sur le graphe de correction. Une regle CSS GLOBALE `canvas{touch-action:none}` (ligne ~286) s'appliquait a tous les canvas ; retirer touch-action de #curveCv le faisait retomber sur cette regle -> toujours bloque. Fix : `#curveCv{touch-action:pan-y}` (surclasse la regle globale) -> le doigt fait defiler le menu au-dessus du graphe. (Piege a retenir : ne pas juste retirer touch-action d'un canvas, il faut l'ecraser explicitement.)
+
 - **2.0.85-beta** : le graphe de correction (#curveCv, affichage seul) bloquait le defilement du menu Calibration quand le doigt passait dessus. Retire `touch-action:none` (CSS) et le listener `touchmove preventDefault` -> le doigt fait desormais defiler le menu normalement au-dessus du graphe.
 
 - **2.0.84-beta** : graphe de la courbe de correction — retrait TOTAL de l'offset. Avant, drawCurve tracait courbe+offset avec une base usine `OFF0=120` -> a 130 dBFS il affichait une ligne 'offset +10.0 dB' (130-120) et decalait toute la courbe vers le haut. Desormais le graphe montre UNIQUEMENT la forme (activeCorrCurve, 0 dB a 1 kHz) : plus de ligne pointillee d'offset, plus de suffixe 'offset recale' dans le titre, bornes/points/trace sans +off. L'offset (scalaire, reference 0 dBFS) reste visible ailleurs (bouton CALIB, ecran offset) mais ne deforme plus la courbe.
