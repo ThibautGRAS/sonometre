@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.77-beta</div>
+  <div class="splashver" id="splashVer">2.0.78-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1169,22 +1169,22 @@ function solveNormal(M,t,lam){const m=M.length,n=M[0].length,A=[],b=new Array(n)
   return b;}
 function designCorrFilter(fs,curve){
   const nyq=fs/2;
-  const CENTERS=[31.5,50,80,125,200,315,500,800,1250,2000,3150,5000,8000].filter(f=>f<nyq*0.9);
-  const loFc=20, hiFc=Math.min(10000,nyq*0.85);
-  const NS=140, fmin=16, fmax=Math.min(20000,nyq*0.98), samp=[];
+  const CENTERS=[31.5,45,63,90,125,180,250,355,500,710,1000,1400,2000,2800,4000,5600,8000,10000,12500,15000].filter(f=>f<nyq*0.9);
+  const loFc=22, hiFc=Math.min(15000,nyq*0.88);
+  const NS=200, fmin=16, fmax=Math.min(20000,nyq*0.98), samp=[];
   for(let i=0;i<NS;i++)samp.push(fmin*Math.pow(fmax/fmin,i/(NS-1)));
   const target=samp.map(f=>interpCurve(curve,f));
   const REF=6, proto=[{type:'ls',fc:loFc}];
-  for(const fc of CENTERS)proto.push({type:'pk',fc,Q:2.4});
+  for(const fc of CENTERS)proto.push({type:'pk',fc,Q:1.4});   // Q large (recouvrement) → fit lisse, faible ondulation
   proto.push({type:'hs',fc:hiFc});
   const mk=(p,g)=>p.type==='ls'?rbjLowShelf(fs,p.fc,g):p.type==='hs'?rbjHighShelf(fs,p.fc,g):rbjPeak(fs,p.fc,p.Q,g);
   const M=samp.map(f=>proto.map(p=>biqMagDb(mk(p,REF),f,fs)/REF));
-  let gains=solveNormal(M,target,0.15);
-  for(let it=0;it<5;it++){const secs=proto.map((p,j)=>mk(p,gains[j]));
+  let gains=solveNormal(M,target,0.06);
+  for(let it=0;it<8;it++){const secs=proto.map((p,j)=>mk(p,gains[j]));
     const resid=samp.map((f,i)=>target[i]-cascadeMagDb(secs,f,fs));
-    const dg=solveNormal(M,resid,0.15);for(let j=0;j<gains.length;j++)gains[j]+=dg[j];}
+    const dg=solveNormal(M,resid,0.06);for(let j=0;j<gains.length;j++)gains[j]+=dg[j];}
   const secs=proto.map((p,j)=>mk(p,gains[j]));
-  let maxErr=0;for(let i=0;i<NS;i++){if(samp[i]<20||samp[i]>12500)continue;const e=Math.abs(cascadeMagDb(secs,samp[i],fs)-target[i]);if(e>maxErr)maxErr=e;}
+  let maxErr=0;for(let i=0;i<NS;i++){if(samp[i]<50||samp[i]>12500)continue;const e=Math.abs(cascadeMagDb(secs,samp[i],fs)-target[i]);if(e>maxErr)maxErr=e;}
   return {sections:secs, maxErr};
 }
 function buildCorrFilter(fs){
