@@ -127,11 +127,11 @@ if('serviceWorker' in navigator){
   .brandwrap{display:flex;align-items:center;gap:10px}
   .logobox{background:#fff;border-radius:9px;padding:5px 10px;display:flex;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.25)}
   .logo{height:15px;width:auto;display:block}
-  .wordmark{font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:.16em;color:var(--ink);text-transform:uppercase;padding-left:11px;border-left:2px solid var(--red);line-height:1}
+  .wordmark{font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:.11em;color:var(--ink);text-transform:uppercase;padding-left:11px;margin-right:8px;border-left:2px solid var(--red);line-height:1}
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
   .hdricons{display:flex;align-items:center;gap:12px;flex:0 0 auto}
-  .helpbtn{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);opacity:.55;font-family:var(--font);font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .helpbtn{width:24px;height:24px;margin-left:2px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);opacity:.55;font-family:var(--font);font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
   .helpbtn:active{opacity:.95}
   .micstat .micic{width:20px;height:20px}
   .micstat .micic path{fill:currentColor;stroke:currentColor}
@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.78-beta</div>
+  <div class="splashver" id="splashVer">2.0.79-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -968,6 +968,15 @@ if('serviceWorker' in navigator){
 
       <h3 class="warn">Précision — à lire</h3>
       <p>Un smartphone n'est pas un instrument certifié. Sans calibration, l'application est fiable en <b>relatif</b> (comparaisons, spectres). Avec calibration au calibreur, elle s'approche d'un sonomètre de classe sur une plage donnée, mais ne peut pas revendiquer une conformité de classe 1 ou 2. À mentionner dans tout rapport.</p>
+
+      <h3>Traitement du signal (avancé)</h3>
+      <p>Le signal du micro alimente <b>deux chaînes parallèles</b>.</p>
+      <p><b>Chaîne fréquentielle (FFT).</b> Le bloc est fenêtré (Blackman par défaut) puis transformé (FFT). L'amplitude est recalée par <b>identité de Parseval</b> : un facteur unique ramène l'énergie spectrale sur le RMS temporel réel du bloc. La perte de puissance propre à la fenêtre s'annule dans ce rapport → le niveau reste juste <b>quelle que soit la fenêtre</b>, sans constante tabulée. Cette chaîne produit les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme), l'<b>émergence</b>, et le <b>Leq quand la correction est sur Off</b>.</p>
+      <p><b>Tiers d'octave.</b> Deux méthodes : <i>synthèse FFT</i> (somme d'énergie des raies de chaque bande — juste en niveau grâce à Parseval) ou <i>filtres IEC 61260</i> (banc Butterworth par bande, sans question de fenêtre, plus fidèle au gabarit surtout en grave).</p>
+      <p><b>Raie tonale en bande fine.</b> Une fenêtre étale un ton sur quelques raies (largeur ENBW). L'<b>énergie intégrée</b> (bande, Leq) reste exacte, mais le <b>sommet tracé</b> d'une raie est sous-estimé d'environ <b>−10·log10(ENBW)</b> (≈ −2,4 dB en Blackman) — intrinsèque à toute FFT fenêtrée. La <b>lecture au curseur</b>, elle, est corrigée : accroche au maximum (snap) puis <b>interpolation parabolique du sommet</b> → vraie fréquence et vrai niveau du ton (repère ⟂).</p>
+      <p><b>Chaîne temporelle (échantillon par échantillon).</b> Elle calcule les <b>niveaux large bande</b> : pondérations <b>A/C</b> par biquads IEC 61672 (validées ≤ ±0,65 dB de 16 Hz à 12,5 kHz), intégrateurs exponentiels <b>Fast/Slow/V-Slow</b>, et vraie crête pondérée C (<b>LCpeak</b>). Réponse temporelle exacte, sans latence de fenêtre FFT.</p>
+      <p><b>Correction micro.</b> L'<i>offset</i> (dB constant) s'applique partout. La <i>courbe de correction</i> agit sur les deux chaînes : les spectres sont corrigés raie par raie ; les niveaux (LAF/LAS/LV, LCpeak <i>et</i> Leq) passent par un <b>filtre temporel</b> qui reproduit la courbe — une cascade de biquads (low-shelf + peaks ~½ octave + high-shelf) ajustée par moindres carrés, appliquée <b>avant</b> les pondérations A/C. Fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz sur une courbe douce (type MEMS). Le Leq est alors dérivé du <b>signal corrigé</b> (cohérent avec le temps réel). Correction sur Off : comportement d'origine (Leq issu de la FFT).</p>
+      <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -4393,8 +4402,9 @@ const HELP_GROUPS={
 };
 /* groupe de chaque section, dans l'ordre du document :
    0 Démarrer,1 Écrans,2 Réglages rapides,3 Gestes,4 Indices,5 Déclenchement,6 Calibration,
-   7 Tiers d'octave,8 Export,9 Émergence,10 Vue 3D,11 Type de spectre,12 Thèmes,13 Préférences,14 Hors ligne */
-const HELP_GROUP_OF=[0,0,0,0, 1,1,1, 2, 3, 1, 2, 2, 3, 3, 3];
+   7 Tiers d'octave,8 Export,9 Émergence,10 Vue 3D,11 Type de spectre,12 Thèmes,13 Préférences,
+   14 Hors ligne,15 Précision,16 Traitement du signal (avancé) */
+const HELP_GROUP_OF=[0,0,0,0, 1,1,1, 2, 3, 1, 2, 2, 3, 3, 3, 0, 2];
 function groupHelp(){
   const hb=document.querySelector('.helpbody'); if(!hb)return;
   let idx=-1, grp=0;
@@ -5723,6 +5733,14 @@ const HELP_EN=`
 <h3>Preferences</h3><p>All settings are <b>saved automatically</b> and restored. Expert menu ▸ Reset settings (↺) restores defaults.</p>
 <h3>Offline & background</h3><p>After a first online load, the app opens without network. Install to home screen for an app-like experience. In background, iOS cuts the mic: the measurement <b>auto-pauses</b> and resumes manually.</p>
 <h3 class="warn">Accuracy — please read</h3><p>A smartphone is not a certified instrument. Uncalibrated, the app is reliable in <b>relative</b> terms. Calibrated, it approaches a class meter over a given range, but cannot claim class 1/2 compliance. State this in any report.</p>
+<h3>Signal processing (advanced)</h3>
+<p>The mic feeds <b>two parallel chains</b>.</p>
+<p><b>Frequency chain (FFT).</b> The block is windowed (Blackman) then transformed. Amplitude is rescaled by <b>Parseval identity</b>: one factor maps spectral energy onto the block's true time-domain RMS. The window's power loss cancels in this ratio → levels stay correct <b>whatever the window</b>. This chain produces the <b>spectra</b> (narrowband, 1/3-octave, spectrogram), <b>emergence</b>, and the <b>Leq when correction is Off</b>.</p>
+<p><b>1/3-octave.</b> Two methods: <i>FFT synthesis</i> (energy sum of each band's bins — level-accurate via Parseval) or <i>IEC 61260 filters</i> (per-band Butterworth bank, no window issue, closer to the mask especially at low frequency).</p>
+<p><b>Tonal line (narrowband).</b> A window spreads a tone over a few bins (ENBW). <b>Integrated energy</b> (band, Leq) stays exact, but the <b>drawn peak</b> is underestimated by ≈ <b>−10·log10(ENBW)</b> (~−2.4 dB with Blackman) — inherent to any windowed FFT. The <b>cursor reading</b> is corrected: snap to the local max then <b>parabolic peak interpolation</b> → true tone frequency and level (⟂ marker).</p>
+<p><b>Time chain (sample by sample).</b> Broadband levels: <b>A/C</b> weightings via IEC 61672 biquads, exponential <b>Fast/Slow/V-Slow</b> integrators, and true C-weighted peak (<b>LCpeak</b>). Exact time response, no FFT-window latency.</p>
+<p><b>Mic correction.</b> The <i>offset</i> (constant dB) applies everywhere. The <i>correction curve</i> acts on both chains: spectra corrected bin by bin; levels (LAF/LAS/LV, LCpeak <i>and</i> Leq) pass through a <b>time-domain filter</b> reproducing the curve — a biquad cascade (low-shelf + ~½-octave peaks + high-shelf) least-squares fitted, applied <b>before</b> A/C weighting. Fidelity &lt; ~0.5 dB from 50 Hz to 12.5 kHz on a smooth (MEMS-like) curve. Leq is then derived from the <b>corrected signal</b> (consistent with real time). Correction Off: original behaviour (FFT-based Leq).</p>
+<p><b>Validation.</b> Processing is checked offline against analytic and normative references (IEC 61672-1, IEC 61260-1, Parseval); the correction filter has its own test routine (fidelity, real gain on tones, energy coherence, stability).</p>
 <div class="helpfoot">CETIM · Sound level meter — built-in help<br>Author: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 const HELP_ES=`
 <h3>Primeros pasos</h3>
@@ -5763,6 +5781,14 @@ const HELP_ES=`
 <h3>Preferencias</h3><p>Todos los ajustes se <b>guardan automáticamente</b>. Menú experto ▸ Restablecer ajustes (↺).</p>
 <h3>Sin conexión y segundo plano</h3><p>Tras una primera carga con red, la app abre sin conexión. Instálala en la pantalla de inicio. En segundo plano, iOS corta el micro: la medida se <b>pausa automáticamente</b> y se reanuda a mano.</p>
 <h3 class="warn">Precisión — leer</h3><p>Un smartphone no es un instrumento certificado. Sin calibrar, la app es fiable en <b>relativo</b>. Calibrada, se aproxima a un sonómetro de clase en un rango dado, pero no puede reivindicar clase 1/2. Indícalo en cualquier informe.</p>
+<h3>Tratamiento de señal (avanzado)</h3>
+<p>El micro alimenta <b>dos cadenas paralelas</b>.</p>
+<p><b>Cadena frecuencial (FFT).</b> El bloque se enventana (Blackman) y se transforma. La amplitud se reajusta por <b>identidad de Parseval</b>: un único factor lleva la energía espectral al RMS temporal real del bloque. La pérdida de potencia de la ventana se cancela en esa razón → el nivel es correcto <b>sea cual sea la ventana</b>. Produce los <b>espectros</b> (banda fina, tercio de octava, espectrograma), la <b>emergencia</b> y el <b>Leq cuando la corrección está en Off</b>.</p>
+<p><b>Tercio de octava.</b> Dos métodos: <i>síntesis FFT</i> (suma de energía de las rayas de cada banda — exacto en nivel gracias a Parseval) o <i>filtros IEC 61260</i> (banco Butterworth por banda, sin cuestión de ventana, más fiel a la plantilla en graves).</p>
+<p><b>Raya tonal (banda fina).</b> Una ventana extiende un tono sobre varias rayas (ENBW). La <b>energía integrada</b> (banda, Leq) es exacta, pero el <b>pico dibujado</b> se subestima en ≈ <b>−10·log10(ENBW)</b> (~−2,4 dB con Blackman) — inherente a toda FFT enventanada. La <b>lectura con cursor</b> se corrige: enganche al máximo e <b>interpolación parabólica del pico</b> → frecuencia y nivel reales del tono (marca ⟂).</p>
+<p><b>Cadena temporal (muestra a muestra).</b> Niveles de banda ancha: ponderaciones <b>A/C</b> con biquads IEC 61672, integradores exponenciales <b>Fast/Slow/V-Slow</b> y verdadero pico C (<b>LCpeak</b>). Respuesta temporal exacta, sin latencia de ventana FFT.</p>
+<p><b>Corrección del micro.</b> El <i>offset</i> (dB constante) se aplica en todo. La <i>curva de corrección</i> actúa en ambas cadenas: espectros corregidos raya por raya; niveles (LAF/LAS/LV, LCpeak <i>y</i> Leq) pasan por un <b>filtro temporal</b> que reproduce la curva — una cascada de biquads (low-shelf + peaks ~½ octava + high-shelf) ajustada por mínimos cuadrados, aplicada <b>antes</b> de las ponderaciones A/C. Fidelidad &lt; ~0,5 dB de 50 Hz a 12,5 kHz en curva suave (tipo MEMS). El Leq se deriva entonces de la <b>señal corregida</b>. Corrección Off: comportamiento original (Leq por FFT).</p>
+<p><b>Validación.</b> El tratamiento se verifica sin conexión contra referencias analíticas y normativas (IEC 61672-1, IEC 61260-1, Parseval); el filtro de corrección tiene su propia rutina de test.</p>
 <div class="helpfoot">CETIM · Sonómetro — ayuda integrada<br>Autor: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 if(I18.lang!=='fr')setLang(I18.lang); else translatePass();
 
