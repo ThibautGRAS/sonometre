@@ -575,7 +575,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.92-beta</div>
+  <div class="splashver" id="splashVer">2.0.93-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -678,8 +678,6 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mLsnSlope" data-cat="affichage"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
           <div class="mrow" id="mLsnGain" data-cat="affichage"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
           <div class="mrow" id="mTheme" data-cat="affichage"><span>Thème de façade</span><b>Marine</b></div>
-          <div class="mrow" id="mCalib" data-cat="calib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Ouvrir l'écran de calibration</span><b style="color:#2FBF83">▸</b></div>
-          <div class="mnote" data-cat="calib">Réf. pleine échelle (0 dBFS), gain fréquentiel (défaut appareil / profil perso), calibreur 1 kHz, balayage tiers d'octave et profils.</div>
           <div class="mrow act red" id="mResetPrefs" data-cat="sys"><span>Réinitialiser les paramètres</span><b>↺</b></div>
           <div class="mnote" data-cat="sys">Remet tous les réglages aux valeurs par défaut. Astuce : réinitialiser max/min/peak-hold se fait en tapant directement l'afficheur max/min.</div>
           <div class="mcredit" data-cat="sys">Sonomètre CETIM · Thibaut Gras · 2026<br>thibaut.gras@cetim.fr</div>
@@ -4724,7 +4722,7 @@ $('dpFMin').addEventListener('change',applyFreqInput);
 $('dpFMax').addEventListener('change',applyFreqInput);
 $('dpInterp').onclick=()=>{S.sgInterp=!S.sgInterp;SG.vSeq=-1;SG.vViewKey='';drawActive();renderDynPop();};
 $('dpFscale').onclick=()=>{ S.fscale=S.fscale==='log'?'lin':'log'; SG.init=false; resetView(); savePrefs(); ui(); renderDynPop(); };
-$('mCalib').onclick=()=>{S.screen='cal';ui();requestAnimationFrame(renderCal);};
+/* l'onglet « Calibration » du menu ouvre directement l'écran de calibration (voir setMenuCat) */
 $('calClose').onclick=()=>{S.screen='menu';ui();};
 
 /* ===== Profils (localStorage) ===== */
@@ -4980,6 +4978,7 @@ $('mResetPrefs').onclick=function(){
 
 /* ===== onglets du menu expert (filtrage par catégorie) ===== */
 function setMenuCat(cat){
+  if(cat==='calib'){ S.screen='cal'; ui(); requestAnimationFrame(renderCal); return; }   // ouvre directement l'écran de calibration (garde l'onglet de filtre courant)
   document.querySelectorAll('#mTabs .mtab').forEach(t=>t.classList.toggle('on',t.dataset.cat===cat));
   document.querySelectorAll('#paneMenu .mrow, #paneMenu .mnote, #paneMenu .mcredit').forEach(el=>{
     if(el.dataset.cat) el.style.display = (el.dataset.cat===cat) ? '' : 'none';
@@ -5765,6 +5764,24 @@ function translatePass(){
   safe(()=>document.querySelectorAll('.mrow span').forEach(trEl));
   safe(()=>document.querySelectorAll('.mrow b').forEach(trDyn));
   safe(()=>document.querySelectorAll('.exp-item b,.exp-item span').forEach(trEl));
+  /* onglets + notes du menu expert : table dédiée (n'alimente pas le moteur de tokens) */
+  safe(()=>{
+    const UITR={
+      'Signal':{en:'Signal',es:'Señal'},
+      'Affichage':{en:'Display',es:'Pantalla'},
+      'Calibration':{en:'Calibration',es:'Calibración'},
+      'Système':{en:'System',es:'Sistema'},
+      "Remet tous les réglages aux valeurs par défaut. Astuce : réinitialiser max/min/peak-hold se fait en tapant directement l'afficheur max/min.":
+        {en:'Resets all settings to defaults. Tip: reset max/min/peak-hold by tapping the max/min readout directly.',
+         es:'Restablece todos los ajustes. Consejo: reinicia máx/mín/peak-hold tocando directamente el indicador máx/mín.'},
+      'FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s.':
+        {en:'FFT computed internally · Parseval RMS rescaling active · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s.',
+         es:'FFT calculada internamente · reescalado RMS Parseval activo · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s.'}
+    };
+    const trUI=el=>{ if(!el)return; if(el.dataset.fr===undefined)el.dataset.fr=el.textContent; const fr=el.dataset.fr,e=UITR[fr]; el.textContent=(I18.lang==='fr'||!e)?fr:(e[I18.lang]||fr); };
+    document.querySelectorAll('#mTabs .mtab').forEach(trUI);
+    document.querySelectorAll('#paneMenu .mnote').forEach(trUI);
+  });
   safe(()=>trTokens($('gTitle')));
   const safe2=f=>{try{f();}catch(e){}};
   const st=$('modeBadge');
