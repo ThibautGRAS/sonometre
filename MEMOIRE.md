@@ -139,6 +139,8 @@ Deux chaînes parallèles à partir du même signal micro :
 
 ## 8. Journal des versions (V2)
 
+- **2.0.97-beta** : mode **Rétroéclairage** (onglet Affichage, `mBacklight`, On/Off). Classe `body.backlit` : halo lumineux (filter drop-shadow + brightness) sur l'ecran (.lcd), la valeur (.num), le badge, et les touches (.key) avec glow des libelles (.kf/.kv) et de la LED (.dot) ; renforce a l'appui. Teinte du halo suivant le theme (neon rouge, matrix vert, gameboy olive ; bleu par defaut). Independant du theme, persiste (backlight), applique dans applyTheme + au toggle. i18n 'Retroeclairage'.
+
 - **2.0.96-beta** : gain d'ecoute Auto plus FORT. Live : makeup **+30 dB** (au lieu de +18) + limiteur. Relecture : normalisation sur le **RMS** (vise ~ -15 dBFS RMS, borne 0.2..64x) au lieu du pic -> bien plus fort a l'oreille, le limiteur (-1 dB, ratio 20) tenant les cretes. Sous-echantillonnage du buffer pour le calcul RMS sur gros enregistrements.
 
 - **2.0.95-beta** : GAIN D'ECOUTE AUTOMATIQUE (♪). Nouvelle option **Auto** dans 'Gain ecoute' (lsnGainSel). `lsnGainLinear()` : si **relecture** -> normalise d'apres le PIC de l'enregistrement (REPL.buf, vise ~ -1 dBFS, borne 0.1..64) = meilleur gain sans ecreter ; si **live** -> makeup +18 dB avec **limiteur** (DynamicsCompressor threshold -1 dB, ratio 20, attack 3 ms, release 250 ms) insere en fin de chaine d'ecoute -> augmente le gain SANS saturer. lsnBuild ajoute le limiteur en mode auto ; lsnOff le deconnecte ; bascule auto<->fixe via lsnRebuild ; recalcul du gain au chargement d'un replay. Etat lsnAuto persiste. Metrologie inchangee (tests OK).
