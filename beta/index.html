@@ -575,7 +575,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.95-beta</div>
+  <div class="splashver" id="splashVer">2.0.96-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1384,12 +1384,14 @@ function lsnSrc(){ return (REPL.on&&REPL.src)?REPL.src:S.srcNode; }
 function lsnGainLinear(){
   if(!S.lsnAuto) return Math.pow(10,(S.lsnGain||0)/20);
   if(REPL.on && REPL.buf){
-    let pk=0; const ch=REPL.buf.getChannelData(0);
-    for(let i=0;i<ch.length;i++){ const a=ch[i]<0?-ch[i]:ch[i]; if(a>pk)pk=a; }
-    if(pk<1e-4) return 8;
-    return Math.max(0.1, Math.min(64, 0.89/pk));   // meilleur gain sans écrêter l'enregistrement
+    const ch=REPL.buf.getChannelData(0); let sum=0,n=0;
+    const step=Math.max(1,Math.floor(ch.length/200000));   // sous-échantillonne les gros buffers
+    for(let i=0;i<ch.length;i+=step){ sum+=ch[i]*ch[i]; n++; }
+    const rms=Math.sqrt(sum/Math.max(1,n));
+    if(rms<1e-5) return 32;
+    return Math.max(0.2, Math.min(64, 0.18/rms));   // vise ~ -15 dBFS RMS (le limiteur tient les crêtes) → bien plus fort
   }
-  return Math.pow(10,18/20);                        // live : +18 dB + limiteur
+  return Math.pow(10,30/20);                          // live : +30 dB + limiteur
 }
 function lsnBuild(){
   const src=lsnSrc();
