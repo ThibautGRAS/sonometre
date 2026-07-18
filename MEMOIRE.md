@@ -319,6 +319,8 @@ Deux chaînes parallèles à partir du même signal micro :
 
 ## 8ter. Journal des versions (V1 / main)
 
+- **PROMOTION 2.0.89 (production)** : la branche V2 (ex-beta) est promue en PRODUCTION a la racine de `main` (version affichee **2.0.89**, sans -beta ; cache SW `sono-2.0.89-<hash>`, reseau-d'abord -> les utilisateurs V1 basculent sur V2 a la prochaine visite en ligne). L'ancienne V1 (1.35.x) reste dans l'historique git (restaurable via deploy_v1.py) ; la branche V2 et le canal /beta restent inchanges pour le developpement continu. Ref rapport de validation : SONO-VAL-000.
+
 - **1.35.46** : **zones mortes autour des icônes superposées** (portage du correctif 2.0.9-beta) : un tap visant un bouton posé sur un graphe ne pose plus de curseur ni ne déclenche le zoom du canvas en dessous (garde `overOverlayBtn`, marge 10 px, 4 gestionnaires).
 
 - **1.35.45** : **infra canal beta V2**. Le service worker de main **exclut les chemins `/beta/`** de son interception (sinon il écrasait le cache `./index.html` de la V1 avec la page beta en ligne, et servait la V1 sur /beta/ hors-ligne). Aucun changement fonctionnel de l'app V1 (bump de version pour la traçabilité et la diffusion du SW).

@@ -17,7 +17,21 @@ if('serviceWorker' in navigator){
     // updateViaCache:'none' → le navigateur va TOUJOURS chercher sw.js sur le réseau (jamais son cache HTTP)
     // réseau d'abord + cache:reload (voir sw.js) suffisent à servir la version fraîche à chaque ouverture.
     // PAS de reload automatique : il provoquait un double-chargement visible à chaque mise à jour.
-    navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ reg.update(); }).catch(()=>{});
+    // Canal beta (main:/beta/) : pas de service worker, la page de test est toujours servie fraîche.
+    if(!location.pathname.includes('/beta/')){
+      navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ reg.update(); }).catch(()=>{});
+    } else {
+      /* BÊTA AUTO-NETTOYANT : un service worker résiduel (installé par l'app principale
+         avant l'exclusion de /beta/) peut resservir une VIEILLE copie du beta en ignorant
+         le ?v=. On purge tout SW + caches, et on recharge UNE fois pour repartir propre. */
+      try{
+        navigator.serviceWorker.getRegistrations().then(rs=>{
+          let had=false; rs.forEach(r=>{ had=true; try{r.unregister();}catch(_){} });
+          if(window.caches&&caches.keys) caches.keys().then(ks=>ks.forEach(k=>{try{caches.delete(k);}catch(_){}})).catch(()=>{});
+          if(had && !sessionStorage.getItem('betaPurged')){ sessionStorage.setItem('betaPurged','1'); location.reload(); }
+        }).catch(()=>{});
+      }catch(_){}
+    }
   });
 }
 </script>
@@ -113,11 +127,11 @@ if('serviceWorker' in navigator){
   .brandwrap{display:flex;align-items:center;gap:10px}
   .logobox{background:#fff;border-radius:9px;padding:5px 10px;display:flex;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.25)}
   .logo{height:15px;width:auto;display:block}
-  .wordmark{font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:.16em;color:var(--ink);text-transform:uppercase;padding-left:11px;border-left:2px solid var(--red);line-height:1}
+  .wordmark{font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:.11em;color:var(--ink);text-transform:uppercase;padding-left:11px;margin-right:8px;border-left:2px solid var(--red);line-height:1}
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
   .hdricons{display:flex;align-items:center;gap:12px;flex:0 0 auto}
-  .helpbtn{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);opacity:.55;font-family:var(--font);font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .helpbtn{width:24px;height:24px;margin-left:2px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);opacity:.55;font-family:var(--font);font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
   .helpbtn:active{opacity:.95}
   .micstat .micic{width:20px;height:20px}
   .micstat .micic path{fill:currentColor;stroke:currentColor}
@@ -151,8 +165,8 @@ if('serviceWorker' in navigator){
       linear-gradient(180deg,var(--cap0),var(--cap1));
     box-shadow:inset 0 -3px 7px var(--cap-sh,rgba(0,0,0,.55));
   }
-  /* Game Boy : pas de capsule (la coque DMG n'a rien à cet endroit) */
-  body.th-gameboy .miccap{display:none}
+  /* Game Boy : pas de grille de haut-parleur, mais on GARDE l'espace pour aligner l'écran avec les autres thèmes */
+  body.th-gameboy .miccap i{visibility:hidden}
   /* Thèmes clairs : fente lisse en creux, sans rayures (les fentes diagonales font tache sur fond clair) */
   body.th-clair .miccap i{
     background:linear-gradient(180deg,var(--cap0),var(--cap1));
@@ -166,6 +180,48 @@ if('serviceWorker' in navigator){
   }
   .bezel::after{content:"";position:absolute;inset:7px;border-radius:12px;pointer-events:none;z-index:3;
     background:linear-gradient(112deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,.03) 16%,transparent 28%)}
+
+  /* ===== liseré LED rotatif : indicateur d'enregistrement discret =====
+     Une comète rouge parcourt le contour du bezel quand body.rec-on est actif.
+     Technique : anneau (padding masqué) rempli d'un conic-gradient dont l'angle
+     de départ est animé via une propriété enregistrée @property (--ledA). */
+  @property --ledA{ syntax:'<angle>'; inherits:false; initial-value:0deg; }
+  .bezel::before{
+    content:"";position:absolute;inset:-2px;border-radius:20px;padding:2px;z-index:4;
+    pointer-events:none;opacity:0;transition:opacity .5s ease;
+    background:conic-gradient(from var(--ledA),
+      rgba(239,51,70,0) 0deg, rgba(239,51,70,0) 255deg,
+      rgba(239,51,70,.12) 300deg, rgba(255,120,135,.9) 348deg,
+      #FF5A6B 356deg, rgba(239,51,70,0) 360deg);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude;
+    filter:drop-shadow(0 0 5px rgba(239,51,70,.8)) drop-shadow(0 0 17px rgba(239,51,70,.6)) drop-shadow(0 0 32px rgba(255,90,110,.4)) drop-shadow(0 0 48px rgba(255,90,110,.22));
+  }
+  body.rec-on .bezel::before{ opacity:1; animation:ledSpin 2.6s linear infinite; }
+  @keyframes ledSpin{ to{ --ledA:360deg; } }
+  /* EN PAUSE : la comète s'arrête, le liseré devient un anneau uniforme léger qui clignote */
+  body.rec-paused .bezel::before{
+    opacity:1;
+    background:conic-gradient(from 0deg, rgba(239,51,70,.5), rgba(255,120,135,.5) 50%, rgba(239,51,70,.5));
+    animation:ledBlink 1.5s ease-in-out infinite;
+  }
+  @keyframes ledBlink{ 0%,100%{opacity:.22} 50%{opacity:.7} }
+  /* FIN DE MESURE (durée atteinte) : le liseré devient un anneau VERT qui entoure l'écran puis s'estompe */
+  body.rec-done .bezel::before{
+    opacity:.5;
+    background:conic-gradient(from 0deg, rgba(47,191,131,.75), rgba(140,255,190,.8) 50%, rgba(47,191,131,.75));
+    filter:drop-shadow(0 0 5px rgba(47,191,131,.85)) drop-shadow(0 0 18px rgba(120,255,180,.6)) drop-shadow(0 0 34px rgba(140,255,190,.4)) drop-shadow(0 0 50px rgba(140,255,190,.22));
+    animation:ledDone 1.6s ease-out forwards;
+  }
+  @keyframes ledDone{ 0%{opacity:0} 12%{opacity:.75} 30%{opacity:.2} 50%{opacity:.75} 70%{opacity:.35} 100%{opacity:.5} }
+  /* accessibilité : pas d'animation → pulsation douce du liseré à la place */
+  @media (prefers-reduced-motion:reduce){
+    body.rec-on .bezel::before{ animation:ledPulse 1.8s ease-in-out infinite;
+      background:conic-gradient(from 0deg, rgba(239,51,70,.5), rgba(255,120,135,.5)); }
+    body.rec-paused .bezel::before{ animation:none; opacity:.45; }
+    @keyframes ledPulse{ 0%,100%{opacity:.35} 50%{opacity:.9} }
+  }
 
   /* ---------- ÉCRAN LCD FIXE (affichage sombre lumineux) ---------- */
   body.booting .lcd, body.booting .keypad{opacity:0}
@@ -185,17 +241,18 @@ if('serviceWorker' in navigator){
       linear-gradient(180deg,var(--lcd-bg2) 0%,var(--lcd-bg) 100%);
     border-radius:11px;color:var(--lcd-ink);
     display:flex;flex-direction:column;
-    padding:10px 12px 8px;overflow:hidden;
+    padding:8px 11px 6px;overflow:hidden;
   }
   .statusline{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--lcd-dim);flex:0 0 auto;font-family:var(--mono)}
   .badge{font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(79,195,255,.14);border:1px solid rgba(79,195,255,.35);color:#BFE3FF;font-size:10px;font-family:var(--font);letter-spacing:.04em;
     min-width:64px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;white-space:nowrap}
   .badge.rec{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 10px rgba(239,51,70,.55)}
+  .badge.replay{background:#1668B8;border-color:#4FC3FF;color:#fff;box-shadow:0 0 10px rgba(79,195,255,.5)}
   .badge.rec::before{content:"● ";animation:blink 1.2s step-end infinite}
   @keyframes blink{50%{opacity:.2}}
 
   .mainrow{display:flex;align-items:baseline;justify-content:center;gap:8px;flex:0 0 auto;margin-top:2px}
-  .numwrap{font-family:var(--mono);font-size:clamp(44px,13vw,64px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;white-space:pre}
+  .numwrap{font-family:var(--mono);font-size:clamp(38px,11vw,54px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;white-space:pre}
   .numwrap .num{color:#F2FAFF;text-shadow:0 0 14px rgba(79,195,255,.45),0 0 3px rgba(79,195,255,.6)}
   .mainrow .unit{font-size:14px;font-weight:700;color:var(--lcd-dim)}
   .mainrow .lbl{font-size:12px;font-weight:700;color:var(--ice);letter-spacing:.1em;text-shadow:0 0 8px rgba(79,195,255,.5)}
@@ -207,24 +264,23 @@ if('serviceWorker' in navigator){
 
   /* zone graphique fixe : les 3 affichages sont superposés, un seul visible */
   .graphzone{flex:1 1 auto;min-height:0;position:relative;margin-top:6px;border-top:1px solid var(--lcd-grid);padding-top:6px}
-  .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--ice);z-index:2;text-shadow:0 0 8px rgba(79,195,255,.4)}
-  .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2}
+  .gtitle{position:absolute;top:8px;left:2px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--ice);z-index:2;text-shadow:0 0 8px rgba(79,195,255,.4);max-width:56%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gscale{position:absolute;top:8px;right:2px;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--lcd-dim);z-index:2;max-width:43%;white-space:nowrap;overflow:hidden;text-align:right}
   .gpane{position:absolute;inset:22px 0 0 0;display:none}
-  .sg3dbtn{transition:opacity .35s ease;}
-  .sg3dbtn.fade{opacity:.18 !important}
+  .sg3dbtn{transition:opacity .3s ease;opacity:.4}   /* toujours semi-transparent par défaut */
+  .sg3dbtn.flash{opacity:1 !important}               /* rendu pleinement visible ~1,5 s après un clic */
   #sg3dBtn:active,#lsnBtn:active{opacity:1 !important}
   .sg3dbtn:active{opacity:1}
-  .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:46px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.06em;border-radius:7px;cursor:pointer}
+  .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:40px;height:22px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:10px;letter-spacing:.04em;border-radius:7px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
-  .sg3dbtn.on{background:rgba(79,195,255,.28);color:#EAF6FF}
-  #emgBtn.on{background:rgba(255,180,84,.24);border-color:rgba(255,180,84,.65);color:#FFD9A0}
+  .sg3dbtn.on{background:#FFA92E;color:#2A1400;border-color:#FFD08A;box-shadow:0 0 12px rgba(255,169,46,.85), inset 0 0 6px rgba(255,220,150,.6);text-shadow:none;font-weight:800}
+  #avgBtn.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY actif = vert */
   #vibBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
-  #avgBtn.on{background:rgba(79,195,255,.24);border-color:rgba(79,195,255,.65);color:#CFEBFF}
   #avgBtn.dis{opacity:.35}
   #lsnBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
   /* icônes du spectrogramme : côte à côte à gauche, dégagées de l'ordonnée (padL≈26) */
-  #sg3dBtn{right:auto;left:30px;top:6px;opacity:.75}
-  #lsnBtn{right:auto;left:82px;top:6px;opacity:.75}
+  #sg3dBtn{right:auto;left:30px;top:6px}
+  #lsnBtn{right:auto;left:82px;top:6px}
   #vibBtn.dis{opacity:.35}
   .gpane.on{display:block}
   canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
@@ -232,9 +288,9 @@ if('serviceWorker' in navigator){
   /* écran VALEURS */
   #paneVal{overflow:hidden}
   .valtable{display:grid;grid-template-columns:1fr 1fr;gap:5px;height:calc(100% - 16px);align-content:start}
-  .valtable .cell{background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:6px 6px 7px;text-align:center;min-height:0;overflow:hidden}
+  .valtable .cell{background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:6px 6px 7px;text-align:center;min-height:0;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
   .valtable .cell.hero{grid-column:span 2;padding:8px}
-  .valtable .cell.hero .v{font-size:38px;line-height:1}
+  .valtable .cell.hero .v{font-size:clamp(26px,8vw,40px);line-height:1.08}
   .valtable .cell.hero .k{font-size:11px;letter-spacing:.2em}
   .valsec{grid-column:span 2;display:flex;justify-content:space-around;gap:6px;flex-wrap:wrap;
     font-size:11px;color:#5F7FB8;padding:6px 4px;border-top:1px solid rgba(79,195,255,.10);margin-top:2px}
@@ -250,14 +306,22 @@ if('serviceWorker' in navigator){
   .exp-item b{font-size:14px;font-weight:700}
   .exp-item span{font-size:11px;color:#8fa3c4}
   .ep-in{width:100%;box-sizing:border-box;background:rgba(0,0,0,.30);border:1px solid var(--line);color:#fff;border-radius:9px;padding:9px 11px;font-family:var(--font);font-size:13px;font-weight:600}
+  .ep-btn{flex:1;height:40px;border-radius:10px;border:1px solid rgba(79,195,255,.45);background:rgba(79,195,255,.14);color:#CFEBFF;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font)}
+  .ep-btn:disabled{opacity:.35}
+  .rec-item{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:9px;padding:7px 9px;margin-bottom:6px}
+  .rec-item .ri-t{flex:1;min-width:0}
+  .rec-item .ri-t b{display:block;font-size:12px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rec-item .ri-t span{display:block;font-size:10px;color:var(--lcd-dim);margin-top:1px}
+  .rec-item .ri-a{display:flex;gap:5px;flex:0 0 auto}
+  .rec-item .ri-a button{height:30px;min-width:34px;border-radius:8px;border:1px solid rgba(79,195,255,.4);background:rgba(79,195,255,.12);color:#CFEBFF;font-size:11px;font-weight:700;font-family:var(--font);padding:0 7px}
   .ep-in::placeholder{color:#6f83a6}
   .ep-figs{display:flex;gap:16px;flex-wrap:wrap;padding:2px}
   .ep-figs label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#cfe3ff;cursor:pointer}
   .ep-figs input{width:18px;height:18px;accent-color:#4FC3FF}
   .valtable .k{font-size:10px;letter-spacing:.06em;color:var(--lcd-dim);font-weight:700}
-  .valtable .v{font-family:var(--mono);font-size:20px;line-height:1.05;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lcd-ink);text-shadow:0 0 8px rgba(79,195,255,.3)}
+  .valtable .v{font-family:var(--mono);font-size:clamp(15px,4.8vw,20px);line-height:1.1;font-weight:700;font-variant-numeric:tabular-nums;color:var(--lcd-ink);text-shadow:0 0 8px rgba(79,195,255,.3)}
   .valtable .v.red{color:#FF6B7A;text-shadow:0 0 8px rgba(239,51,70,.5)}
-  .valtable .v.small{font-size:13px;line-height:1.3}
+  .valtable .v.small{font-size:clamp(11px,3.4vw,13px);line-height:1.25}
 
   /* écran MODE EXPERT */
   .menu{height:100%;display:flex;flex-direction:column;gap:4px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px;touch-action:pan-y}
@@ -277,7 +341,10 @@ if('serviceWorker' in navigator){
   .calhead{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--ice);font-weight:700;flex:0 0 auto;padding-bottom:5px}
   .calx{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--lcd-dim);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer}
   .calbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:4px;padding-right:2px}
-  .micsel{background:rgba(127,216,255,.08);border:1px solid rgba(127,216,255,.3);color:var(--lcd-ink);font-family:var(--font);font-size:12px;border-radius:6px;padding:4px 8px;max-width:62%}
+  .micsel{background:rgba(127,216,255,.08);border:1px solid rgba(127,216,255,.3);color:#CFE4FF;font-family:var(--font);font-size:12px;border-radius:6px;padding:4px 8px;max-width:62%}
+  /* liste déroulante native (PC) : options texte foncé sur fond blanc — sinon claire sur claire = illisible */
+  .micsel option{color:#0A1F42;background:#fff}
+  .micsel{color-scheme:light}
   .miwarn{background:rgba(255,176,32,.12);border:1px solid rgba(255,176,32,.5);color:#ffc152;font-family:var(--font);font-size:11.5px;line-height:1.35;border-radius:8px;padding:7px 10px;margin-bottom:8px}
   .micinfo{background:rgba(79,195,255,.06);border:1px solid rgba(79,195,255,.16);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;gap:3px}
   .microw{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8fa3c4}
@@ -293,7 +360,7 @@ if('serviceWorker' in navigator){
   .curvebox{background:#050F26;border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:5px 6px 2px;position:relative}
   .curvelbl{display:flex;justify-content:space-between;font-size:8.5px;font-weight:700;color:var(--lcd-dim);font-family:var(--mono);padding-bottom:2px}
   .curvelbl span:first-child{color:var(--ice)}
-  #curveCv{width:100%;height:80px;display:block;touch-action:none}
+  #curveCv{width:100%;height:80px;display:block;touch-action:pan-y}
   .calbody{overscroll-behavior:contain}
   .menu{overscroll-behavior:contain}
 
@@ -306,18 +373,24 @@ if('serviceWorker' in navigator){
   .scell.sel{border-color:var(--ice);box-shadow:0 0 8px rgba(79,195,255,.5)}
 
   .bottomstrip{display:flex;justify-content:space-between;align-items:center;flex:0 0 auto;margin-top:6px;padding-top:5px;border-top:1px solid var(--lcd-grid);font-family:var(--mono);font-size:11px;color:var(--lcd-dim)}
+  .replbar{display:none;align-items:center;gap:9px;flex:0 0 auto;margin-top:6px;font-family:var(--mono);font-size:11px;color:#CFEBFF}
+  .replbar.on{display:flex}
+  .rb-track{position:relative;flex:1;height:26px;display:flex;align-items:center;touch-action:none}
+  .rb-track::before{content:"";position:absolute;left:0;right:0;height:4px;background:#0B2450;border-radius:2px}
+  .rb-fill{position:absolute;left:0;height:4px;background:#4FC3FF;border-radius:2px;width:0}
+  .rb-dot{position:absolute;width:15px;height:15px;border-radius:50%;background:#4FC3FF;box-shadow:0 0 9px rgba(79,195,255,.65);transform:translateX(-8px);left:0}
   .bottomstrip b{color:var(--lcd-ink);font-weight:700;text-shadow:0 0 6px rgba(79,195,255,.35)}
   .progress{height:3px;background:#0B2450;border-radius:2px;overflow:hidden;flex:1;margin:0 10px}
   .progress .p{height:100%;width:0%;background:var(--red);box-shadow:0 0 6px rgba(239,51,70,.7)}
 
   /* ---------- CLAVIER PHYSIQUE ---------- */
-  .keypad{flex:0 0 auto;display:flex;flex-direction:column;gap:7px;
-    margin-top:10px;padding:9px 8px 10px;border-radius:16px;
+  .keypad{flex:0 0 auto;display:flex;flex-direction:column;gap:5px;
+    margin-top:6px;padding:6px 7px 7px;border-radius:16px;
     background:linear-gradient(180deg,var(--plate0),var(--plate1));
     box-shadow:inset 0 2px 6px rgba(0,0,0,.55), inset 0 -1px 0 rgba(255,255,255,.05), 0 1px 0 rgba(255,255,255,.06)}
-  .krow{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .krow{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
   .key{
-    border:0;border-radius:12px;min-height:52px;cursor:pointer;color:#fff;
+    border:0;border-radius:12px;min-height:38px;cursor:pointer;color:#fff;
     background:
       radial-gradient(130% 100% at 50% -10%, rgba(255,255,255,.13), transparent 48%),
       linear-gradient(180deg,var(--key-top) 0%,var(--key-mid) 45%,var(--key-bot) 100%);
@@ -328,7 +401,7 @@ if('serviceWorker' in navigator){
       inset 0 0 14px rgba(79,195,255,.09);
     transition:transform .05s, box-shadow .05s, filter .09s;
     will-change:transform,filter;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
     font-family:var(--font);
     overflow:hidden;
   }
@@ -343,10 +416,10 @@ if('serviceWorker' in navigator){
       inset 0 2px 4px rgba(0,0,0,.35), inset 0 -5px 8px rgba(0,0,0,.2),
       inset 0 0 18px rgba(99,205,255,.22)}
   .key:active::before{opacity:.5}
-  .key .kf{font-size:8px;letter-spacing:.14em;color:var(--key-lbl);font-weight:700;
+  .key .kf{font-size:6.5px;letter-spacing:.1em;color:var(--key-lbl);font-weight:700;
     text-shadow:0 1px 1px rgba(0,0,0,.35)}   /* légende */
   #kCalV{font-size:10.5px!important}
-  .key .kv{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--key-txt);
+  .key .kv{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--key-txt);
     text-shadow:0 1px 1px rgba(0,0,0,.3)}
   .key .kv small{font-size:10px;color:#B9C7E2}
   .key .dot{width:6px;height:6px;border-radius:50%;background:#31446e;margin-top:1px}
@@ -377,12 +450,41 @@ if('serviceWorker' in navigator){
     box-shadow:0 1px 0 #5E3C08, inset 0 2px 6px rgba(94,60,8,.55), 0 0 10px rgba(255,194,75,.5);
     transform:translateY(1px);
   }
-  .key-pause.paused .tico{animation:pauseBlink 1.1s ease-in-out infinite}
+  .key-pause.paused .tico{fill:#1E7A46;filter:drop-shadow(0 0 4px rgba(47,191,131,.8));animation:pauseBlink 1.1s ease-in-out infinite}
   @keyframes pauseBlink{0%,100%{opacity:1}50%{opacity:.45}}
+  /* LECTURE : bouton VERT, triangle BLANC (réécoute / relance d'un enregistrement) */
+  .key-pause.playgreen{
+    background:linear-gradient(180deg,#3FD37E 0%,#22A55B 45%,#12703D 100%);
+    box-shadow:0 3px 0 #0A4022, inset 0 1px 0 rgba(255,255,255,.30);
+  }
+  .key-pause.playgreen:active{transform:translateY(2px);box-shadow:0 1px 0 #0A4022, inset 0 1px 0 rgba(255,255,255,.30)}
+  .key-pause.playgreen .tico{fill:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  /* ENREGISTREMENT EN PAUSE : icône pause conservée + halo pulsé (pas de triangle vert) */
+  .key-pause.pausedrec{ animation:pauseGlow 1.6s ease-in-out infinite; }
+  .key-pause.pausedrec .tico{ animation:pauseBlink 1.2s ease-in-out infinite; }
+  @keyframes pauseGlow{
+    0%,100%{ box-shadow:0 3px 0 #5E3C08, inset 0 1px 0 rgba(255,255,255,.30), 0 0 0 0 rgba(255,194,75,.5) }
+    50%{ box-shadow:0 3px 0 #5E3C08, inset 0 1px 0 rgba(255,255,255,.30), 0 0 13px 2px rgba(255,194,75,.65) }
+  }
   /* touche désactivée (réglage bloqué pendant la mesure) */
   .key[disabled],.key.locked{opacity:.4;pointer-events:none;filter:saturate(.4)}
   .key.locked::after{content:"🔒";position:absolute;top:5px;right:7px;font-size:9px;opacity:.7}
   .key{position:relative}
+  /* ===== thème Néon : liseré lumineux sur les touches, couleur qui change à l'appui ===== */
+  body.th-neon .key{
+    border:1.5px solid rgba(79,195,255,.55);
+    box-shadow:0 0 11px rgba(79,195,255,.45), 0 3px 0 var(--key-edge), inset 0 1px 0 var(--key-hi), inset 0 -6px 10px rgba(0,0,0,.22);
+    transition:transform .05s, box-shadow .16s ease, border-color .16s ease, filter .09s;
+  }
+  body.th-neon .key .kf{color:#BFE3FF}
+  body.th-neon .key:active{
+    border-color:#FF3D6E;
+    box-shadow:0 0 20px rgba(255,61,110,.8), inset 0 2px 6px rgba(0,0,0,.5);
+    transform:translateY(2px);
+  }
+  body.th-neon .keypad{box-shadow:inset 0 2px 6px rgba(0,0,0,.6), 0 0 18px rgba(79,195,255,.18)}
+  body.th-neon .key.key-start{border-color:rgba(255,90,110,.7);box-shadow:0 0 13px rgba(239,51,70,.5),0 3px 0 var(--key-edge),inset 0 1px 0 var(--key-hi)}
+  body.th-neon .key.key-start:active{border-color:#fff;box-shadow:0 0 22px rgba(239,51,70,.85),inset 0 2px 6px rgba(0,0,0,.5)}
 
 
   /* popover CALIBRATION */
@@ -396,9 +498,14 @@ if('serviceWorker' in navigator){
   .ppopt span{font-size:11.5px;line-height:1.45;color:#B9C7E2}
   .ppopt em{font-size:10.5px;color:#8FB2E8;font-style:normal;font-family:var(--mono);letter-spacing:.02em}
   .langbar{display:flex;gap:8px;padding:8px 12px 2px}
-  .langbtn{flex:1;background:rgba(127,216,255,.08);border:1px solid rgba(127,216,255,.25);color:var(--lcd-ink);font-family:var(--font);font-size:12px;font-weight:700;border-radius:8px;padding:7px 0;cursor:pointer}
+  .langbtn{flex:1;background:rgba(127,216,255,.08);border:1px solid rgba(127,216,255,.25);color:#CFE4FF;font-family:var(--font);font-size:12px;font-weight:700;border-radius:8px;padding:7px 0;cursor:pointer}
   .langbtn.on{background:rgba(127,216,255,.22);border-color:rgba(127,216,255,.6)}
-  .helpbody{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-right:4px}
+  .helpbody{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-right:4px;flex:1 1 auto;min-height:0}
+  .helpnav{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 8px;margin-bottom:2px;border-bottom:1px solid rgba(79,195,255,.15);flex:0 0 auto;scrollbar-width:none}
+  .helpnav::-webkit-scrollbar{display:none}
+  .helpnav button{flex:0 0 auto;white-space:nowrap;background:rgba(79,195,255,.12);border:1px solid rgba(79,195,255,.3);color:#CFE4FF;font-family:var(--font);font-size:11px;font-weight:700;border-radius:14px;padding:6px 11px;cursor:pointer}
+  .helpnav button:active{background:rgba(79,195,255,.3)}
+  .helpnav button.on{background:rgba(47,191,131,.9);border-color:#7CFFB0;color:#04140C;font-weight:800}
   .helpbody h3{font-size:13px;color:var(--ice);letter-spacing:.06em;margin:14px 0 5px;font-weight:700}
   .helpbody h3.warn{color:#FFB454}
   .helpbody h3:first-child{margin-top:2px}
@@ -409,12 +516,12 @@ if('serviceWorker' in navigator){
   .helpfoot{margin-top:14px;padding-top:10px;border-top:1px solid rgba(79,195,255,.14);font-size:10px;letter-spacing:.1em;color:#5F7FB8;text-align:center;line-height:1.6}
   .mcredit{margin-top:10px;padding-top:10px;text-align:center;font-size:10px;letter-spacing:.08em;color:var(--lcd-dim);line-height:1.6;opacity:.8}
   .calpop-in{width:100%;max-width:520px;background:linear-gradient(180deg,#0A1F42,#050F26);border:1px solid rgba(79,195,255,.2);border-radius:16px 16px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom) + 16px);box-shadow:0 -8px 30px rgba(0,0,0,.5)}
-  .cp-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.14em;color:var(--ice);font-weight:700;padding-bottom:10px}
+  .cp-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.14em;color:#CFE4FF;font-weight:700;padding-bottom:10px}
   .cp-head button{background:rgba(255,255,255,.08);border:0;color:#fff;border-radius:8px;width:30px;height:30px;font-size:14px;cursor:pointer}
   .cp-row{display:flex;justify-content:space-between;align-items:center;background:rgba(79,195,255,.08);border:1px solid rgba(79,195,255,.16);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;margin-bottom:10px}
   .cp-row button{background:rgba(79,195,255,.18);border:0;color:#CFEBFF;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)}
   .cp-row button.on{background:var(--ice);color:var(--navy)}
-  .cp-lbl{font-size:10px;letter-spacing:.12em;color:var(--lcd-dim);font-weight:700;margin-bottom:6px}
+  .cp-lbl{font-size:10px;letter-spacing:.12em;color:#8FB2E8;font-weight:700;margin-bottom:6px}
   .cp-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
   .cp-presets button{background:rgba(255,255,255,.06);border:1px solid var(--line);color:#fff;border-radius:9px;padding:12px 4px;font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer}
   .cp-presets button.on{background:var(--ice);color:var(--navy);border-color:var(--ice)}
@@ -461,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">1.35.48</div>
+  <div class="splashver" id="splashVer">2.0.89</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -516,7 +623,7 @@ if('serviceWorker' in navigator){
     <div class="graphzone">
       <div class="gtitle" id="gTitle">SPECTRE · TIERS D'OCTAVE · POND. A</div>
       <div class="gscale" id="gScale"></div>
-      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="avgBtn">MOY</button><button class="sg3dbtn" id="emgBtn" style="right:60px">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="display:none">VIB</button></div>
+      <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="avgBtn">MOY</button><button class="sg3dbtn" id="emgBtn" style="right:54px">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="display:none">VIB</button></div>
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="paneVal">
@@ -540,7 +647,7 @@ if('serviceWorker' in navigator){
       </div>
       <div class="gpane" id="paneMenu">
         <div class="menu">
-          <div class="mrow" id="mPreset" style="border-color:rgba(79,195,255,.4);background:rgba(79,195,255,.10)"><span>Optimiser le spectrogramme</span><b id="mPresetV" style="color:#4FC3FF">▸ choisir</b></div>
+          <div class="mrow" id="mPreset" style="border-color:rgba(79,195,255,.4);background:rgba(79,195,255,.10)"><span>Type de spectre</span><b id="mPresetV" style="color:#4FC3FF;white-space:nowrap">▸ choisir</b></div>
           <div class="mrow" id="mWin"><span>Type de fenêtre</span><b>Blackman</b></div>
           <div class="mrow" id="mFft"><span>Nombre de points (FFT)</span><b>16384</b></div>
           <div class="mrow" id="mRes"><span>Résolution · bande</span><b>2.9 Hz</b></div>
@@ -548,7 +655,12 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
           <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
           <div class="mrow" id="mEmgThr"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
+          <div class="mrow" id="mSpecFrames"><span>Moyennage spectre (trames)</span><b>4</b></div>
+          <div class="mrow" id="mSpecSmooth"><span>Lissage fréquentiel (bande fine)</span><b>1/12 oct</b></div>
           <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
+          <div class="mrow" id="mLvlSrc"><span>Niveaux temps réel (LAF…, Leq)</span><b>Temporel IIR</b></div>
+          <div class="mrow" id="mHP"><span>Passe-haut (limite grave)</span><b>10 Hz</b></div>
+          <div class="mrow" id="mLP"><span>Passe-bas (limite aigu)</span><b>22 kHz</b></div>
           <div class="mrow" id="mSg3dSmooth"><span>Lissage / perf. 3D</span><b>Lisse</b></div>
           <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
           <div class="mrow" id="mLsnGain"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
@@ -596,8 +708,8 @@ if('serviceWorker' in navigator){
               <button class="cbtn go" id="calDo1k">Caler offset</button>
             </div>
             <div class="crow2">
-              <span class="cunit" id="offView" style="flex:1">Offset actuel : 120.0 dB</span>
-              <button class="cbtn" id="offReset">Réinit. offset (120 dB)</button>
+              <span class="cunit" id="offView" style="flex:1">Offset actuel : 130.0 dB</span>
+              <button class="cbtn" id="offReset">Réinit. offset (130 dB)</button>
             </div>
             <div class="msub">BALAYAGE TIERS D'OCTAVE (manuel)</div>
             <div class="sweepgrid" id="sweepGrid"></div>
@@ -609,6 +721,12 @@ if('serviceWorker' in navigator){
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="replbar" id="replBar">
+      <span id="rbCur">0:00</span>
+      <div class="rb-track" id="rbTrack"><div class="rb-fill" id="rbFill"></div><div class="rb-dot" id="rbDot"></div></div>
+      <span id="rbDur">0:00</span>
     </div>
 
     <div class="bottomstrip" id="bottomStrip">
@@ -647,12 +765,15 @@ if('serviceWorker' in navigator){
     <div class="cp-lbl">MICRO</div>
     <div class="cp-row"><span id="cpMicName" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62%">—</span><b id="cpMicRate">—</b></div>
     <div class="cp-row"><span>Choisir</span><select id="micSelPop" class="micsel" style="max-width:62%"><option value="">Automatique</option></select></div>
+    <div class="cp-lbl">SORTIE (réécoute ♪)</div>
+    <div class="cp-row"><span>Haut-parleur</span><select id="outSelPop" class="micsel" style="max-width:62%"><option value="">Automatique (système)</option></select></div>
+    <div class="cp-note" id="outNote" style="font-size:11px;opacity:.7;padding:2px 0 4px"></div>
     <div class="cp-row"><span>Correction amplitude</span><button id="cpCorr">Off</button></div>
     <div class="cp-lbl">OFFSET dBFS → dB SPL</div>
     <div class="cp-presets" id="cpPresets"></div>
     <div class="cp-fine">
       <button id="cpMinus">−0.5</button>
-      <span id="cpOff">120.0 dB</span>
+      <span id="cpOff">130.0 dB</span>
       <button id="cpPlus">+0.5</button>
     </div>
     <button class="cp-full" id="cpFull">Calibration avancée (profils, balayage…)</button>
@@ -714,7 +835,7 @@ if('serviceWorker' in navigator){
     </div>
 
     <div class="cp-row" id="dpSecInterp" style="margin-top:10px"><span>Interpolation spectrogramme</span><button id="dpInterp" class="cp-tog">Activée</button></div>
-    <div class="mnote" style="margin-top:8px">Affichage uniquement — réglable pendant la mesure · pincer à deux doigts reste actif</div>
+    <div class="mnote" id="dynNote" style="margin-top:8px">Affichage uniquement — réglable pendant la mesure · pincer à deux doigts reste actif</div>
   </div></div>
 
   <!-- popover DÉCLENCHEMENT (appui long sur Démarrer) -->
@@ -731,37 +852,52 @@ if('serviceWorker' in navigator){
     <div class="mnote" style="margin-top:8px">Ordre : armement micro → décompte → attente du seuil → mesure. Appui court sur ▶ pour lancer.</div>
   </div></div>
 
+  <!-- popover DURÉE (appui long sur DURÉE) -->
+  <div id="durPop" class="calpop"><div class="calpop-in">
+    <div class="cp-head">DURÉE DE MESURE <button id="durClose">✕</button></div>
+    <div class="cp-lbl">DURÉES PRÉDÉFINIES</div>
+    <div class="cp-presets" id="durPresets"></div>
+    <div class="cp-lbl" style="margin-top:10px">DURÉE PERSONNALISÉE</div>
+    <div class="cp-fine">
+      <input class="cin" id="durCustom" type="number" inputmode="numeric" min="1" step="1" placeholder="—" style="width:96px">
+      <span class="cp-mini" style="flex:1">secondes (0 ou vide = ∞)</span>
+      <button id="durApply" class="cp-ok">OK</button>
+    </div>
+    <div class="mnote" style="margin-top:8px">La mesure s'arrête automatiquement à la durée choisie. Appui court sur DURÉE = cycle rapide.</div>
+  </div></div>
+
   <!-- menu EXPORT -->
   <!-- page AIDE -->
   <!-- popover PRESET spectrogramme -->
   <div id="presetPop" class="calpop"><div class="calpop-in">
-    <div class="cp-head">OPTIMISER LE SPECTROGRAMME <button id="ppClose">✕</button></div>
+    <div class="cp-head">TYPE DE SPECTRE <button id="ppClose">✕</button></div>
     <div class="ppbody">
       <button class="ppopt" data-preset="tonal">
         <b>Son tonal / stable</b>
         <span>Moteur, ventilateur, bourdonnement. Résolution fréquence maximale (1,5 Hz) pour séparer harmoniques et repérer une émergence.</span>
-        <em>FFT 32768 · Blackman · overlap 75 % · 20 col/s · log</em>
+        <em>FFT 32768 · Blackman · overlap 75 % · 20 col/s · log · moyennage 2×</em>
       </button>
       <button class="ppopt" data-preset="transient">
         <b>Transitoire / événements brefs</b>
         <span>Chocs, impacts, parole. Résolution temporelle privilégiée pour voir quand les choses arrivent.</span>
-        <em>FFT 4096 · Hann · overlap 75 % · 40 col/s · log</em>
+        <em>FFT 4096 · Hann · overlap 75 % · 40 col/s · log · moyennage 2×</em>
       </button>
       <button class="ppopt" data-preset="balanced">
         <b>Équilibré (polyvalent)</b>
         <span>Bon compromis fréquence / temps pour un usage général.</span>
-        <em>FFT 16384 · Blackman · overlap 75 % · 20 col/s · log</em>
+        <em>FFT 16384 · Blackman · overlap 75 % · 20 col/s · log · moyennage 4×</em>
       </button>
       <div class="mnote" style="margin-top:8px">L'overlap lisse le rendu (plus de colonnes) mais ne change pas la résolution réelle, fixée par la taille de FFT. Compromis de Gabor : fréquence fine ⇄ temps fin.</div>
     </div>
   </div></div>
 
   <div id="helpPop" class="calpop"><div class="calpop-in helppop">
-    <div class="cp-head">AIDE &amp; GUIDE <span id="hpVer" style="margin-left:auto;margin-right:10px;font-size:10px;letter-spacing:.08em;color:var(--lcd-dim);font-weight:700"></span><button id="hpClose">✕</button></div>
+    <div class="cp-head">AIDE &amp; GUIDE <span id="hpVer" style="margin-left:auto;margin-right:10px;font-size:10px;letter-spacing:.08em;color:#8FB2E8;font-weight:700"></span><button id="hpClose">✕</button></div>
     <div class="langbar"><button class="langbtn" data-lang="fr">🇫🇷 Français</button><button class="langbtn" data-lang="en">🇬🇧 English</button><button class="langbtn" data-lang="es">🇪🇸 Español</button></div>
+    <div class="helpnav" id="helpNav"></div>
     <div class="helpbody">
       <h3>Démarrer</h3>
-      <p>Autorise le microphone au premier lancement, puis appuie sur <b>▶</b>. Un court « INIT MICRO… » précède la mesure (le temps que le micro se stabilise). <b>■</b> arrête, <b>⏸</b> met en pause.</p>
+      <p>Autorise le microphone au premier lancement, puis appuie sur <b>▶</b>. Un « INIT MICRO… » précède <b>seulement la première mesure</b> (le temps que le micro se stabilise) ; les mesures suivantes démarrent quasi instantanément. Pendant l'init, le chrono reste à 00:00. <b>■</b> arrête, <b>⏸</b> met en pause. Un liseré rouge tourne autour de l'écran pendant l'enregistrement ; à la fin d'une mesure à durée définie, il devient un <b>anneau vert</b>.</p>
 
       <h3>Écrans</h3>
       <p>La touche <b>ÉCRAN</b> fait défiler : Spectre → Spectrogramme → Évolution → Valeurs. La touche <b>MENU</b> ouvre le <b>mode expert</b> (réglages FFT, fenêtre, interpolation, source des tiers d'octave, thème, cette aide).</p>
@@ -782,14 +918,14 @@ if('serviceWorker' in navigator){
       </ul>
 
       <h3>Gestes sur les graphes</h3>
-      <ul>
-        <li><b>Pincer</b> horizontal/vertical : zoom fréquence, temps ou dB.</li>
-        <li><b>Glisser</b> : déplacer la vue.</li>
-        <li><b>Toucher</b> : poser un curseur de lecture (fréquence + niveau). Toucher le curseur le referme.</li>
-        <li>Spectrogramme : <b>deux doigts</b> = suivi automatique du maximum.</li>
+      <ul id="gestList">
+        <li id="liGest1"><b>Pincer</b> horizontal/vertical : zoom fréquence, temps ou dB.</li>
+        <li id="liGest2"><b>Glisser</b> : déplacer la vue.</li>
+        <li id="liGest3"><b>Toucher</b> : poser un curseur de lecture (fréquence + niveau). Toucher le curseur le referme.</li>
+        <li>Spectrogramme : <b>double-tap</b> (ou deux doigts, ou touche M) = suivi automatique du maximum ; en <b>relecture</b>, le viseur suit le pic au fil de la lecture. <b>Deux doigts / Maj+clic</b> font pareil.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
         <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
-        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>instantané</b> (lissé selon TEMPS : Fast/Slow/V‑Slow) et <b>moyenné (Leq)</b> sur toute la durée de mesure — libellé « L<i>x</i>·Moy ». Le calcul moyenné tourne en permanence en parallèle (aucun surcoût), et le <b>rapport PDF</b> utilise toujours le spectre moyenné. Disponible en tiers d'octave, octave et bande fine.</li>
+        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>live</b> et <b>moyenné (Leq)</b> sur toute la durée — libellé « L<i>x</i>·Moy ». Deux débruitages du spectre <b>fin</b> (menu Expert), indépendants du bouton TEMPS : <b>Moyennage (trames)</b> = moyenne des N derniers périodogrammes (méthode de Welch, agrégés à pas fixe = fenêtre·(1−overlap), donc « N moyennes » est une vraie grandeur, identique en direct et en replay), et <b>Lissage fréquentiel</b> = moyenne 1/n octave sur les raies (nettoie sans latence, n'affecte que la courbe pas les mesures au curseur). Le rapport PDF utilise toujours le spectre moyenné.</li>
       </ul>
 
       <h3>Indices</h3>
@@ -807,6 +943,7 @@ if('serviceWorker' in navigator){
 
       <h3>Calibration</h3>
       <p>Écran Calibration (menu expert). <b>Offset</b> : place un calibreur acoustique (94 ou 114 dB) sur le micro, saisis la référence, cale. <b>Correction fréquentielle</b> : balaye les tiers d'octave face à un sonomètre étalon pour bâtir une courbe, enregistrable en profil. La calibration est propre à chaque appareil.</p>
+      <p><b>Comment la correction est appliquée.</b> L'<i>offset</i> (dB constant) s'applique partout. Par défaut, l'app suppose <b>0 dBFS ≈ 130 dB SPL</b> (ordre de grandeur pour un micro d'iPhone — c'est une hypothèse, pas une mesure). Un calibreur remplace cette hypothèse par une valeur exacte : sans calibreur, un écart de référence se traduit par un décalage <b>uniforme</b> de tous les niveaux absolus (LAF, Leq, spectre), sans toucher aux grandeurs <b>relatives</b> (émergence, forme spectrale, comparaisons). La <i>correction fréquentielle</i>, elle, agit sur deux chaînes : (1) les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme) sont corrigés raie par raie ; (2) les <b>niveaux large bande</b> — LAF/LAS/LV, LAFmax, LCpeak <i>et</i> le <b>Leq</b> — passent par un <b>filtre temporel</b> qui reproduit la courbe (cascade de biquads), appliqué au signal <i>avant</i> les pondérations A/C. La courbe est une <b>forme normalisée à 0 dB à 1 kHz</b> (le niveau global reste porté par l'offset, pas par la courbe). Ainsi tout est cohérent, sans latence. Quand la correction est sur <b>Off</b>, le comportement d'origine est conservé (Leq issu de la FFT). Courbe douce (type MEMS) : fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz.</p>
 
       <h3>Tiers d'octave : FFT ou filtres IEC</h3>
       <p>Deux méthodes commutables dans le menu expert. <b>Synthèse FFT</b> : rapide, somme d'énergie des raies. <b>Filtres IEC 61260</b> : banc de filtres Butterworth par bande, plus fidèle au gabarit normalisé (surtout en basses fréquences), coût de calcul un peu plus élevé.</p>
@@ -820,11 +957,11 @@ if('serviceWorker' in navigator){
       <h3>Vue 3D du spectrogramme</h3>
       <p>Sur l'écran spectrogramme, le bouton <b>3D</b> bascule en vue « waterfall » isométrique : l'amplitude donne le relief et la couleur, la tranche vive au premier plan est l'instant présent. <b>Glisse horizontalement</b> pour pivoter la scène, <b>verticalement</b> pour l'incliner (plongée, rotation autour de l'axe des fréquences). La <b>fenêtre de temps</b> suit le réglage TEMPS (X) du menu ÉCHELLES : un preset 3/5/10 s affiche cette durée (défaut 5 s), avec un glissement continu de l'affichage. La durée réellement affichée est rappelée dans l'en-tête (ex. « … · 3.0 s ») et la tranche vive au premier plan est l'instant présent. Le zoom de fréquence et la colorbar suivent la zone affichée. Le <b>lissage</b> du rendu se règle dans le mode expert (<i>Standard</i>, <i>Lisse</i>, <i>Très lisse</i>).</p>
 
-      <h3>Optimiser le spectrogramme</h3>
-      <p>Menu expert ▸ <b>Optimiser le spectrogramme</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse et échelle. <b>Tonal</b> (résolution fréquence max, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, pour chocs/parole), <b>Équilibré</b> (polyvalent). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
+      <h3>Type de spectre</h3>
+      <p>Menu expert ▸ <b>Type de spectre</b> : trois presets appliquent d'un coup FFT, fenêtre, recouvrement, vitesse, échelle <b>et moyennage</b>. <b>Tonal</b> (résolution fréquence max, moyennage 2×, pour moteurs/ventilateurs), <b>Transitoire</b> (résolution temps, moyennage 2×, pour chocs/parole), <b>Équilibré</b> (polyvalent, moyennage 4×). Lissage fréquentiel désactivé par défaut (activable à part). Compromis de Gabor : on ne peut pas être fin en fréquence ET en temps à la fois.</p>
 
       <h3>Thèmes</h3>
-      <p>Menu expert ▸ <b>Thème de façade</b> : Marine, Acier, Clair labo, OLED noir, <b>Game Boy</b> (écran vert monochrome) et <b>Matrice</b> (noir et verts phosphorescents). Tout suit le thème — façade, écran de mesure, capsule, touches et couleurs des courbes. Le logo CETIM reste conforme à la charte (blanc ou bleu selon le fond).</p>
+      <p>Menu expert ▸ <b>Thème de façade</b> : Marine, Acier, Clair labo, OLED noir, <b>Néon</b> (touches à liseré lumineux, couleur qui change à l'appui), <b>Game Boy</b> (écran vert monochrome) et <b>Matrice</b> (noir et verts phosphorescents). Tout suit le thème — façade, écran de mesure, capsule, touches et couleurs des courbes. Le logo CETIM reste conforme à la charte (blanc ou bleu selon le fond).</p>
 
       <h3>Préférences &amp; mémorisation</h3>
       <p>Les réglages (thème, pondération, temps, mode, échelles, FFT, fenêtre, tiers d'octave, déclenchement, calibration…) sont <b>enregistrés automatiquement</b> et restaurés à la réouverture. Menu expert ▸ <b>Réinitialiser les paramètres</b> (↺) remet tout aux valeurs par défaut.</p>
@@ -834,6 +971,17 @@ if('serviceWorker' in navigator){
 
       <h3 class="warn">Précision — à lire</h3>
       <p>Un smartphone n'est pas un instrument certifié. Sans calibration, l'application est fiable en <b>relatif</b> (comparaisons, spectres). Avec calibration au calibreur, elle s'approche d'un sonomètre de classe sur une plage donnée, mais ne peut pas revendiquer une conformité de classe 1 ou 2. À mentionner dans tout rapport.</p>
+
+      <h3>Traitement du signal (avancé)</h3>
+      <p>Le signal du micro alimente <b>deux chaînes parallèles</b>.</p>
+      <p><b>Chaîne fréquentielle (FFT).</b> Le bloc est fenêtré (Blackman par défaut) puis transformé (FFT). L'amplitude est recalée par <b>identité de Parseval</b> : un facteur unique ramène l'énergie spectrale sur le RMS temporel réel du bloc. La perte de puissance propre à la fenêtre s'annule dans ce rapport → le niveau reste juste <b>quelle que soit la fenêtre</b>, sans constante tabulée. Cette chaîne produit les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme), l'<b>émergence</b>, et le <b>Leq quand la correction est sur Off</b>.</p>
+      <p><b>Tiers d'octave.</b> Deux méthodes : <i>synthèse FFT</i> (somme d'énergie des raies de chaque bande — juste en niveau grâce à Parseval) ou <i>filtres IEC 61260</i> (banc Butterworth par bande, sans question de fenêtre, plus fidèle au gabarit surtout en grave).</p>
+      <p><b>Raie tonale en bande fine.</b> Une fenêtre étale un ton sur quelques raies (largeur ENBW). L'<b>énergie intégrée</b> (bande, Leq) reste exacte, mais le <b>sommet tracé</b> d'une raie est sous-estimé d'environ <b>−10·log10(ENBW)</b> (≈ −2,4 dB en Blackman) — intrinsèque à toute FFT fenêtrée. La <b>lecture au curseur</b>, elle, est corrigée : accroche au maximum (snap) puis <b>interpolation parabolique du sommet</b> → vraie fréquence et vrai niveau du ton (repère ⟂).</p>
+      <p><b>Chaîne temporelle (échantillon par échantillon).</b> Elle calcule les <b>niveaux large bande</b> : pondérations <b>A/C</b> par biquads IEC 61672 (validées ≤ ±0,65 dB de 16 Hz à 12,5 kHz), intégrateurs exponentiels <b>Fast/Slow/V-Slow</b>, et vraie crête pondérée C (<b>LCpeak</b>). Réponse temporelle exacte, sans latence de fenêtre FFT.</p>
+      <p><b>Correction micro.</b> L'<i>offset</i> (dB constant) s'applique partout. La <i>courbe de correction</i> agit sur les deux chaînes : les spectres sont corrigés raie par raie ; les niveaux (LAF/LAS/LV, LCpeak <i>et</i> Leq) passent par un <b>filtre temporel</b> qui reproduit la courbe — une cascade de biquads (low-shelf + peaks ~½ octave + high-shelf) ajustée par moindres carrés, appliquée <b>avant</b> les pondérations A/C. Fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz sur une courbe douce (type MEMS). Le Leq est alors dérivé du <b>signal corrigé</b> (cohérent avec le temps réel). Correction sur Off : comportement d'origine (Leq issu de la FFT).</p>
+      <p><b>Limitation de bande.</b> Deux filtres réglables (menu Expert) bornent la bande analysée : un <b>passe-haut</b> (Off / 3 / 10 / 20 Hz, défaut 10 Hz) qui écarte le continu, le vent et l'infrason, et un <b>passe-bas</b> (Off / 20 / 22 kHz, défaut 22 kHz). Réalisés en biquads Butterworth (2e ordre, −3 dB à la coupure), ils s'appliquent au signal en amont des pondérations : niveaux, Leq et spectre sont bornés de façon cohérente. Utile surtout pour le <b>LZeq</b> (non pondéré), sinon gonflé par l'énergie hors bande.</p>
+      <p><b>Sélecteur (diagnostic).</b> Menu Expert ▸ <b>Niveaux temps réel</b> : <i>Temporel IIR</i> (défaut recommandé — pondérations A/C par biquads, réponse temporelle exacte) ou <i>Dérivé FFT</i> (niveaux lissés à partir du spectre, pour comparer au banc). En mode Dérivé FFT, la latence de fenêtre réapparaît et, <b>lorsqu'une correction est active</b>, le recalage de Parseval annule la contribution globale de la courbe : le niveau absolu perd la correction (l'écart peut atteindre plusieurs dB en grave). C'est pourquoi, correction active, le mode <i>Temporel IIR</i> (Option 1) est le seul exact — le mode FFT est réservé à la comparaison. Verrouillé pendant une mesure.</p>
+      <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -858,6 +1006,18 @@ if('serviceWorker' in navigator){
         <label><input type="radio" name="expBand" value="toct"> Tiers d'octave</label>
         <label><input type="radio" name="expBand" value="oct"> Octave</label>
       </div>
+      <div class="msub">AUDIO · V2 BÊTA</div>
+      <div class="ep-figs">
+        <label><input type="checkbox" id="arecTgl"> Enregistrer l'audio pendant la mesure</label>
+      </div>
+      <div class="mnote" style="margin:0 0 4px" id="arecState">désactivé</div>
+      <div style="display:flex;gap:8px">
+        <button class="ep-btn" id="arecWavShare" disabled>Partager WAV</button>
+        <button class="ep-btn" id="arecWavDl" disabled>Télécharger WAV</button>
+        <button class="ep-btn" id="arecSave" disabled>Sauvegarder</button>
+      </div>
+      <div class="msub">ENREGISTREMENTS LOCAUX</div>
+      <div id="recList"></div>
       <div class="msub">RAPPORT COMPLET</div>
       <button class="exp-item" id="epReport"><b>Générer le rapport (PDF)</b><span>document A4 · impression iOS → « Enregistrer en PDF »</span></button>
       <div class="msub">DONNÉES &amp; IMAGE</div>
@@ -875,22 +1035,24 @@ if('serviceWorker' in navigator){
 /* ================= État ================= */
 const S = {
   running:false, paused:false, screen:'spec',           // spec | hist | val
-  weight:'A', time:'F', mode:'toct', duration:0, offset:120.0, comp:false,
+  weight:'A', time:'F', mode:'toct', duration:0, offset:130.0, comp:false,
   ctx:null, analyser:null, stream:null, raf:0, wake:null,
   fftDb:null, td:null, K:0, freqs:null, binHz:0,
   wA:null, wC:null, compGain:null,
   bands:[], bandBins:[],
-  bandPowF:null, bandPowS:null, bandPowV:null, bandPeak:null, bandEnergy:null,
-  binPowF:null, binPowS:null, binPowV:null, binEnergy:null,
+  bandPowF:null, bandPowS:null, bandPowV:null, bandPowD:null, bandPeak:null, bandEnergy:null,
+  binPowF:null, binPowS:null, binPowV:null, binPowD:null, binEnergy:null,
+  specFrames:4,                   // moyennage temporel du spectre : nombre de trames (Welch ; 1 = live)
+  specSmooth:0,                   // lissage fréquentiel du spectre fin : 1/n octave (0 = off par défaut)
   pF:{A:0,C:0,Z:0}, pS:{A:0,C:0,Z:0}, pV:{A:0,C:0,Z:0},
   eq:{A:0,C:0,Z:0}, eqT:0,
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
-  win:'blackman', overlap:0.5, peakInterp:true, emgOn:true, emgThr:10, specAvg:false, expBand:'toct',
+  win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -925,6 +1087,17 @@ function interpCurve(curve,f){
     return g[i-1]+a*(g[i]-g[i-1]);
   }
   return 0;
+}
+/* Courbe de correction ACTIVE (générique ou profil), NORMALISÉE à 0 dB en médium (1 kHz) :
+   une correction est une FORME relative au médium ; tout niveau global appartient à l'offset
+   (référence 0 dBFS, 130 dB par défaut iPhone), pas à la courbe. Renvoie null si correction Off. */
+function activeCorrCurve(){
+  const c = S.corr==='profile'&&S.corrCurve ? S.corrCurve
+          : S.corr==='generic' ? (GENERIC[S.device]||GENERIC.iphone)
+          : null;
+  if(!c || !c.fc || !c.fc.length) return null;
+  const m = interpCurve(c,1000);                 // valeur en médium
+  return {fc:c.fc.slice(), g:(c.g||c.gain_dB).map(v=>v-m)};   // recalée : 0 dB à 1 kHz
 }
 const WINS={
   rect:{name:'Rectangulaire',f:(i,N)=>1},
@@ -974,6 +1147,130 @@ function cFilterRun(bq,x){        // filtre en place (Direct Form II transposée
     const a=Math.abs(y); if(a>mx)mx=a;
   }
   return mx;
+}
+/* ===== pondération A dans le domaine TEMPOREL (IEC 61672) =====
+   A(s)=(2πf4)²·s⁴/((s+2πf1)²(s+2πf2)(s+2πf3)(s+2πf4)²), en 3 biquads bilinéaires
+   (pôle HF f4 pré-distordu), normalisée à 1 kHz. Écart ≤ ±0,65 dB de 16 Hz à 12,5 kHz
+   (validé vs IEC 61672-1 ; déviation croissante 16–20 kHz, limite bilinéaire à 48 kHz). */
+function designAWeight(fs){
+  const K=2*fs, w1=2*Math.PI*20.598997,w2=2*Math.PI*107.65265,w3=2*Math.PI*737.86223,w4=K*Math.tan(Math.PI*12194.217/fs);
+  const bq=(b,a)=>({b0:b[0]/a[0],b1:b[1]/a[0],b2:b[2]/a[0],a1:a[1]/a[0],a2:a[2]/a[0],z1:0,z2:0});
+  const bl=(b2,b1,b0,a2,a1,a0)=>bq([b2*K*K+b1*K+b0,-2*b2*K*K+2*b0,b2*K*K-b1*K+b0],[a2*K*K+a1*K+a0,-2*a2*K*K+2*a0,a2*K*K-a1*K+a0]);
+  const s1=bl(1,0,0,1,2*w1,w1*w1);       // s²/(s+w1)²
+  const s2=bl(1,0,0,1,w2+w3,w2*w3);      // s²/((s+w2)(s+w3))
+  const s3=bl(0,0,w4*w4,1,2*w4,w4*w4);   // w4²/(s+w4)²
+  const H=(secs,f)=>{const w=2*Math.PI*f/fs;let m=1;for(const s of secs){
+    const nR=s.b0+s.b1*Math.cos(w)+s.b2*Math.cos(2*w),nI=-s.b1*Math.sin(w)-s.b2*Math.sin(2*w);
+    const dR=1+s.a1*Math.cos(w)+s.a2*Math.cos(2*w),dI=-s.a1*Math.sin(w)-s.a2*Math.sin(2*w);
+    m*=Math.hypot(nR,nI)/Math.hypot(dR,dI);}return m;};
+  const g=1/H([s1,s2,s3],1000); s1.b0*=g;s1.b1*=g;s1.b2*=g;
+  return [s1,s2,s3];
+}
+/* ===== FILTRE DE CORRECTION MICRO dans le domaine TEMPOREL (Option 1) =====
+   Réalise la courbe de correction dB(f) sous forme d'une cascade de biquads (RBJ) :
+   low-shelf grave + peaks (maillage ~1/2 octave) + high-shelf aigu, gains résolus par
+   moindres carrés linéarisés (2-5 itérations sur le résidu réel). Appliqué aux échantillons
+   AVANT les pondérations A/C dans lvlDet → LAF/LAS/LV, LCpeak ET Leq reflètent la correction,
+   sans latence. Courbe douce (type MEMS) : erreur < ~0,5 dB de 50 Hz à 12,5 kHz. Repli FIR
+   non nécessaire pour ces courbes (garde-fou : maxErr documenté). Neutre si correction = Off. */
+function rbjPeak(fs,fc,Q,gDb){const A=Math.pow(10,gDb/40),w=2*Math.PI*fc/fs,c=Math.cos(w),s=Math.sin(w),al=s/(2*Q);
+  const a0=1+al/A;return{b0:(1+al*A)/a0,b1:(-2*c)/a0,b2:(1-al*A)/a0,a1:(-2*c)/a0,a2:(1-al/A)/a0,z1:0,z2:0};}
+function rbjHP(fs,fc,Q){const w=2*Math.PI*fc/fs,c=Math.cos(w),s=Math.sin(w),al=s/(2*(Q||0.7071));
+  const a0=1+al;return{b0:((1+c)/2)/a0,b1:(-(1+c))/a0,b2:((1+c)/2)/a0,a1:(-2*c)/a0,a2:(1-al)/a0,z1:0,z2:0};}
+function rbjLP(fs,fc,Q){const w=2*Math.PI*fc/fs,c=Math.cos(w),s=Math.sin(w),al=s/(2*(Q||0.7071));
+  const a0=1+al;return{b0:((1-c)/2)/a0,b1:(1-c)/a0,b2:((1-c)/2)/a0,a1:(-2*c)/a0,a2:(1-al)/a0,z1:0,z2:0};}
+/* limitation de bande (passe-haut + passe-bas Butterworth 2e ordre), réglable, indépendante de la correction */
+function buildBandLimit(fs){
+  const secs=[];
+  if(S.hpFc>0) secs.push(rbjHP(fs,S.hpFc,0.7071));
+  if(S.lpFc>0 && S.lpFc<fs/2*0.99) secs.push(rbjLP(fs,S.lpFc,0.7071));
+  return secs.length?secs:null;
+}
+function blPowGainBin(f){   // gain de PUISSANCE de la limitation de bande à la fréquence f (pour le spectre/FFT)
+  if(!(S.hpFc>0)&&!(S.lpFc>0))return 1;
+  let db=0;
+  if(S.hpFc>0)db+=biqMagDb(rbjHP(S._blFs||48000,S.hpFc,0.7071),f,S._blFs||48000);
+  if(S.lpFc>0)db+=biqMagDb(rbjLP(S._blFs||48000,S.lpFc,0.7071),f,S._blFs||48000);
+  return Math.pow(10,db/10);
+}
+function rbjLowShelf(fs,fc,gDb,S){S=S||0.9;const A=Math.pow(10,gDb/40),w=2*Math.PI*fc/fs,c=Math.cos(w),s=Math.sin(w),al=s/2*Math.sqrt((A+1/A)*(1/S-1)+2),ap=2*Math.sqrt(A)*al;
+  const a0=(A+1)+(A-1)*c+ap;return{b0:A*((A+1)-(A-1)*c+ap)/a0,b1:2*A*((A-1)-(A+1)*c)/a0,b2:A*((A+1)-(A-1)*c-ap)/a0,a1:-2*((A-1)+(A+1)*c)/a0,a2:((A+1)+(A-1)*c-ap)/a0,z1:0,z2:0};}
+function rbjHighShelf(fs,fc,gDb,S){S=S||0.9;const A=Math.pow(10,gDb/40),w=2*Math.PI*fc/fs,c=Math.cos(w),s=Math.sin(w),al=s/2*Math.sqrt((A+1/A)*(1/S-1)+2),ap=2*Math.sqrt(A)*al;
+  const a0=(A+1)-(A-1)*c+ap;return{b0:A*((A+1)+(A-1)*c+ap)/a0,b1:-2*A*((A-1)+(A+1)*c)/a0,b2:A*((A+1)+(A-1)*c-ap)/a0,a1:2*((A-1)-(A+1)*c)/a0,a2:((A+1)-(A-1)*c-ap)/a0,z1:0,z2:0};}
+function biqMagDb(s,f,fs){const w=2*Math.PI*f/fs;
+  const nR=s.b0+s.b1*Math.cos(w)+s.b2*Math.cos(2*w),nI=-s.b1*Math.sin(w)-s.b2*Math.sin(2*w);
+  const dR=1+s.a1*Math.cos(w)+s.a2*Math.cos(2*w),dI=-s.a1*Math.sin(w)-s.a2*Math.sin(2*w);
+  return 20*Math.log10(Math.hypot(nR,nI)/Math.hypot(dR,dI));}
+function cascadeMagDb(secs,f,fs){let m=0;for(const s of secs)m+=biqMagDb(s,f,fs);return m;}
+function solveNormal(M,t,lam){const m=M.length,n=M[0].length,A=[],b=new Array(n).fill(0);
+  for(let i=0;i<n;i++)A.push(new Array(n).fill(0));
+  for(let i=0;i<n;i++){for(let j=0;j<n;j++){let s=0;for(let r=0;r<m;r++)s+=M[r][i]*M[r][j];A[i][j]=s+(i===j?lam:0);}let s=0;for(let r=0;r<m;r++)s+=M[r][i]*t[r];b[i]=s;}
+  for(let cI=0;cI<n;cI++){let p=cI;for(let r=cI+1;r<n;r++)if(Math.abs(A[r][cI])>Math.abs(A[p][cI]))p=r;
+    const tA=A[cI];A[cI]=A[p];A[p]=tA;const tb=b[cI];b[cI]=b[p];b[p]=tb;const d=A[cI][cI]||1e-9;
+    for(let j=cI;j<n;j++)A[cI][j]/=d;b[cI]/=d;
+    for(let r=0;r<n;r++)if(r!==cI){const f=A[r][cI];for(let j=cI;j<n;j++)A[r][j]-=f*A[cI][j];b[r]-=f*b[cI];}}
+  return b;}
+function designCorrFilter(fs,curve){
+  const nyq=fs/2;
+  const CENTERS=[31.5,45,63,90,125,180,250,355,500,710,1000,1400,2000,2800,4000,5600,8000,10000,12500,15000].filter(f=>f<nyq*0.9);
+  const loFc=22, hiFc=Math.min(15000,nyq*0.88);
+  const NS=200, fmin=16, fmax=Math.min(20000,nyq*0.98), samp=[];
+  for(let i=0;i<NS;i++)samp.push(fmin*Math.pow(fmax/fmin,i/(NS-1)));
+  const target=samp.map(f=>interpCurve(curve,f));
+  const REF=6, proto=[{type:'ls',fc:loFc}];
+  for(const fc of CENTERS)proto.push({type:'pk',fc,Q:1.4});   // Q large (recouvrement) → fit lisse, faible ondulation
+  proto.push({type:'hs',fc:hiFc});
+  const mk=(p,g)=>p.type==='ls'?rbjLowShelf(fs,p.fc,g):p.type==='hs'?rbjHighShelf(fs,p.fc,g):rbjPeak(fs,p.fc,p.Q,g);
+  const M=samp.map(f=>proto.map(p=>biqMagDb(mk(p,REF),f,fs)/REF));
+  let gains=solveNormal(M,target,0.06);
+  for(let it=0;it<8;it++){const secs=proto.map((p,j)=>mk(p,gains[j]));
+    const resid=samp.map((f,i)=>target[i]-cascadeMagDb(secs,f,fs));
+    const dg=solveNormal(M,resid,0.06);for(let j=0;j<gains.length;j++)gains[j]+=dg[j];}
+  const secs=proto.map((p,j)=>mk(p,gains[j]));
+  let maxErr=0;for(let i=0;i<NS;i++){if(samp[i]<50||samp[i]>12500)continue;const e=Math.abs(cascadeMagDb(secs,samp[i],fs)-target[i]);if(e>maxErr)maxErr=e;}
+  return {sections:secs, maxErr};
+}
+function buildCorrFilter(fs){
+  const curve=activeCorrCurve();                 // générique OU profil, recalée 0 dB à 1 kHz
+  if(!curve)return null;
+  try{ const r=designCorrFilter(fs,curve); S._corrMaxErr=r.maxErr; return r.sections; }
+  catch(e){ S._corrMaxErr=null; return null; }
+}
+/* ===== détecteur de niveau LARGE BANDE, pondération temporelle exacte (Option 2) =====
+   Filtre de CORRECTION micro (si actif) → Z (aucun) / A / C sur chaque échantillon, carré,
+   puis intégrateurs exponentiels Fast/Slow/V-Slow, crête C, et énergies cumulées (Leq). */
+function buildLvlDet(fs){
+  return {fs, A:designAWeight(fs), C:designCWeight(fs), corr:buildCorrFilter(fs), bl:buildBandLimit(fs),
+    aF:Math.exp(-1/(TAU.F*fs)), aS:Math.exp(-1/(TAU.S*fs)), aV:Math.exp(-1/(TAU.V*fs)),
+    cPeak:0, seeded:false, F:{A:0,C:0,Z:0}, S:{A:0,C:0,Z:0}, V:{A:0,C:0,Z:0},
+    eqA:0, eqC:0, eqZ:0, eqN:0 };   // énergies cumulées (signal CORRIGÉ) → Leq domaine temporel
+}
+function runBq(secs,v){           // cascade de biquads (Direct Form II transposée), état en place
+  for(let j=0;j<secs.length;j++){ const s=secs[j];
+    const y=s.b0*v+s.z1; s.z1=s.b1*v+s.z2-s.a1*y; s.z2=s.b2*v-s.a2*y; v=y; }
+  return v;
+}
+function lvlDetRun(det,x,acc){
+  const A=det.A,C=det.C,cr=det.corr,bl=det.bl,aF=det.aF,aS=det.aS,aV=det.aV,bF=1-aF,bS=1-aS,bV=1-aV;
+  const F=det.F,Sl=det.S,V=det.V; let cpk=det.cPeak; const n=x.length;
+  if(!det.seeded){                 // 1er bloc : cale les intégrateurs sur la moyenne (pas de rampe depuis 0)
+    let sz=0,sa=0,sc=0;
+    for(let i=0;i<n;i++){let v=x[i];if(bl)v=runBq(bl,v);const vc=cr?runBq(cr,v):v,a=runBq(A,vc),c=runBq(C,vc);sz+=vc*vc;sa+=a*a;sc+=c*c;const ac=c<0?-c:c;if(ac>cpk)cpk=ac;}
+    const mz=n?sz/n:0,ma=n?sa/n:0,mc=n?sc/n:0;
+    F.Z=Sl.Z=V.Z=mz; F.A=Sl.A=V.A=ma; F.C=Sl.C=V.C=mc; det.seeded=true; det.cPeak=cpk; return;
+  }
+  let eA=0,eC=0,eZ=0;
+  for(let i=0;i<n;i++){
+    let v=x[i]; if(bl)v=runBq(bl,v);                          // limitation de bande (passe-haut/passe-bas)
+    const vc=cr?runBq(cr,v):v, a=runBq(A,vc), c=runBq(C,vc), z2=vc*vc, a2=a*a, c2=c*c;
+    F.Z=aF*F.Z+bF*z2; Sl.Z=aS*Sl.Z+bS*z2; V.Z=aV*V.Z+bV*z2;
+    F.A=aF*F.A+bF*a2; Sl.A=aS*Sl.A+bS*a2; V.A=aV*V.A+bV*a2;
+    F.C=aF*F.C+bF*c2; Sl.C=aS*Sl.C+bS*c2; V.C=aV*V.C+bV*c2;
+    const ac=c<0?-c:c; if(ac>cpk)cpk=ac;
+    if(acc){ eA+=a2; eC+=c2; eZ+=z2; }        // énergie du signal corrigé + borné (pour le Leq temporel)
+  }
+  det.cPeak=cpk;
+  if(acc){ det.eqA+=eA; det.eqC+=eC; det.eqZ+=eZ; det.eqN+=n; }
 }
 /* ===== banc de filtres TIERS D'OCTAVE IEC 61260 (option expert) =====
    Butterworth passe-bande ordre 6 (3 biquads) par bande : prototype passe-bas
@@ -1057,27 +1354,22 @@ function parabolicPeak(getDb, i, binHz){
 /* ===== estompage automatique des icônes flottantes des graphes =====
    Motif « contrôles de lecteur vidéo » : pleinement visibles à l'interaction,
    quasi transparents après 3,5 s pour laisser lire les étiquettes d'axes dessous. */
-const FADE={t:null};
-function fadeWake(){
-  document.querySelectorAll('.sg3dbtn').forEach(b=>b.classList.remove('fade'));
-  clearTimeout(FADE.t);
-  FADE.t=setTimeout(()=>{
-    document.querySelectorAll('.sg3dbtn').forEach(b=>b.classList.add('fade'));
-  },3500);
-}
-document.addEventListener('DOMContentLoaded',()=>{
-  const zone=document.querySelector('.lcd')||document.body;
-  ['touchstart','mousedown'].forEach(ev=>zone.addEventListener(ev,fadeWake,{passive:true}));
-  fadeWake();
-});
+/* boutons superposés MOY/ÉMG/3D/🔊 : toujours semi-transparents ; un clic les rend
+   pleinement visibles ~1,5 s (flash) puis ils re-disparaissent. Chaque bouton est indépendant. */
+function flashBtn(btn){ if(!btn)return; btn.classList.add('flash'); clearTimeout(btn._ft); btn._ft=setTimeout(()=>btn.classList.remove('flash'),1500); }
+function unflashBtn(btn){ if(!btn)return; clearTimeout(btn._ft); btn.classList.remove('flash'); }
+/* (plus de réveil global au tap : chaque bouton gère son propre flash) */
 /* ===== écoute filtrée en temps réel =====
    Réinjecte le micro vers la sortie audio à travers un passe-bande cascade calé sur la
    fenêtre de fréquence zoomée (2× passe-haut + 2× passe-bas Butterworth ≈ 24 dB/oct de
    chaque côté). Le filtre SUIT le zoom en direct. Écouteurs fortement recommandés :
    sur haut-parleur, le micro réentend la sortie → larsen. */
 const LSN={on:false, nodes:null, lastF:'', warned:false, _raf:0};
+/* source d'entrée de l'écoute filtrée : le son EN COURS — replay si lecture, sinon micro */
+function lsnSrc(){ return (REPL.on&&REPL.src)?REPL.src:S.srcNode; }
 function lsnBuild(){
-  if(!S.ctx||!S.srcNode)return false;
+  const src=lsnSrc();
+  if(!S.ctx||!src)return false;
   const c=S.ctx;
   /* pente réglable (menu expert) : chaque biquad = 12 dB/oct → N = pente/12 par côté */
   const N=Math.max(1,Math.round((S.lsnSlope||24)/12));
@@ -1086,11 +1378,18 @@ function lsnBuild(){
   for(let i=0;i<N;i++){const f=c.createBiquadFilter();f.type='lowpass'; f.Q.value=0.707;lp.push(f);}
   const gn=c.createGain(); gn.gain.value=Math.pow(10,(S.lsnGain||0)/20);   // gain de rattrapage (dB)
   const chain=[...hp,...lp,gn];
-  S.srcNode.connect(chain[0]);
+  src.connect(chain[0]);
   for(let i=0;i<chain.length-1;i++)chain[i].connect(chain[i+1]);
   gn.connect(c.destination);
-  LSN.nodes={hp,lp,gn,first:chain[0]};
+  LSN.nodes={hp,lp,gn,first:chain[0],srcRef:src};
   return true;
+}
+/* rebranche l'écoute filtrée sur une nouvelle source (seek/relance du replay, retour micro) */
+function lsnRetarget(src){
+  if(!LSN.on||!LSN.nodes)return;
+  if(LSN.nodes.srcRef&&LSN.nodes.srcRef!==src){ try{LSN.nodes.srcRef.disconnect(LSN.nodes.first);}catch(_){} }
+  if(src){ try{src.connect(LSN.nodes.first);}catch(_){} LSN.nodes.srcRef=src; }
+  else lsnOff();
 }
 function lsnUpdate(){
   if(!LSN.on||!LSN.nodes||!S.ctx)return;
@@ -1105,7 +1404,7 @@ function lsnUpdate(){
 function lsnOff(){
   if(LSN._raf){cancelAnimationFrame(LSN._raf);LSN._raf=0;}
   if(LSN.nodes){
-    try{S.srcNode&&S.srcNode.disconnect(LSN.nodes.first);}catch(e){}
+    try{LSN.nodes.srcRef&&LSN.nodes.srcRef.disconnect(LSN.nodes.first);}catch(e){}
     try{LSN.nodes.gn.disconnect();}catch(e){}
     LSN.nodes=null;
   }
@@ -1123,14 +1422,35 @@ function lsnSetGain(){                     // ajuste le gain sans reconstruire l
    En mesure, loop() appelle déjà lsnUpdate → ici on ne fait que reprogrammer la frame. */
 function lsnTick(){
   if(!LSN.on){LSN._raf=0;return;}
-  if(!S.running) lsnUpdate();
+  if(!S.running||REPL.on) lsnUpdate();   // live : loop() met à jour ; replay/idle : c'est ici (loop ne tourne pas)
   LSN._raf=requestAnimationFrame(lsnTick);
 }
 async function lsnToggle(){
   if(LSN.on){lsnOff();ui();return;}
+  /* MODE REPLAY : on écoute le son REJOUÉ — aucun micro demandé */
+  if(REPL.on){
+    try{ if(S.ctx&&S.ctx.state==='suspended'&&!S.paused) await S.ctx.resume(); }catch(_){}
+    if(lsnBuild()){
+      LSN.on=true; LSN.lastF=''; lsnUpdate(); lsnTick(); ui();
+      toast('Écoute de l\'enregistrement rejoué — le filtre suit la bande zoomée.');
+    }
+    return;
+  }
+  /* barre replay affichée mais lecture finie : le son à écouter est l'enregistrement */
+  if(!S.running&&REPL.lastId&&$('replBar').classList.contains('on')){
+    toast('Lance la lecture (⟲ ou glisse la barre) pour écouter l\'enregistrement.');
+    return;
+  }
+  /* MODE MICRO : la sortie ne peut PAS être forcée sur les écouteurs depuis iOS. Pour éviter
+     le larsen sur haut-parleur, on demande une confirmation explicite (annulable). */
+  if(!LSN.warned){
+    const ok=window.confirm('Réécoute ♪ pendant la mesure : à écouter au CASQUE.\nSur haut-parleur, risque de LARSEN (le micro capte la sortie).\n\nÉcouteurs branchés — continuer ?');
+    if(!ok) return;
+  }
   /* amorcer l'audio SANS démarrer de mesure : le clic est un geste utilisateur,
      donc l'autorisation micro passe. Écoute filtrée possible dès le micro autorisé. */
   try{
+    S.micWanted=true;                      // geste volontaire : l'écoute filtrée nécessite le micro
     if(!S.ctx) await initAudio();
     else if(!micAlive()) await reviveMic(true);
     if(S.ctx && S.ctx.state==='suspended') await S.ctx.resume();
@@ -1319,10 +1639,34 @@ function fft(re,im){
 }
 const NOMS=[20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000];
 const DURS=[0,10,30,60,300,900], DURL=['∞','10 s','30 s','1 min','5 min','15 min'];
+/* libellé de durée : gère aussi les valeurs PERSO hors liste (0 = illimité) */
+function durLabel(d){
+  if(!d||d<=0)return '∞';
+  if(d<60)return d+' s';
+  const m=Math.floor(d/60), s=Math.round(d%60);
+  return s?(m+' min '+s+' s'):(m+' min');
+}
 const TAU={F:0.125,S:1.0,V:10.0};                  // constantes de temps (s)
 const TIME_ORDER=['F','S','V'];
 const TIME_LBL={F:'Fast',S:'Slow',V:'V-Slow'};
 const $=id=>document.getElementById(id);
+/* détection PC (souris fine + survol) vs tactile → consignes adaptées */
+const IS_PC = !!(window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches);
+function applyInputHints(){
+  if(!IS_PC)return;                       // tactile : on garde les libellés par défaut
+  const g1=$('liGest1'), g2=$('liGest2'), g3=$('liGest3'), dn=$('dynNote');
+  if(g1)g1.innerHTML='<b>Molette</b> : zoom vertical (Y). <b>Ctrl+molette</b> : zoom horizontal (X).';
+  if(g2)g2.innerHTML='<b>Clic-glisser</b> : déplacer la vue (ou le curseur).';
+  if(g3)g3.innerHTML='<b>Clic</b> : poser un curseur de lecture. <b>Double-clic</b> : réinitialiser la vue (double-clic sur le curseur = le refermer).';
+  if(dn)dn.textContent='Affichage uniquement — réglable pendant la mesure · molette de zoom reste active';
+  const gl=$('gestList');
+  if(gl && !$('liGestPC')){
+    gl.insertAdjacentHTML('beforeend',
+      '<li id="liGestPC"><b>Maj+clic</b> : curseur de suivi du maximum (équivalent « deux doigts »).</li>'+
+      '<li><b>Tableau Valeurs</b> : molette, flèches ← →, ou clic sur les points pour changer de page.</li>'+
+      '<li><b>Raccourcis clavier</b> : <b>Espace</b> = démarrer/arrêter · <b>R</b> = réinitialiser la vue · <b>M</b> = curseur max.</li>');
+  }
+}
 
 /* ============ Pondérations IEC 61672 ============ */
 function aWeight(f){ if(f<=0)return -200;
@@ -1351,16 +1695,20 @@ function configureAnalyser(){
   S.fftDb=new Float32Array(n);
   S.K=0;
   S.binHz=S.ctx.sampleRate/N;
-  S.freqs=new Float32Array(n); S.wA=new Float32Array(n); S.wC=new Float32Array(n); S.compGain=new Float32Array(n);
-  const curve = S.corr==='profile'&&S.corrCurve ? S.corrCurve
-              : S.corr==='generic' ? GENERIC[S.device]||GENERIC.iphone
-              : null;
+  S._blFs=S.ctx.sampleRate;                                     // fs pour blPowGainBin
+  S.freqs=new Float32Array(n); S.wA=new Float32Array(n); S.wC=new Float32Array(n); S.compGain=new Float32Array(n); S.blGain=new Float32Array(n);
+  const curve = activeCorrCurve();     // générique ou profil, recalée 0 dB à 1 kHz (null si Off)
+  const blOn = (S.hpFc>0)||(S.lpFc>0);
+  const hpS = S.hpFc>0?rbjHP(S._blFs,S.hpFc,0.7071):null, lpS = S.lpFc>0?rbjLP(S._blFs,S.lpFc,0.7071):null;
   for(let i=0;i<n;i++){
     const f=i*S.binHz; S.freqs[i]=f;
     S.wA[i]=Math.pow(10,aWeight(f)/10);
     S.wC[i]=Math.pow(10,cWeight(f)/10);
     S.compGain[i]=curve?Math.pow(10,interpCurve(curve,f)/10):1;
+    let bd=0; if(hpS)bd+=biqMagDb(hpS,f,S._blFs); if(lpS)bd+=biqMagDb(lpS,f,S._blFs);
+    S.blGain[i]=blOn?Math.pow(10,bd/10):1;                       // gain de puissance de la limitation de bande par bin
   }
+  if(S.lvlDet){ S.lvlDet.corr=buildCorrFilter(S.ctx.sampleRate); S.lvlDet.bl=buildBandLimit(S.ctx.sampleRate); }  // suit courbe + bande, sans reset des intégrateurs
   S.bands=[]; S.bandBins=[];
   for(const fc of NOMS){
     if(fc*Math.pow(2,1/6) > S.ctx.sampleRate/2) break;
@@ -1375,25 +1723,502 @@ function configureAnalyser(){
     S.bandPowF=new Float32Array(nb);
     S.bandPowS=new Float32Array(nb);
     S.bandPowV=new Float32Array(nb);
+    S.bandPowD=new Float32Array(nb);
+    S.curBnd=new Float32Array(nb);
     S.bandEnergy=new Float64Array(nb);
     S.bandPeak=new Float32Array(nb).fill(-99);
+    S.welch=null;
   }
   if(!S.binPowF||S.binPowF.length!==n){
     S.binPowF=new Float32Array(n);
     S.binPowS=new Float32Array(n);
     S.binPowV=new Float32Array(n);
+    S.binPowD=new Float32Array(n);
+    S.curFin=new Float32Array(n);
     S.binEnergy=new Float64Array(n);
+    S.welch=null;
   }
   S.iirBank=null;                      // le banc IIR dépend de fs/binHz/compGain : reconstruit
   SG.init=false;                       // recartographie bins→lignes (les données sgram sont préservées par sgSetup)
+  if(typeof REPL!=='undefined' && REPL.on && !REPL._building){ clearTimeout(REPL._reanaT); REPL._reanaT=setTimeout(replReanalyze,60); }
 }
 async function initAudio(){
   S.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  try{ if(S.outId&&S.ctx.setSinkId) await S.ctx.setSinkId(S.outId); }catch(_){}   // sortie réécoute (si supportée)
   S.analyser=S.ctx.createAnalyser();
   await acquireMic();
   configureAnalyser();
 }
 /* (ré)acquiert le flux micro et le branche sur l'analyseur existant */
+/* ===== V2 · CAPTURE AUDIO (chantier 1) =====================================
+   Captage CONTINU du flux micro par nœud dédié (l'AnalyserNode d'affichage perd
+   des échantillons entre deux frames). ScriptProcessor : universel et mono-fichier.
+   Empile des blocs Int16 pendant la mesure effective (mêmes règles que le Leq :
+   rien pendant l'armement, le départ différé, l'attente de seuil ou la pause).
+   Garde-fou mémoire : 20 min max (~115 Mo), arrêt propre de la capture au-delà. */
+const AREC={chunks:[], len:0, fs:0, node:null, sink:null, t0:null, full:false, MAXS:20*60};
+function arecReset(){ AREC.chunks=[]; AREC.len=0; AREC.fs=S.ctx?S.ctx.sampleRate:0; AREC.t0=new Date(); AREC.full=false; arecUi(); }
+function arecWire(){
+  if(AREC.node){ try{AREC.node.disconnect();}catch(_){} AREC.node=null; }
+  if(!S.recAudio||!S.ctx||!S.srcNode) return;
+  const bs=4096, pr=S.ctx.createScriptProcessor(bs,1,1);
+  pr.onaudioprocess=e=>{
+    if(REPL.on) return;                                     // jamais de capture pendant un replay
+    if(!S.running||S.paused||S._idle||AREC.full) return;
+    if(AREC.len/(AREC.fs||1)>=AREC.MAXS){ AREC.full=true; arecUi(); return; }
+    const x=e.inputBuffer.getChannelData(0), q=new Int16Array(x.length);
+    for(let i=0;i<x.length;i++){ const v=Math.max(-1,Math.min(1,x[i])); q[i]=v<0?v*32768:v*32767; }
+    AREC.chunks.push(q); AREC.len+=q.length;
+  };
+  /* iOS n'active le processor que s'il est raccordé à la destination : gain muet */
+  if(!AREC.sink){ AREC.sink=S.ctx.createGain(); AREC.sink.gain.value=0; AREC.sink.connect(S.ctx.destination); }
+  S.srcNode.connect(pr); pr.connect(AREC.sink); AREC.node=pr;
+}
+function arecWavBlob(){
+  const n=AREC.len, fs=AREC.fs||44100, bytes=44+n*2, b=new ArrayBuffer(bytes), v=new DataView(b);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF'); v.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,fs,true); v.setUint32(28,fs*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  ws(36,'data'); v.setUint32(40,n*2,true);
+  let o=44; for(const c of AREC.chunks){ new Int16Array(b,o,c.length).set(c); o+=c.length*2; }
+  return new Blob([b],{type:'audio/wav'});
+}
+function arecUi(){
+  const st=$('arecState'), bs=$('arecWavShare'), bd=$('arecWavDl'), bv=$('arecSave'); if(!st) return;
+  const dur=AREC.fs?AREC.len/AREC.fs:0, mb=(AREC.len*2/1048576);
+  st.textContent=!S.recAudio?'désactivé':
+    AREC.len?((AREC.full?'plein (20 min) · ':'')+dur.toFixed(1)+' s · '+mb.toFixed(1)+' Mo · '+Math.round(AREC.fs)+' Hz'):
+    'prêt (capte pendant la mesure)';
+  const has=AREC.len>0; if(bs)bs.disabled=!has; if(bd)bd.disabled=!has; if(bv)bv.disabled=!has;
+}
+/* ===== V2 · BIBLIOTHÈQUE LOCALE (chantier 2) ================================
+   Enregistrements persistés dans IndexedDB : store 'recs' (métadonnées : fs,
+   date, durée, offset et profil de calibration — nécessaires au replay) et
+   store 'chunks' (PCM int16 par blocs ~1 Mo, clé [id,seq]) pour ne jamais
+   charger toute la bibliothèque en RAM. navigator.storage.persist() demandé à
+   la première sauvegarde (sinon Safari peut purger silencieusement). */
+const RDB={db:null, CH:524288};
+function rdbOpen(){ return new Promise((res,rej)=>{ if(RDB.db)return res(RDB.db);
+  const rq=indexedDB.open('sono_rec',1);
+  rq.onupgradeneeded=e=>{ const db=e.target.result;
+    db.createObjectStore('recs',{keyPath:'id'});
+    db.createObjectStore('chunks',{keyPath:['id','seq']});
+  };
+  rq.onsuccess=()=>{RDB.db=rq.result;res(RDB.db);};
+  rq.onerror=()=>rej(rq.error);
+});}
+function rdbTx(stores,mode,fn){ return rdbOpen().then(db=>new Promise((res,rej)=>{
+  const tx=db.transaction(stores,mode); const out=fn(tx);
+  tx.oncomplete=()=>res(out); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error);
+}));}
+async function recPut(meta,segs){
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(_){}
+  await rdbTx(['recs','chunks'],'readwrite',tx=>{
+    tx.objectStore('recs').put(meta);
+    segs.forEach((s,i)=>tx.objectStore('chunks').put({id:meta.id,seq:i,pcm:s}));
+  });
+}
+function buildSegs(chunks){
+  const segs=[]; let cur=new Int16Array(RDB.CH), fill=0;
+  for(const c of chunks){ let o=0;
+    while(o<c.length){ const n=Math.min(c.length-o,RDB.CH-fill); cur.set(c.subarray(o,o+n),fill); fill+=n; o+=n;
+      if(fill===RDB.CH){ segs.push(cur); cur=new Int16Array(RDB.CH); fill=0; } } }
+  if(fill)segs.push(cur.subarray(0,fill).slice());
+  return segs;
+}
+async function recSave(){
+  if(!AREC.len) return;
+  const segs=buildSegs(AREC.chunks);
+  const t0=AREC.t0||new Date();
+  const meta={ id:Date.now().toString(36), name:'Mesure du '+t0.toLocaleString('fr-FR'),
+    date:t0.toISOString(), fs:AREC.fs, len:AREC.len, dur:AREC.len/(AREC.fs||1),
+    offset:S.offset, corr:S.corr, corrName:S.corrName||'', nseg:segs.length, app:APP_VERSION };
+  await recPut(meta,segs);
+  /* vérification par RELECTURE (diagnostic durabilité iOS) : on ne dit « sauvegardé »
+     que si la base relit vraiment l'entrée et tous ses segments */
+  let ok=false, nseg=0;
+  try{ const back=(await recList()).find(r=>r.id===meta.id); nseg=(await recSegs(meta.id)).length; ok=!!back&&nseg===segs.length; }catch(_){}
+  toast(ok?('Sauvegardé et vérifié ('+meta.dur.toFixed(1)+' s, '+nseg+' seg) — attends ~10 s avant de fermer/recharger (écriture disque iOS)')
+          :'ATTENTION : la relecture après sauvegarde a échoué — stockage local défaillant');
+  renderRecList();
+}
+function recList(){ return rdbTx(['recs'],'readonly',tx=>{
+  const out=[]; tx.objectStore('recs').openCursor().onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value);c.continue();}};
+  return out;
+});}
+function recDelete(id){ return rdbTx(['recs','chunks'],'readwrite',tx=>{
+  tx.objectStore('recs').delete(id);
+  tx.objectStore('chunks').delete(IDBKeyRange.bound([id,0],[id,1e9]));
+});}
+function recRename(id,name){ return rdbTx(['recs'],'readwrite',tx=>{
+  const st=tx.objectStore('recs'); st.get(id).onsuccess=e=>{const m=e.target.result;if(m){m.name=name;st.put(m);}};
+});}
+function recSegs(id){ return rdbTx(['chunks'],'readonly',tx=>{
+  const out=[]; tx.objectStore('chunks').openCursor(IDBKeyRange.bound([id,0],[id,1e9])).onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value.pcm);c.continue();}};
+  return out;
+});}
+async function recWavBlob(id,meta){
+  const segs=await recSegs(id);
+  const n=segs.reduce((a,s)=>a+s.length,0), fs=meta.fs||44100;
+  const b=new ArrayBuffer(44+n*2), v=new DataView(b);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF'); v.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,fs,true); v.setUint32(28,fs*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  ws(36,'data'); v.setUint32(40,n*2,true);
+  let o=44; for(const s of segs){ new Int16Array(b,o,s.length).set(s); o+=s.length*2; }
+  return new Blob([b],{type:'audio/wav'});
+}
+async function renderRecList(){
+  const box=$('recList'); if(!box)return;
+  let recs=[], err='';
+  try{ recs=await recList(); }catch(e){ err=(e&&(e.name+': '+e.message))||'erreur inconnue'; }
+  /* --- panneau de diagnostic stockage (beta) --- */
+  let diag='';
+  try{
+    const persisted=navigator.storage&&navigator.storage.persisted?await navigator.storage.persisted():null;
+    const est=navigator.storage&&navigator.storage.estimate?await navigator.storage.estimate():null;
+    const standalone=(window.navigator.standalone===true)||matchMedia('(display-mode: standalone)').matches;
+    diag='stockage : '+(persisted===true?'persistant':persisted===false?'NON persistant (purgeable par iOS)':'?')
+      +(est&&est.usage!=null?' · '+(est.usage/1048576).toFixed(1)+' / '+(est.quota?(est.quota/1048576).toFixed(0):'?')+' Mo':'')
+      +' · contexte : '+(standalone?'app installée':'Safari')+' · '+location.pathname;
+  }catch(_){ diag='diagnostic stockage indisponible'; }
+  if(err){ box.innerHTML='<div class="mnote" style="margin:0;color:#FFB454">bibliothèque en erreur : '+err+'</div><div class="mnote" style="margin:2px 0 0">'+diag+'</div>'; return; }
+  recs.sort((a,b)=>b.date<a.date?-1:1);
+  if(!recs.length){ box.innerHTML='<div class="mnote" style="margin:0">aucun enregistrement en base</div><div class="mnote" style="margin:2px 0 0">'+diag+'</div>'; return; }
+  box.innerHTML='';
+  for(const m of recs){
+    const d=document.createElement('div'); d.className='rec-item';
+    d.innerHTML='<div class="ri-t"><b></b><span>'+new Date(m.date).toLocaleString('fr-FR')+' · '+m.dur.toFixed(1)+' s · '+(m.len*2/1048576).toFixed(1)+' Mo · '+Math.round(m.fs)+' Hz</span></div>'+
+      '<div class="ri-a"><button data-a="play">▶</button><button data-a="wav">WAV</button><button data-a="ren">✎</button><button data-a="del">🗑</button></div>';
+    d.querySelector('b').textContent=m.name;
+    d.querySelector('[data-a="play"]').onclick=()=>{ replayStart(m.id); };
+    d.querySelector('[data-a="wav"]').onclick=async()=>{ toast('Préparation du WAV…'); shareOrDownload(await recWavBlob(m.id,m),(m.name.replace(/[^\w\- ]+/g,'_')||'enregistrement')+'.wav','Audio sonomètre CETIM'); };
+    d.querySelector('[data-a="ren"]').onclick=async()=>{ const n=prompt('Nom de l\'enregistrement :',m.name); if(n){ await recRename(m.id,n); renderRecList(); } };
+    d.querySelector('[data-a="del"]').onclick=async()=>{ if(confirm('Supprimer « '+m.name+' » ?')){ await recDelete(m.id); renderRecList(); } };
+    box.appendChild(d);
+  }
+  const u=document.createElement('div'); u.className='mnote'; u.style.margin='2px 0 0'; u.textContent=diag; box.appendChild(u);
+}
+function toast(msg){ const el=$('err'); if(!el)return; el.style.display='block'; el.textContent=msg; clearTimeout(toast._t); toast._t=setTimeout(()=>el.style.display='none',3000); }
+/* ===== V2 · MOTEUR DE REPLAY (chantier 3) ===================================
+   Rejoue un enregistrement de la bibliothèque DANS la chaîne d'analyse, à la
+   place du micro : AudioBufferSourceNode → S.analyser. Tout le pipeline tourne
+   à l'identique (spectre, Leq, MOY, émergence, LCpeak et banc IIR alimentés
+   depuis S.tap). WebAudio rééchantillonne si la fs stockée diffère du contexte.
+   Calibration : l'offset DE L'ENREGISTREMENT est appliqué le temps du replay
+   (dB SPL du jour de la mesure), puis restauré. Pas d'armement (signal propre).
+   Pause = suspend/resume du contexte. Fin (naturelle ou stop) → retour micro. */
+const REPL={on:false, src:null, buf:null, meta:null, savedOff:null, dur:0, lastId:null,
+  frames:null, i:0, playing:false, playAcc:0, raf:null, scrubbing:false, sinceAudio:0};
+function rbFmt(t){ const m=Math.floor(t/60), s=Math.floor(t%60); return m+':'+(s<10?'0':'')+s; }
+function replTickUi(t){
+  const u=REPL.dur>0?Math.max(0,Math.min(1,t/REPL.dur)):0;
+  $('rbCur').textContent=rbFmt(t);
+  $('rbFill').style.width=(u*100)+'%'; $('rbDot').style.left=(u*100)+'%';
+}
+/* ===== V2 · ANALYSE À FROID (chantier replay-scrubber) =====================
+   Au chargement, tout le fichier est découpé en trames (~50 ms) et analysé une
+   fois : spectre → tiers d'octave (brut) + niveaux A/C/Z instantanés, avec sommes
+   cumulées (prefix) pour lire la MOYENNE début→curseur instantanément. Ensuite le
+   slider n'est qu'un INDEX : l'affichage ne dépend plus jamais de l'horloge audio,
+   donc plus aucune dérive. La lecture ne fait qu'avancer l'index + jouer le son. */
+function replResample(ch,srcFs,dstFs){
+  if(srcFs===dstFs) return ch;
+  const r=srcFs/dstFs, n=Math.floor(ch.length/r), out=new Float32Array(n);
+  for(let i=0;i<n;i++){ const x=i*r, k=Math.floor(x), f=x-k; out[i]=k+1<ch.length?ch[k]*(1-f)+ch[k+1]*f:ch[k]; }
+  return out;
+}
+async function replBuildFrames(buf){
+  const fs=S.ctx.sampleRate;
+  const pcm=replResample(buf.getChannelData(0),buf.sampleRate,fs);
+  const N=S.fftN, w=S.winCoef, ws2=S.winSum2, n=N/2;
+  const nb=S.bands.length, bins=S.bandBins, wA=S.wA, wC=S.wC, corr=S.corr!=='off'?S.compGain:null;
+  const hop=Math.max(Math.round(fs*0.05), Math.round(N/4));
+  const count=Math.max(1,Math.floor((pcm.length-N)/hop)+1);
+  /* ===== grille bande fine ADAPTATIVE (anti raies fantômes) + résolution selon la taille du fichier =====
+     Une grille log fixe a, en bas du spectre, PLUS de lignes que la FFT n'a de points →
+     lignes vides = raies fantômes (surtout en log). Ici : 1 point FFT par ligne tant que
+     le pas log est plus fin que la FFT (→ pleine résolution en bas), puis regroupement en haut.
+     RESmax est calé sur un budget mémoire (~48 Mo pour les 2 pistes fines) DIVISÉ par le nombre
+     de trames : petits fichiers → RES peut atteindre la pleine résolution FFT (n points) ;
+     gros fichiers → RES réduit automatiquement (mais bien au-delà de l'ancien plafond de 320). */
+  const binHz=fs/N, f1=fs/2, lr1=Math.log(f1);
+  const RESmax=Math.max(64, Math.min(n, Math.floor(48e6/(8*Math.max(1,count)))));
+  const finMap=new Int16Array(n);
+  const lineSumF=[], lineCnt=[];
+  { let L=0, step=(lr1-Math.log(binHz))/RESmax, boundLog=Math.log(binHz)+step;
+    for(let k=1;k<n;k++){
+      const lf=Math.log(k*binHz);
+      if(lf>boundLog && lineCnt[L]>0 && L<RESmax-1){ L++; boundLog=Math.max(lf,boundLog)+step; }
+      finMap[k]=L; lineSumF[L]=(lineSumF[L]||0)+k*binHz; lineCnt[L]=(lineCnt[L]||0)+1;
+    }
+    var RES=L+1;
+  }
+  const finCnt=new Float32Array(RES); for(let r=0;r<RES;r++)finCnt[r]=lineCnt[r]||1;
+  const F={ fs, hop, hopSec:hop/fs, N, nb, count, binHz,
+    finRES:RES, finMap, finF:new Float32Array(RES),
+    wAfc:new Float64Array(nb), wCfc:new Float64Array(nb),
+    band:new Array(count), A:new Float64Array(count), C:new Float64Array(count), Z:new Float64Array(count),
+    cumBand:new Array(count), cumA:new Float64Array(count), cumC:new Float64Array(count), cumZ:new Float64Array(count),
+    LAF:new Float64Array(count), maxLAF:new Float64Array(count), minLAF:new Float64Array(count), maxC:new Float64Array(count),
+    cumFine:new Float32Array(count*RES), rawFine:new Float32Array(count*RES) };
+  for(let r=0;r<RES;r++) F.finF[r]=(lineSumF[r]||(f1))/ (lineCnt[r]||1);
+  for(let b=0;b<nb;b++){ const fc=S.bands[b]; F.wAfc[b]=Math.pow(10,aWeight(fc)/10); F.wCfc[b]=Math.pow(10,cWeight(fc)/10); }
+  const re=new Float64Array(N), im=new Float64Array(N);
+  const run=new Float64Array(nb);
+  const dtS=F.hopSec, aF=Math.exp(-dtS/0.125), aS=Math.exp(-dtS/1.0), aV=Math.exp(-dtS/10.0);
+  const finSum=new Float32Array(RES), runFine=new Float32Array(RES);
+  let runA=0,runC=0,runZ=0,mxL=-Infinity,mnL=Infinity,mxC=-Infinity;
+  for(let f=0;f<count;f++){
+    const off=f*hop;
+    let Pt=0; for(let i=0;i<N;i++){ const s=pcm[off+i]||0; re[i]=s*w[i]; im[i]=0; Pt+=s*s; } Pt/=N;
+    fft(re,im);
+    let pA=0,pC=0,pZ=0; const norm=2/ws2;
+    finSum.fill(0);
+    for(let i=1;i<n;i++){ let p=(re[i]*re[i]+im[i]*im[i])*norm; if(corr)p*=corr[i]; pZ+=p; pA+=p*wA[i]; pC+=p*wC[i]; finSum[finMap[i]]+=p; }
+    const bd=new Float32Array(nb);
+    for(let b=0;b<nb;b++){ const i0=bins[b][0],i1=bins[b][1]; let s=0; for(let i=i0;i<=i1;i++){ let p=(re[i]*re[i]+im[i]*im[i])*norm; if(corr)p*=corr[i]; s+=p; } bd[b]=s; }
+    const K=(pZ>0&&Pt>0&&isFinite(Pt))?Pt/pZ:1;   // recalage Parseval par trame
+    pA*=K; pC*=K; pZ*=K; for(let b=0;b<nb;b++)bd[b]*=K;
+    F.band[f]=bd; F.A[f]=pA; F.C[f]=pC; F.Z[f]=pZ;
+    runA+=pA; runC+=pC; runZ+=pZ; for(let b=0;b<nb;b++)run[b]+=bd[b];
+    F.cumA[f]=runA; F.cumC[f]=runC; F.cumZ[f]=runZ; F.cumBand[f]=Float32Array.from(run);
+    const laf=pA>0?10*Math.log10(pA)+S.offset:-99, lcf=pC>0?10*Math.log10(pC)+S.offset:-99;
+    F.LAF[f]=laf; if(laf>mxL)mxL=laf; if(laf<mnL)mnL=laf; if(lcf>mxC)mxC=lcf;
+    F.maxLAF[f]=mxL; F.minLAF[f]=mnL; F.maxC[f]=mxC;
+    /* spectre fin réduit : puissance instantanée par ligne (recalée Parseval) + cumul (MOY).
+       Le spectre est affiché en LIVE (trame au curseur) ; la MOY vient du cumul. */
+    const base=f*RES;
+    for(let r=0;r<RES;r++){
+      const inst=finSum[r]/finCnt[r]*K;
+      runFine[r]+=inst; F.cumFine[base+r]=runFine[r];
+      F.rawFine[base+r]=inst;
+    }
+    if((f&127)===0){ $('rbCur').textContent='…'+Math.round(100*f/count)+'%'; await new Promise(r=>setTimeout(r,0)); }
+  }
+  /* ===== pistes temporelles Fast/Slow/V-Slow LARGE BANDE (niveaux globaux ; TEMPS s'y applique) ===== */
+  for(const k of ['A','C','Z']){ F['tF'+k]=new Float64Array(count); F['tS'+k]=new Float64Array(count); F['tV'+k]=new Float64Array(count); }
+  let fA=F.A[0],fC=F.C[0],fZ=F.Z[0], sA=fA,sC=fC,sZ=fZ, vA=fA,vC=fC,vZ=fZ;
+  for(let f=0;f<count;f++){
+    const iA=F.A[f],iC=F.C[f],iZ=F.Z[f];
+    if(f===0){ fA=sA=vA=iA; fC=sC=vC=iC; fZ=sZ=vZ=iZ; }
+    else{
+      fA=aF*fA+(1-aF)*iA; fC=aF*fC+(1-aF)*iC; fZ=aF*fZ+(1-aF)*iZ;
+      sA=aS*sA+(1-aS)*iA; sC=aS*sC+(1-aS)*iC; sZ=aS*sZ+(1-aS)*iZ;
+      vA=aV*vA+(1-aV)*iA; vC=aV*vC+(1-aV)*iC; vZ=aV*vZ+(1-aV)*iZ;
+    }
+    F.tFA[f]=fA;F.tFC[f]=fC;F.tFZ[f]=fZ; F.tSA[f]=sA;F.tSC[f]=sC;F.tSZ[f]=sZ; F.tVA[f]=vA;F.tVC[f]=vC;F.tVZ[f]=vZ;
+  }
+  return F;
+}
+/* reconstruit le spectrogramme pour qu'il FINISSE à l'index i, depuis les spectres
+   fins réduits stockés (piste selon TEMPS). Appelé à chaque rendu → suit le curseur
+   (rembobinage inclus) et ne s'accumule jamais (reconstruit, pas empilé). */
+function replBuildSgram(i){
+  const F=REPL.frames; if(!F) return;
+  if(!CV.sgramCv)sizeCanvas('sgramCv');
+  if(!SG.init&&CV.sgramCv)sgSetup(CV.sgramCv);
+  if(!SG.init||!SG.map||!SG.flineHz)return;
+  const Hb=SG.bufH, Wp=SG.Wp, RES=F.finRES;
+  const key=Hb+'|'+SG.flineHz[0].toFixed(2)+'|'+SG.flineHz[Hb-1].toFixed(2)+'|'+S.weight+'|'+RES+'|'+(SG.map[0]?SG.map[0][0]:0);
+  if(SG._rbKey!==key){
+    const rr=new Int16Array(Hb), rw=new Float32Array(Hb);
+    for(let r=0;r<Hb;r++){
+      const mp=SG.map[r]||[1,1], mid=Math.max(1,Math.min(F.finMap.length-1,(mp[0]+mp[1])>>1));
+      rr[r]=F.finMap[mid]||0;                          // même grille que le stockage → aucune ligne vide
+      const fr=Math.max(20,SG.flineHz[r]);
+      rw[r]=S.weight==='A'?Math.pow(10,aWeight(fr)/10):S.weight==='C'?Math.pow(10,cWeight(fr)/10):1;
+    }
+    SG._rbRed=rr; SG._rbW=rw; SG._rbKey=key;
+  }
+  const rr=SG._rbRed, rw=SG._rbW;
+  const track=F.rawFine;   // spectrogramme = spectre INSTANTANÉ (comme en direct via fftDb)
+  if(!SG.cols||SG.cols.length!==Wp)SG.cols=new Array(Wp).fill(null);
+  const cols=SG.cols;
+  for(let x=0;x<Wp;x++){
+    const fi=i-(Wp-1-x);
+    if(fi<0){ cols[x]=null; continue; }
+    const base=fi*RES, col=new Float32Array(Hb);
+    for(let r=0;r<Hb;r++) col[r]=lvl(track[base+rr[r]]*rw[r]);
+    cols[x]=col;
+  }
+  SG.colSeq=Math.min(Wp,i+1); SG.vSeq=-1;   // force le re-blit couleur
+  /* mode auto (suivi du max) : suit le max de la colonne AU CURSEUR DE LECTURE (dernière colonne) */
+  if(S.sgCursor&&S.sgCursor.mode==='auto'){
+    const last=cols[Wp-1];
+    if(last){
+      const nfmin=Math.max(F_LOW(),S.fview.min), nfmax=Math.min(S.fview.max,nyq());
+      let bestR=-1,bestL=-Infinity;
+      for(let r=0;r<Hb;r++){ const fr=SG.flineHz[r]; if(fr<nfmin||fr>nfmax)continue; if(last[r]>bestL){bestL=last[r];bestR=r;} }
+      if(bestR>=0){ const rr=refineRow(last,bestR,Hb); S.sgCursor.f=rr.f; S.sgCursor.L=rr.L; S.sgCursor.col=Wp-1; }
+    }
+  }
+}
+/* affiche la trame d'index i : instantané au point + moyenne cumulée début→i */
+function renderReplayFrame(i){
+  const F=REPL.frames; if(!F) return;
+  i=Math.max(0,Math.min(F.count-1,i|0)); REPL.i=i;
+  const cnt=i+1, T=cnt*F.hopSec;
+  const wfc=S.weight==='A'?F.wAfc:S.weight==='C'?F.wCfc:null;   // pondération au centre de bande (comme la source IIR)
+  /* cumul (MOYENNE début→curseur) */
+  S.eqT=T; S.eq.A=F.cumA[i]*F.hopSec; S.eq.C=F.cumC[i]*F.hopSec; S.eq.Z=F.cumZ[i]*F.hopSec;
+  const cb=F.cumBand[i]; for(let b=0;b<F.nb;b++){ const g=wfc?wfc[b]:1; S.bandEnergy[b]=cb[b]*g*F.hopSec; }
+  /* niveaux « instantanés » au point = pistes temporelles Fast/Slow/V-Slow pré-calculées
+     (le sélecteur TEMPS choisit la piste — comme en direct) */
+  S.pF.A=F.tFA[i]; S.pF.C=F.tFC[i]; S.pF.Z=F.tFZ[i];
+  S.pS.A=F.tSA[i]; S.pS.C=F.tSC[i]; S.pS.Z=F.tSZ[i];
+  S.pV.A=F.tVA[i]; S.pV.C=F.tVC[i]; S.pV.Z=F.tVZ[i];
+  const NF=Math.max(1,S.specFrames|0);
+  for(let b=0;b<F.nb;b++){ const g=wfc?wfc[b]:1;
+    let s=0,c=0; for(let j=0;j<NF&&i-j>=0;j++){ s+=F.band[i-j][b]; c++; }
+    S.bandPowD[b]=(c?s/c:0)*g;                                   // bandes : moyenne des N dernières trames
+  }
+  S.lafMax=F.maxLAF[i]; S.lafMin=F.minLAF[i]; S.lcPeak=F.maxC[i];
+  /* spectre bande fine : pistes réduites pré-calculées (F/S/V + MOY cumulative), étendues
+     à la résolution FFT via la table finMap. Le spectre suit donc le curseur, avec MOY exacte. */
+  const RES=F.finRES, base=i*RES, invT=1/cnt;   // MOY = cumFine/(i+1)
+  if(replPreviewFill((i*F.hop+F.N)/F.fs)){ S._previewRing=true; const mag=computeSpectrum(); S._previewRing=false;
+    const nn=mag.length; for(let k=0;k<nn;k++) S.fftDb[k]=mag[k]>0?10*Math.log10(mag[k]):-180; }   // fftDb net (émergence/pics)
+  const nn=S.binPowD.length;
+  for(let k=0;k<nn;k++){ const r=F.finMap[k]||0;
+    let s=0,c=0; for(let j=0;j<NF&&i-j>=0;j++){ s+=F.rawFine[(i-j)*RES+r]; c++; }
+    S.binPowD[k]=c?s/c:0;                                        // spectre fin : moyenne des N dernières trames
+    if(S.binEnergy) S.binEnergy[k]=F.cumFine[base+r]*invT*T;     // MOY fine : moyenne début→curseur
+  }
+  /* valeur principale = piste temporelle sélectionnée, pondération courante */
+  const tr=S.time==='S'?S.pS:S.time==='V'?S.pV:S.pF;
+  const pw=S.weight==='C'?tr.C:S.weight==='Z'?tr.Z:tr.A;
+  const L=pw>0?10*Math.log10(pw)+S.offset:-99;
+  /* courbe d'évolution : L(t) selon TEMPS+pondération, de 0 à i (sous-échantillonné) */
+  const trkA=S.time==='S'?F.tSA:S.time==='V'?F.tVA:F.tFA;
+  const trkC=S.time==='S'?F.tSC:S.time==='V'?F.tVC:F.tFC;
+  const trkZ=S.time==='S'?F.tSZ:S.time==='V'?F.tVZ:F.tFZ;
+  const trk=S.weight==='C'?trkC:S.weight==='Z'?trkZ:trkA;
+  const step=Math.max(1,Math.ceil(cnt/600)); S.hist=[];
+  for(let f=0;f<=i;f+=step){ const lv=trk[f]>0?10*Math.log10(trk[f])+S.offset:-99; S.hist.push({t:f*F.hopSec, L:lv, Leq:lvl(F.cumA[f]/(f+1))}); }
+  S.elapsed=T;
+  replTickUi(i*F.hopSec);
+  replBuildSgram(i);   // spectrogramme reconstruit jusqu'au curseur (suit/rembobine, sans accumulation)
+  updateNumbers(L); drawActive();
+}
+function replSetIndex(i,{audio}={}){
+  if(!REPL.frames)return;
+  renderReplayFrame(i);
+  if(audio) replAudioTo(REPL.i*REPL.frames.hopSec);
+}
+/* (re)positionne la LECTURE AUDIO au temps t (le son suit, l'affichage vient de l'index) */
+function replAudioTo(t){
+  if(!REPL.buf||!S.ctx)return;
+  if(REPL.src){ try{REPL.src.onended=null;REPL.src.stop();}catch(_){} try{REPL.src.disconnect();}catch(_){} REPL.src=null; }
+  const src=S.ctx.createBufferSource(); src.buffer=REPL.buf; src.connect(S.analyser);
+  src.onended=()=>{};   // la fin est gérée par l'index (replPlayTick), pas par l'audio
+  REPL.src=src; src.start(0,Math.max(0,Math.min(REPL.dur-0.02,t))); lsnRetarget(src);
+}
+function replPlayTick(ts){
+  if(!REPL.on||!REPL.playing){ REPL.raf=null; return; }
+  REPL.raf=requestAnimationFrame(replPlayTick);
+  if(!REPL._lastTs){ REPL._lastTs=ts; return; }
+  const dt=Math.min(0.25,(ts-REPL._lastTs)/1000); REPL._lastTs=ts;
+  REPL.playAcc+=dt;
+  const F=REPL.frames, adv=Math.floor(REPL.playAcc/F.hopSec);
+  if(adv>0){ REPL.playAcc-=adv*F.hopSec; let ni=REPL.i+adv;
+    if(ni>=F.count-1){ renderReplayFrame(F.count-1); replPause(); replTickUi(REPL.dur); return; }
+    renderReplayFrame(ni);
+  }
+}
+function replPlay(){
+  if(!REPL.on||REPL.playing)return;
+  if(REPL.i>=REPL.frames.count-1){ REPL.i=0; }
+  REPL.playing=true; REPL.playAcc=0; REPL._lastTs=0;
+  if(S.ctx&&S.ctx.state!=='running'){ try{S.ctx.resume();}catch(_){} }
+  replAudioTo(REPL.i*REPL.frames.hopSec);
+  setTransport();
+  cancelAnimationFrame(REPL.raf); REPL.raf=requestAnimationFrame(replPlayTick);
+}
+function replPause(){
+  REPL.playing=false;
+  if(REPL.src){ try{REPL.src.onended=null;REPL.src.stop();}catch(_){} try{REPL.src.disconnect();}catch(_){} REPL.src=null; }
+  cancelAnimationFrame(REPL.raf); REPL.raf=null;
+  setTransport();
+}
+async function replayStart(id,startAt,startPaused){
+  if(S.running&&!REPL.on){ toast('Arrête la mesure en cours avant de rejouer'); return; }
+  REPL._building=true;                                   // évite l'auto-ré-analyse pendant le setup (configureAnalyser)
+  let meta=null, buf=null, reuse=(REPL.buf&&REPL.meta&&REPL.meta.id===id&&REPL.frames);
+  if(reuse){ meta=REPL.meta; buf=REPL.buf; }
+  else{
+    let segs=[];
+    try{ meta=(await recList()).find(r=>r.id===id); segs=meta?await recSegs(id):[]; }catch(_){}
+    if(!meta||!segs.length){ toast('Enregistrement introuvable'); return; }
+    if(!S.ctx){ try{ S.ctx=new (window.AudioContext||window.webkitAudioContext)(); try{ if(S.outId&&S.ctx.setSinkId) await S.ctx.setSinkId(S.outId); }catch(_){} }catch(_){ toast('Audio indisponible'); return; } }
+    if(S.ctx.state!=='running'){ try{ await S.ctx.resume(); }catch(_){} }
+    if(!S.analyser){ S.analyser=S.ctx.createAnalyser(); }
+    configureAnalyser();
+    buf=S.ctx.createBuffer(1,meta.len,meta.fs||S.ctx.sampleRate);
+    const ch=buf.getChannelData(0); let o=0; for(const s of segs){ for(let i=0;i<s.length;i++)ch[o++]=s[i]/32768; }
+  }
+  /* réécoute pure : on LIBÈRE le micro (sinon iOS reste en session enregistrement+lecture
+     et route mal la sortie — souvent haut-parleur au lieu des écouteurs). Réacquis au prochain REC. */
+  if(S.srcNode){ try{S.srcNode.disconnect();}catch(_){} S.srcNode=null; }
+  if(S.stream){ try{ for(const t of S.stream.getTracks())t.stop(); }catch(_){} S.stream=null; }
+  REPL.savedOff=(REPL.savedOff!=null?REPL.savedOff:S.offset); if(typeof meta.offset==='number')S.offset=meta.offset;
+  REPL.on=true; REPL.buf=buf; REPL.meta=meta; REPL.dur=buf.duration; REPL.lastId=meta.id; REPL.playing=false;
+  resetMeasure();
+  S.running=true; S.paused=true; S.lastT=0; S.warmT=0; S.warmAge=0; S.delayT=0; S.trigWait=false; S.K=0;
+  clearRunVisuals();
+  $('replBar').classList.add('on'); $('rbDur').textContent=rbFmt(REPL.dur);
+  cancelAnimationFrame(S.raf);                                    // la boucle live NE tourne PAS en replay
+  $('expPop').classList.remove('on');
+  toast(reuse?('Replay : '+meta.name):'Analyse de l\u2019enregistrement…');
+  if(!reuse){ REPL.frames=await replBuildFrames(buf); }
+  const i0=startAt? Math.round(startAt/REPL.frames.hopSec):0;
+  renderReplayFrame(i0);
+  REPL._building=false;                                  // setup terminé : un changement de réglage déclenchera une ré-analyse
+  setTransport(); setLocks();
+  if(!startPaused) replPlay();                                    // par défaut : démarre en lecture
+  ui();
+}
+/* changement de fenêtre / FFT / correction pendant un replay → ré-analyse depuis le début */
+function replReanalyze(){
+  if(!REPL.on||!REPL.lastId||REPL._building) return;
+  REPL.frames=null;                                      // force la reconstruction
+  toast('Réglage d\u2019analyse changé — ré-analyse depuis le début…');
+  replayStart(REPL.lastId,0,true);
+}
+/* 1er STOP : quitte le mode replay, revient à 0, fichier CONSERVÉ (barre visible),
+   Pondération/Temps réactivés. La figure reste gelée sur le début. */
+function replExit(){
+  const hadFrames=!!REPL.frames;
+  S.running=false; S.paused=false;     // AVANT teardown : évite le nettoyage « mesure micro » de ui() qui libérerait le fichier
+  replayTeardown();                    // sort du replay (offset/micro restaurés), garde buf/frames
+  REPL.i=0;
+  if(hadFrames&&REPL.frames) renderReplayFrame(0);   // fige l'affichage au début
+  $('replBar').classList.add('on');    // barre gardée : relance possible (glissé ou ▶)
+  replTickUi(0);
+  setTransport(); setLocks();
+  const b=$('modeBadge'); if(b){b.textContent='PRÊT';b.className='badge';}
+}
+/* 2e STOP : décharge le fichier, masque la barre, réinitialise toutes les figures. */
+function replUnload(){
+  REPL.buf=null; REPL.frames=null; REPL.meta=null; REPL.lastId=null; REPL.i=0;
+  $('replBar').classList.remove('on');
+  resetMeasure();                      // remet à zéro spectrogramme, courbes, vues, chiffres
+  setTransport(); setLocks();
+  const b=$('modeBadge'); if(b){b.textContent='PRÊT';b.className='badge';}
+}
+function replayTeardown(){
+  if(!REPL.on) return;
+  clearTimeout(REPL._reanaT);
+  replPause();
+  REPL.on=false; S._previewRing=false;
+  if(REPL.savedOff!=null){ S.offset=REPL.savedOff; REPL.savedOff=null; }
+  if(S.ctx&&S.ctx.state==='suspended'){ try{S.ctx.resume();}catch(_){} }
+  if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} arecWire(); }
+  if(LSN.on) lsnRetarget(S.srcNode||null);
+  ui();
+}
 async function acquireMic(){
   lsnOff();
   if(S.srcNode){try{S.srcNode.disconnect();}catch(e){}}
@@ -1403,6 +2228,7 @@ async function acquireMic(){
   S.stream=await navigator.mediaDevices.getUserMedia({audio:ac});
   S.srcNode=S.ctx.createMediaStreamSource(S.stream);
   S.srcNode.connect(S.analyser);
+  arecWire();                                   // V2 : rebranche le captage continu (srcNode neuf)
   S.lcLastCt=S.ctx.currentTime;                 // évite un saut de bloc dans les filtres temporels
   const tr=S.stream.getAudioTracks()[0];
   if(tr){
@@ -1433,6 +2259,7 @@ function micLost(why){
 /* tente de tout remettre en route au retour au premier plan */
 async function reviveMic(fromGesture){
   if(!S.ctx)return false;
+  if(!S.micWanted)return false;   // jamais de prompt micro tant que l'utilisateur n'a pas fait REC (replays purs)
   try{ if(S.ctx.state!=='running') await S.ctx.resume(); }catch(e){}
   let tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
   if(!tr || tr.readyState!=='live' || tr.muted){
@@ -1475,12 +2302,14 @@ window.addEventListener('pageshow',()=>setTimeout(reviveMic,250));
 /* calcule le spectre courant (magnitude puissance par bin) avec la fenêtre choisie */
 function computeSpectrum(){
   const N=S.fftN, tap=S.tap, an=S.analyser;
-  an.getFloatTimeDomainData(tap);
-  /* alimente le ring buffer avec le dernier bloc capté */
-  const L=tap.length;
-  if(N<=L){ S.ring.set(tap.subarray(L-N)); }
-  else {
-    S.ring.copyWithin(0,L); S.ring.set(tap,N-L);
+  if(!S._previewRing){                       // scrub replay : le ring est rempli par replPreviewFill
+    an.getFloatTimeDomainData(tap);
+    /* alimente le ring buffer avec le dernier bloc capté */
+    const L=tap.length;
+    if(N<=L){ S.ring.set(tap.subarray(L-N)); }
+    else {
+      S.ring.copyWithin(0,L); S.ring.set(tap,N-L);
+    }
   }
   const re=S.re, im=S.im, w=S.winCoef;
   for(let i=0;i<N;i++){re[i]=S.ring[i]*w[i];im[i]=0;}
@@ -1492,6 +2321,10 @@ function computeSpectrum(){
 
 function resetMeasure(){
   S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0}; S.pV={A:0,C:0,Z:0};
+  S.lvlDet=null;                       // détecteur temporel : reconstruit + re-calé au prochain bloc
+  S.welch=null;                        // moyennage spectre (Welch) : repart propre
+  S._fft=null;                         // état lissage FFT (mode diagnostic) : repart propre
+  document.body.classList.remove('rec-done');
   S.eq={A:0,C:0,Z:0}; S.eqT=0;
   S.lafMax=-Infinity; S.lafMin=Infinity;
   S.lcPeak=-Infinity; S.L10=-99; S.L50=-99; S.L90=-99; S.statT=0;
@@ -1501,16 +2334,18 @@ function resetMeasure(){
   if(S.bandPowF)S.bandPowF.fill(0);
   if(S.bandPowS)S.bandPowS.fill(0);
   if(S.bandPowV)S.bandPowV.fill(0);
+  if(S.bandPowD)S.bandPowD.fill(0);
   if(S.binPowF)S.binPowF.fill(0);
   if(S.binPowS)S.binPowS.fill(0);
   if(S.binPowV)S.binPowV.fill(0);
+  if(S.binPowD)S.binPowD.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
   if(S.bandPeak)S.bandPeak.fill(-99);
   /* spectrogramme : vider le tampon de données et les curseurs/zoom associés */
   if(SG.cols)SG.cols.fill(null);
   SG.colSeq=0; SG.vScaleKey=''; SG.vViewKey=''; SG.vSeq=-1;
   resetSg3d();
-  S.sgCursor=null; S.histCursor=null;
+  S.sgCursor=null; S.histCursor=null; S.cursor=null; S.maxCur=false;
   S.tview=sgDefaultView(); S.histView=null;
   updateNumbers(-99); drawActive();
 }
@@ -1523,16 +2358,44 @@ function clearPeak(){ S.lafMax=-Infinity; S.lafMin=Infinity; S.peakHold=0; if(S.
 
 /* ================= Boucle ================= */
 const lvl=p=>p>0?10*Math.log10(p)+S.offset:-99;
+/* Moyennage temporel du spectre façon WELCH : moyenne des N derniers périodogrammes,
+   agrégés à PAS FIXE = fenêtre·(1−overlap) (donc « N moyennes » est une vraie grandeur,
+   avec un recouvrement défini, identique en direct et — via renderReplayFrame — en replay).
+   N=1 → live pur (chaque trame). L'affichage reste rafraîchi à chaque frame ; on n'agrège
+   une nouvelle FFT que lorsqu'un pas s'est écoulé (sinon le spectre affiché reste stable). */
+function welchUpdate(ts){
+  const N=Math.max(1,S.specFrames|0), n=S.curFin?S.curFin.length:0, nb=S.curBnd?S.curBnd.length:0;
+  if(!n){ return; }
+  if(N<=1){ S.binPowD.set(S.curFin); S.bandPowD.set(S.curBnd); return; }
+  let W=S.welch;
+  if(!W||W.N!==N||W.n!==n||W.nb!==nb){
+    W={N,n,nb,fin:[],bnd:[],sumFin:new Float32Array(n),sumBnd:new Float32Array(nb),pos:0,count:0,foldT:ts};
+    for(let j=0;j<N;j++){ W.fin.push(new Float32Array(n)); W.bnd.push(new Float32Array(nb)); }
+    S.welch=W;
+  }
+  const fs=S.ctx?S.ctx.sampleRate:48000;
+  const hopMs=1000*(S.fftN*(1-S.overlap))/fs;          // pas d'analyse (Welch)
+  if(W.count===0 || (ts-W.foldT)>=hopMs){
+    W.foldT=ts;
+    const sf=W.fin[W.pos], sb=W.bnd[W.pos], SF=W.sumFin, SB=W.sumBnd, cf=S.curFin, cb=S.curBnd;
+    for(let i=0;i<n;i++){ SF[i]+=cf[i]-sf[i]; sf[i]=cf[i]; }      // somme glissante : retire l'ancien, ajoute le nouveau
+    for(let b=0;b<nb;b++){ SB[b]+=cb[b]-sb[b]; sb[b]=cb[b]; }
+    W.pos=(W.pos+1)%N; if(W.count<N)W.count++;
+    const inv=1/W.count;
+    for(let i=0;i<n;i++)S.binPowD[i]=SF[i]*inv;
+    for(let b=0;b<nb;b++)S.bandPowD[b]=SB[b]*inv;
+  }
+}
 function loop(ts){
   S.raf=requestAnimationFrame(loop);
   if(!S.lastT){S.lastT=ts;return;}
   const dt=Math.min(0.2,(ts-S.lastT)/1000); S.lastT=ts;
-  if(S.paused)return;
+  if(S.paused&&!S._previewRing)return;       // le scrub replay prévisualise même en pause
   /* filet de sécurité : si on est censé mesurer mais que le micro n'est plus vivant
      (arrière-plan, écran verrouillé, appel…), on met en pause au lieu d'intégrer du vide.
      Tolérance : on attend ~0,4 s de micro mort d'affilée pour ne pas réagir à un simple
      hoquet transitoire pendant le geste de bascule de l'app. */
-  if(S.running && !micAlive()){
+  if(S.running && !REPL.on && !micAlive()){
     S.micDeadT=(S.micDeadT||0)+dt;
     if(S.micDeadT>0.4){
       S.paused=true; setTransport();
@@ -1545,8 +2408,9 @@ function loop(ts){
      qui peut durer ~1 s. On reste en préchauffage tant que le niveau n'est pas STABILISÉ,
      avec un minimum de 0,8 s et un maximum de 3 s de sécurité. Rien n'est intégré pendant ce temps. */
   const warm = S.warmT>0;
-  const idle = warm || S.delayT>0 || S.trigWait;    // aucune intégration tant que la mesure n'a pas VRAIMENT commencé
-  S.elapsed+=dt;
+  const idle = warm || S.delayT>0 || S.trigWait || !!S._previewRing;   // preview scrub : affichage seul, zéro intégration
+  S._idle=idle;                                     // miroir lu par la capture audio (V2)
+  if(!S._previewRing && !warm) S.elapsed+=dt;         // SCRUB : horloge gelée · INIT micro : chrono à 0 (on ne mesure pas encore)
 
   const mag=computeSpectrum();
   const n=mag.length;
@@ -1560,6 +2424,7 @@ function loop(ts){
     let p=mag[i];
     if(!isFinite(p))p=0;
     if(S.corr!=='off')p*=S.compGain[i];
+    if(S.blGain)p*=S.blGain[i];              // limitation de bande (passe-haut/passe-bas)
     pZ+=p; pA+=p*S.wA[i]; pC+=p*S.wC[i];
   }
   for(let b=0;b<nb;b++){
@@ -1568,6 +2433,7 @@ function loop(ts){
       let p=mag[i];
       if(!isFinite(p))p=0;
       if(S.corr!=='off')p*=S.compGain[i];
+      if(S.blGain)p*=S.blGain[i];
       if(wSel)p*=wSel[i];
       s+=p;
     }
@@ -1595,30 +2461,22 @@ function loop(ts){
   }
 
   const aF=Math.exp(-dt/TAU.F), aS=Math.exp(-dt/TAU.S), aV=Math.exp(-dt/TAU.V);
-  /* pendant les toutes premières trames, on cale Fast=Slow=V-Slow sur la valeur courante
-     (sinon la montée depuis 0 crée un faux transitoire qui trompe le détecteur d'armement) */
-  const seed = warm && S.warmAge<0.25;
-  for(const k of ['A','C','Z']){
-    const p=k==='A'?pA:k==='C'?pC:pZ;
-    if(seed){S.pF[k]=p;S.pS[k]=p;S.pV[k]=p;}
-    else{
-      S.pF[k]=aF*S.pF[k]+(1-aF)*p;
-      S.pS[k]=aS*S.pS[k]+(1-aS)*p;
-      S.pV[k]=aV*S.pV[k]+(1-aV)*p;
-    }
-    if(!idle) S.eq[k]+=p*dt;                    // Leq : intègre seulement après le déclenchement effectif
-  }
-  if(!idle) S.eqT+=dt;
+  /* Leq (énergie) : toujours dérivé du spectre FFT — moyenne longue, insensible à la latence
+     de fenêtre. Les niveaux INSTANTANÉS A/C/Z (S.pF/pS/pV) sont désormais calculés dans le
+     domaine temporel (voir bloc « NIVEAU LARGE BANDE » plus bas), pas ici. */
+  /* Leq (énergie). Correction micro ACTIVE → dérivé du signal TEMPOREL corrigé (bloc lvlDet
+     plus bas, Option 1) pour cohérence exacte avec LAF/LCpeak. Correction Off → FFT/Parseval
+     (comportement historique inchangé). */
+  const tdLeq = (S.corr!=='off') && !REPL.on && S.lvlSrc!=='fft';
+  for(const k of ['A','C','Z']){ const p=k==='A'?pA:k==='C'?pC:pZ; if(!idle && !tdLeq) S.eq[k]+=p*dt; }
+  if(!idle && !tdLeq) S.eqT+=dt;
   const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
+  /* Spectre : moyennage temporel de type WELCH — on empile la trame FFT courante dans un tampon
+     puis on l'agrège (moyenne des N derniers périodogrammes) à PAS FIXE = fenêtre·(1−overlap).
+     Ici on ne fait que capturer la trame courante ; l'agrégation se fait dans welchUpdate(). */
   for(let b=0;b<nb;b++){
-    S.bandPowF[b]=aF*S.bandPowF[b]+(1-aF)*bp[b];
-    S.bandPowS[b]=aS*S.bandPowS[b]+(1-aS)*bp[b];
-    S.bandPowV[b]=aV*S.bandPowV[b]+(1-aV)*bp[b];
-    if(!idle){
-      S.bandEnergy[b]+=bp[b]*dt;
-      const Lb=lvl(pick(S.bandPowF[b],S.bandPowS[b],S.bandPowV[b]));
-      if(Lb>S.bandPeak[b])S.bandPeak[b]=Lb; else S.bandPeak[b]-=dt*3;
-    }
+    S.curBnd[b]=bp[b];
+    if(!idle) S.bandEnergy[b]+=bp[b]*dt;
   }
   /* corrélation vibro-acoustique : instantané à ~20 Hz quand VIB est actif.
      Séries selon l'affichage : bandes 1/3 oct (tiers/octave) ou 128 groupes log (bande fine). */
@@ -1644,42 +2502,48 @@ function loop(ts){
       }
     }
   }
-  /* lissage du spectre FFT par bin (mêmes constantes) : Fast/Slow/V-Slow agissent aussi sur les bandes fines */
+  /* spectre fin : trame courante dans curFin + cumul d'énergie pour la MOY */
   for(let i=1;i<n;i++){
     let p=mag[i]; if(!isFinite(p))p=0;
     if(S.corr!=='off')p*=S.compGain[i];
     p*=K;
-    S.binPowF[i]=aF*S.binPowF[i]+(1-aF)*p;
-    S.binPowS[i]=aS*S.binPowS[i]+(1-aS)*p;
-    S.binPowV[i]=aV*S.binPowV[i]+(1-aV)*p;
+    S.curFin[i]=p;
     if(!idle&&S.binEnergy)S.binEnergy[i]+=p*dt;   // énergie cumulée par bin → spectre Leq moyenné (rapport)
   }
+  welchUpdate(ts);                                 // agrège les N derniers périodogrammes (pas fixe + overlap) → binPowD/bandPowD
 
-  const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
-  const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
-  /* ---- traitements temporels sur les échantillons NOUVEAUX (états continus) ---- */
-  {
-    if(!S.lcBq&&S.ctx)S.lcBq=designCWeight(S.ctx.sampleRate);
-    if(S.lcBq&&S.tap){
-      const ct=S.ctx.currentTime, fs=S.ctx.sampleRate;
-      let k=Math.round((ct-(S.lcLastCt||ct))*fs); S.lcLastCt=ct;
-      k=Math.max(0,Math.min(S.tap.length,k));
-      if(k>0){
-        const fresh=S.tap.subarray(S.tap.length-k);
-        /* LCpeak (filtre C) */
-        const mx=cFilterRun(S.lcBq,fresh);
-        if(!warm && S.delayT<=0 && !S.trigWait && mx>0){
-          const Lp=20*Math.log10(mx)+S.offset;
-          if(Lp>S.lcPeak)S.lcPeak=Lp;
-        }
-        /* banc de filtres IEC (option expert) */
-        if(S.toctSrc==='iir'){
-          if(!S.iirBank)S.iirBank=buildIirBank();
-          if(S.iirBank)iirBankRun(S.iirBank,fresh);
-        }
+  /* ===== NIVEAU LARGE BANDE — pondération temporelle exacte (Option 2) =====
+     Les niveaux instantanés A/C/Z (LAF/LAS/LV), le LCpeak et le banc IEC sont calculés
+     sur les échantillons NEUFS (continus), indépendamment de la fenêtre FFT : réponse
+     conforme aux constantes Fast/Slow/V-Slow sans latence de fenêtre. Leq/spectre = FFT. */
+  if(!REPL.on && S.ctx && S.tap){
+    if(!S.lvlDet) S.lvlDet=buildLvlDet(S.ctx.sampleRate);
+    const det=S.lvlDet, ct=S.ctx.currentTime, fs=S.ctx.sampleRate;
+    let k=Math.round((ct-(S.lcLastCt||ct))*fs); S.lcLastCt=ct;
+    k=Math.max(0,Math.min(S.tap.length,k));
+    if(k>0){
+      const fresh=S.tap.subarray(S.tap.length-k);
+      lvlDetRun(det,fresh,!idle);                 // A/C/Z Fast/Slow/V-Slow + crête C + énergie Leq (si mesure)
+      S.pF.A=det.F.A; S.pF.C=det.F.C; S.pF.Z=det.F.Z;
+      S.pS.A=det.S.A; S.pS.C=det.S.C; S.pS.Z=det.S.Z;
+      S.pV.A=det.V.A; S.pV.C=det.V.C; S.pV.Z=det.V.Z;
+      if(tdLeq && det.eqN>0){ S.eq.A=det.eqA/fs; S.eq.C=det.eqC/fs; S.eq.Z=det.eqZ/fs; S.eqT=det.eqN/fs; }  // Leq domaine temporel corrigé
+      if(!warm && S.delayT<=0 && !S.trigWait && det.cPeak>0){
+        const Lp=20*Math.log10(det.cPeak)+S.offset; if(Lp>S.lcPeak)S.lcPeak=Lp;
       }
+      det.cPeak=0;                                // crête ré-évaluée bloc par bloc
+      if(S.toctSrc==='iir'){ if(!S.iirBank)S.iirBank=buildIirBank(); if(S.iirBank)iirBankRun(S.iirBank,fresh); }
     }
   }
+  if(S.lvlSrc==='fft'){    // DIAGNOSTIC : niveaux instantanés dérivés de la FFT (lissage exponentiel F/S/V), au lieu du temporel IIR
+    let f=S._fft; if(!f){ f=S._fft={F:{A:pA,C:pC,Z:pZ},S:{A:pA,C:pC,Z:pZ},V:{A:pA,C:pC,Z:pZ}}; }
+    f.F.A=aF*f.F.A+(1-aF)*pA; f.S.A=aS*f.S.A+(1-aS)*pA; f.V.A=aV*f.V.A+(1-aV)*pA;
+    f.F.C=aF*f.F.C+(1-aF)*pC; f.S.C=aS*f.S.C+(1-aS)*pC; f.V.C=aV*f.V.C+(1-aV)*pC;
+    f.F.Z=aF*f.F.Z+(1-aF)*pZ; f.S.Z=aS*f.S.Z+(1-aS)*pZ; f.V.Z=aV*f.V.Z+(1-aV)*pZ;
+    S.pF.A=f.F.A;S.pF.C=f.F.C;S.pF.Z=f.F.Z; S.pS.A=f.S.A;S.pS.C=f.S.C;S.pS.Z=f.S.Z; S.pV.A=f.V.A;S.pV.C=f.V.C;S.pV.Z=f.V.Z;
+  }
+  const L=lvl(pick(S.pF[S.weight],S.pS[S.weight],S.pV[S.weight]));
+  const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
   if(warm){
     /* ARMEMENT : on jette les premières 1,5 s (transitoire de gain iOS + pop d'amorçage).
        Délai fixe = simple et fiable ; l'affichage tourne mais rien n'est intégré. */
@@ -1706,6 +2570,13 @@ function loop(ts){
     const b=$('modeBadge'); b.textContent='ATTENTE ≥ '+S.trigLevel+' dB'; b.className='badge';
     if(LAF>=S.trigLevel){ S.trigWait=false; beginRun(); }
     else { updateNumbers(L); drawActive(); return; }
+  }
+  if(S._previewRing){
+    /* SCRUB : le spectre reflète le PCM sous le doigt (déjà dans le ring), mais on
+       ne touche NI à l'horloge, NI à l'historique, NI au spectrogramme (pas de
+       défilement parasite). Seule la vue fréquentielle suit le doigt. */
+    updateNumbers(L); drawActive();
+    return;
   }
   if(S.eqT>0.5){ if(LAF>S.lafMax)S.lafMax=LAF; if(LAF<S.lafMin)S.lafMin=LAF; }
   if(L>S.peakHold)S.peakHold=L; else S.peakHold-=dt*2;
@@ -1754,7 +2625,7 @@ function updateNumbers(L){
      Hystérésis : il faut aussi plusieurs échantillons "absents" pour retirer l'affichage. */
   if(nowS-(S.emgT||0)>200){
     S.emgT=nowS;
-    const bp=S.time==='F'?S.binPowF:S.time==='S'?S.binPowS:S.binPowV;
+    const bp=S.binPowD;
     const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
     let cand=null;
     if(bp){
@@ -1791,7 +2662,7 @@ function updateNumbers(L){
   $('barFill').style.width=Math.max(0,Math.min(100,(L-30)))+'%';
   $('peakMark').style.left=Math.max(0,Math.min(100,(S.peakHold-30)))+'%';
   const m=Math.floor(S.elapsed/60),s=Math.floor(S.elapsed%60);
-  $('tLine').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+' / '+DURL[DURS.indexOf(S.duration)];
+  $('tLine').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+' / '+durLabel(S.duration);
   if(S.duration>0)$('tProg').style.width=Math.min(100,S.elapsed/S.duration*100)+'%';
   else $('tProg').style.width='0%';
 }
@@ -1907,10 +2778,16 @@ function drawSpectrum(avg,modeOverride){
   const useAvg=(avg===undefined?S.specAvg:avg)&&S.eqT>0;
   const mode=modeOverride||S.mode;             // export : force octave / tiers indépendamment de l'écran
 
+  /* INIT micro : on n'affiche AUCUNE courbe (grille vide) tant que la mesure n'a pas réellement démarré */
+  if(S.running && S.warmT>0 && !REPL.on){
+    grid(g,w,h,sc,padL,10);
+    axisUnits(g,w,h,padL,'Hz');
+    return;
+  }
   if(mode==='toct'||mode==='oct'){
     /* octave : agrège les tiers par groupes centrés sur les fréquences normalisées (…31.5,63,125,250,500,1k…) */
     let names, pw, peak;
-    const pwT=useAvg?Array.from(S.bandEnergy,e=>e/S.eqT):(S.time==='F'?S.bandPowF:S.time==='S'?S.bandPowS:S.bandPowV);
+    const pwT=useAvg?Array.from(S.bandEnergy,e=>e/S.eqT):S.bandPowD;
     if(mode==='oct'){
       const OCT=[16,31.5,63,125,250,500,1000,2000,4000,8000,16000];
       names=[]; pw=[]; peak=[];
@@ -1938,7 +2815,6 @@ function drawSpectrum(avg,modeOverride){
     let dLo=Infinity,dHi=-Infinity;
     for(let b=0;b<nb;b++){
       const L=lvl(pw[b]); if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
-      if(!useAvg&&peak[b]>dHi)dHi=peak[b];
     }
     autoRange(sc,dLo,dHi);
     grid(g,w,h,sc,padL,10);
@@ -1966,8 +2842,6 @@ function drawSpectrum(avg,modeOverride){
       if(vibC){const cv=S.mode==='toct'?(S.bands.indexOf(names[b])>=0?VIB.coef[S.bands.indexOf(names[b])]:1):vibC[b]; g.globalAlpha=0.12+0.88*cv;}
       g.fillStyle=L>85?THEME.barHi:L>70?THEME.barMid:THEME.barLo;
       g.fillRect(x+1,y,Math.max(1,bw-2),Math.max(0,y0-y));
-      const Lp=peak[b];
-      if(!useAvg&&Lp>sc.lo){g.fillStyle=THEME.peak;g.fillRect(x+1,y2(Lp,h,sc)-1,Math.max(1,bw-2),2);}
       if(vibC)g.globalAlpha=1;
       if(labelSet.includes(names[b])){
         g.fillStyle=THEME.axis;
@@ -1994,7 +2868,7 @@ function drawSpectrum(avg,modeOverride){
     const V0=TF(fmin), V1=TF(fmax);
     const x2=f=>padL+((TF(f)-V0)/(V1-V0))*(w-padL-4);
     const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
-    const binPow=S.time==='F'?S.binPowF:S.time==='S'?S.binPowS:S.binPowV;
+    const binPow=S.binPowD;
     /* source EFFECTIVE : en mode MOY, tampon persistant binEnergy/eqT — la courbe,
        les curseurs (tap + max) et l'émergence lisent tous la MÊME donnée */
     let binPowEff=binPow;
@@ -2004,12 +2878,26 @@ function drawSpectrum(avg,modeOverride){
       const inv=1/S.eqT; for(let i=0;i<nE;i++)S._avgBinPow[i]=S.binEnergy[i]*inv;
       binPowEff=S._avgBinPow;
     }
+    /* lissage fréquentiel 1/n octave — AFFICHAGE de la trace uniquement (les mesures :
+       curseur, émergence, suivi de max, restent sur les données brutes binPowEff).
+       Moyenne glissante en fréquence via sommes cumulées (O(n), aucune latence temporelle). */
+    let binShow=binPowEff;
+    if(S.specSmooth>0 && binPowEff){
+      const nn=binPowEff.length;
+      if(!S._psum||S._psum.length!==nn+1)S._psum=new Float64Array(nn+1);
+      if(!S._smoothArr||S._smoothArr.length!==nn)S._smoothArr=new Float32Array(nn);
+      const ps=S._psum; ps[0]=0;
+      for(let i=0;i<nn;i++){ const v=binPowEff[i]; ps[i+1]=ps[i]+((isFinite(v)&&v>0)?v:0); }
+      const hw=Math.pow(2,1/(2*S.specSmooth)), sm=S._smoothArr;   // demi-largeur 1/(2n) oct (ratio bin = ratio fréquence)
+      for(let i=1;i<nn;i++){ let lo=Math.floor(i/hw), hi=Math.ceil(i*hw); if(lo<1)lo=1; if(hi>nn-1)hi=nn-1; if(hi<lo)hi=lo; sm[i]=(ps[hi+1]-ps[lo])/(hi-lo+1); }
+      binShow=sm;
+    }
     let dLo=Infinity,dHi=-Infinity;
     const pts=[];
     const i0=Math.max(1,Math.floor(fmin/S.binHz)), i1=Math.min(S.fftDb.length-1,Math.ceil(fmax/S.binHz));
     for(let i=i0;i<=i1;i++){
       const f=S.freqs[i];
-      let p=binPowEff?binPowEff[i]:0;   // moyenné (Leq) ou live lissé selon MOY
+      let p=binShow?binShow[i]:0;   // trace lissée en fréquence (ou brute si lissage off)
       if(!isFinite(p))p=0;
       if(wSel)p*=wSel[i];                // pondération A/C appliquée à l'affichage
       const L=lvl(p); pts.push([x2(f),L]);
@@ -2022,9 +2910,12 @@ function drawSpectrum(avg,modeOverride){
       const x=x2(f);g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();
       g.fillText(fmtF(f),x,h-4);
     }
+    g.save();
+    g.beginPath(); g.rect(padL, 0, Math.max(0,w-padL), h); g.clip();   // borne le tracé à la zone du graphe (pas de débordement sur l'axe des ordonnées)
     g.beginPath();g.strokeStyle=THEME.line;g.lineWidth=1.3;
     pts.forEach((pt,i)=>{const y=y2(pt[1],h,sc); i?g.lineTo(pt[0],y):g.moveTo(pt[0],y);});
     g.stroke();
+    g.restore();
     /* ===== filtre vibro-acoustique en bande fine : voile sur les groupes non corrélés ===== */
     if(VIB.on&&VIB.kind==='fft'&&VIB.coef&&VIB.grpF){
       g.save();
@@ -2064,9 +2955,9 @@ function drawSpectrum(avg,modeOverride){
       g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
       g.fillStyle=THEME.cursor;g.beginPath();g.arc(x,y2(L,h,sc),3,0,7);g.fill();
       const emg=tonalEmergence(binPowEff,bi,wSel);
-      let clbl=fmtF(pk.f)+'Hz · '+fmt(L)+' dB'+S.weight+((S.cursor.snap!==false&&S.peakInterp)?' ⟂':'');
-      if(emg) clbl+=' · émg +'+emg.dL.toFixed(1)+'dB';   // toujours affichée au curseur unique
-      cursorLabel(g,w,x,clbl,labY); labY+=19;
+      const lines=[fmtF(pk.f)+' Hz · '+fmt(L)+' dB'+S.weight+((S.cursor.snap!==false&&S.peakInterp)?' ⟂':'')];
+      if(emg) lines.push('émg +'+emg.dL.toFixed(1)+' dB');   // 2e ligne : émergence au curseur
+      const bh=cursorLabel(g,w,x,lines,labY); labY+=bh+4;
     }
     /* ===== ÉMERGENCE TONALE : encadré ORANGE =====
        Live : candidate confirmée temporellement (S._emgCand, hystérésis).
@@ -2090,8 +2981,8 @@ function drawSpectrum(avg,modeOverride){
       const x=x2(emgShow.fc);
       g.strokeStyle='#FFB454';g.lineWidth=1;g.setLineDash([2,3]);
       g.beginPath();g.moveTo(x,labY);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
-      labelBox(g,w,x,'émergence +'+emgShow.dL.toFixed(1)+' dB · '+fmtF(emgShow.fc)+'Hz',labY,'#3A2404','#FFB454','#FFD9A0');
-      labY+=19;
+      const bh=labelBox(g,w,x,['émg +'+emgShow.dL.toFixed(1)+' dB', fmtF(emgShow.fc)+' Hz'],labY,'#3A2404','#FFB454','#FFD9A0');
+      labY+=bh+4;
     }
     /* ===== curseur SUIVEUR DE MAX (tap à deux doigts) : max de la fenêtre zoomée ===== */
     if(S.maxCur && binPowEff && S.binHz && n){
@@ -2113,13 +3004,18 @@ function drawSpectrum(avg,modeOverride){
 }
 function labelBox(g,w,x,txt,y,bg,edge,ink){
   y=y||2;
+  const lines=Array.isArray(txt)?txt:[txt];
   g.font='bold 10px Arial';
-  const tw=g.measureText(txt).width+10;
+  let tw=0; for(const l of lines) tw=Math.max(tw,g.measureText(l).width);
+  tw+=10;
+  const lh=12, bh=lines.length*lh+4;
   let lx=Math.max(2,Math.min(w-tw-2,x-tw/2));
-  g.fillStyle=bg;g.fillRect(lx,y,tw,15);g.strokeStyle=edge;g.strokeRect(lx+0.5,y+0.5,tw-1,14);
-  g.fillStyle=ink;g.textAlign='left';g.fillText(txt,lx+5,y+11);
+  g.fillStyle=bg;g.fillRect(lx,y,tw,bh);g.strokeStyle=edge;g.strokeRect(lx+0.5,y+0.5,tw-1,bh-1);
+  g.fillStyle=ink;g.textAlign='left';
+  lines.forEach((l,i)=>g.fillText(l,lx+5,y+11+i*lh));
+  return bh;
 }
-function cursorLabel(g,w,x,txt,y){ labelBox(g,w,x,txt,y,'#08306B','rgba(79,195,255,.5)','#CFEBFF'); }
+function cursorLabel(g,w,x,txt,y){ return labelBox(g,w,x,txt,y,'#08306B','rgba(79,195,255,.5)','#CFEBFF'); }
 
 function drawHistory(){
   const c=CV.histCv; if(!c)return;
@@ -2159,7 +3055,7 @@ function drawHistory(){
     const tc=t0+S.histCursor*span;
     const x=x2(tc);
     g.strokeStyle=THEME.cursor;g.lineWidth=1;g.setLineDash([3,3]);
-    g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);
+    g.beginPath();g.moveTo(x,2);g.lineTo(x,h-14);g.stroke();g.setLineDash([]);   // ligne TOUJOURS visible au point touché
     let best=null,bd=1e9;
     for(const pt of S.hist){if(pt.t<t0||pt.t>t1)continue;const d=Math.abs(pt.t-tc);if(d<bd){bd=d;best=pt;}}
     if(best){
@@ -2285,6 +3181,7 @@ function sgColumn(){
     for(let i=i0;i<=i1;i++){
       let p=Math.pow(10,S.fftDb[i]/10); if(!isFinite(p))p=0;
       if(S.corr!=='off')p*=S.compGain[i];
+      if(S.blGain)p*=S.blGain[i];
       if(wSel)p*=wSel[i];
       if(p>pm)pm=p;
     }
@@ -2453,7 +3350,7 @@ function sgBlit(c){
   const agoL=(1-S.tview.x0)*Tbuf, agoM=(1-(S.tview.x0+S.tview.x1)/2)*Tbuf, agoR=(1-S.tview.x1)*Tbuf;
   const ft=t=>t<0.05?'0 s':'−'+(t<10?t.toFixed(1):Math.round(t))+' s';
   g.textAlign='left';  g.fillText(ft(agoL),padL+3*c.dpr,H-4*c.dpr);
-  g.textAlign='center';g.fillText(ft(agoM)+'  ·  pincer ↕ fréq / ↔ temps',padL+Wp/2,H-4*c.dpr);
+  g.textAlign='center';g.fillText(ft(agoM)+(IS_PC?'  ·  molette ↕ fréq / Ctrl+molette ↔ temps':'  ·  pincer ↕ fréq / ↔ temps'),padL+Wp/2,H-4*c.dpr);
   g.textAlign='right'; g.fillText(ft(agoR),Wr-3*c.dpr,H-4*c.dpr);
   /* ===== COLORBAR dB (jet) à droite ===== */
   {
@@ -2530,17 +3427,24 @@ function sgBlit(c){
   $('gScale').textContent=Math.round(sc.lo)+'–'+Math.round(sc.hi)+' dB · '+fmtF(nfmin)+'–'+fmtF(nfmax)+'Hz';
 }
 /* démarre réellement l'intégration : compteurs remis à zéro sur un signal propre */
-function beginRun(){
-  S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;
-  S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;S.lcPeak=-Infinity;
-  S.L10=-99;S.L50=-99;S.L90=-99;S.statT=0;
-  /* départ VIERGE : la mesure commence exactement ici, rien d'antérieur à l'écran */
-  if(S.bandPeak)S.bandPeak.fill(-99);
-  if(S.bandEnergy)S.bandEnergy.fill(0);
-  if(S.binEnergy)S.binEnergy.fill(0);
+function clearRunVisuals(){
+  /* départ VIERGE : rien d'antérieur à l'écran (spectrogramme, 3D, vues) */
   S.histView=null; S.histCursor=null; S.tview=sgDefaultView();
   if(SG.cols){SG.cols.fill(null);SG.colSeq=0;SG.vScaleKey='';SG.vSeq=-1;S.sgCursor=null;}
   resetSg3d();
+}
+function beginRun(){
+  S.elapsed=0;S.histLast=0;S.hist=[];S.eq={A:0,C:0,Z:0};S.eqT=0;S._fft=null;
+  S.lafMax=-Infinity;S.lafMin=Infinity;S.peakHold=0;S.lcPeak=-Infinity;
+  S.L10=-99;S.L50=-99;S.L90=-99;S.statT=0;
+  if(S.bandPeak)S.bandPeak.fill(-99);
+  if(S.bandEnergy)S.bandEnergy.fill(0);
+  if(S.binEnergy)S.binEnergy.fill(0);
+  if(S.recAudio&&!REPL.on)arecReset();          // V2 : nouvel enregistrement audio par mesure (jamais en replay)
+  /* en REPLAY, un saut de timeline relance les intégrateurs mais PRÉSERVE le
+     spectrogramme (flux continu de ce qu'on explore) ; le nettoyage complet
+     n'a lieu qu'au démarrage d'un replay (replayStart) ou d'une mesure micro. */
+  if(!REPL.on) clearRunVisuals();
   ui();
 }
 /* alimente le spectrogramme (appelé par la boucle même quand un autre écran/menu est affiché) */
@@ -2558,6 +3462,7 @@ function sgWin(sec){ const T=sgBufDur(); if(!isFinite(T)||T<0.5) return {x0:0,x1
 function sgDefaultView(){ return S.sg3d ? sgWin(5) : {x0:0,x1:1}; }
 function sgTick(){
   if(!S.binHz)return;
+  if(S.running && S.warmT>0 && !REPL.on) return;      // INIT micro : aucune colonne (pas de courbe)
   if(!CV.sgramCv)sizeCanvas('sgramCv');               // dimensionne même si l'écran n'est pas affiché
   if(!SG.init&&CV.sgramCv)sgSetup(CV.sgramCv);        // (re)cartographie
   if(!SG.init||!SG.map||!SG.map.length)return;
@@ -2581,7 +3486,7 @@ function drawSgram3D(){
      continu ne sert que pour les fenêtres bornées 3/5/10 s. */
   const isTout = S.tview.x0<=1e-3 && S.tview.x1>=0.999;
   /* plafond de cadence (~43 FPS) uniquement pour le glissement borné (pas en « Tout ») */
-  if(S.running && !S.paused && !isTout){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<10)return; SG._3dLast=_tn; }  // ~60 FPS (pas de glissement plus petits → moins de scintillement)
+  if(S.running && !S.paused && !isTout){ const _tn=performance.now(); if(SG._3dLast && _tn-SG._3dLast<28)return; SG._3dLast=_tn; }  // ~35 FPS : le glissement est interpolé (phase fractionnaire), donc fluide, et la charge GPU/GC chute (évite l'échauffement qui faisait laguer au bout d'un moment)
   /* fenêtre de temps (réglage TEMPS du popover ÉCHELLES), en colonnes */
   const winCols=Math.min(seq, Wp, Math.max(8, Math.round((S.tview.x1-S.tview.x0)*Wp)));
   const winSec = Math.max(0.3,(S.tview.x1-S.tview.x0)*sgBufDur());
@@ -2754,7 +3659,7 @@ function drawSgram3D(){
     /* couleur en DÉGRADÉ le long de la courbe (interpolation RGB entre points) au lieu
        d'une couleur figée par segment → plus de sauts de couleur marqués aux pics. */
     const gr=g.createLinearGradient(px(j,0),0,px(j,nF-1),0);
-    for(let i=0;i<nF;i+=2){
+    for(let i=0;i<nF;i+=4){   // pas de couleur allégé (4 au lieu de 2) : moitié moins de stops, rendu identique à l'œil
       const idx=(Math.max(0,Math.min(255,Math.round(P[j][i]*255)))|0)*3;
       gr.addColorStop(Math.min(1,i/(nF-1)),'rgb('+Math.round(LUT[idx]*fade)+','+Math.round(LUT[idx+1]*fade)+','+Math.round(LUT[idx+2]*fade)+')');
     }
@@ -2881,7 +3786,7 @@ function overOverlayBtn(e,cv){
   if(t.clientX==null)return false;
   const M=10, btns=cv.parentNode?cv.parentNode.querySelectorAll('button'):[];
   for(const b of btns){
-    if(!b.offsetParent&&getComputedStyle(b).position!=='fixed')continue;
+    if(!b.offsetParent&&getComputedStyle(b).position!=='fixed')continue;   // bouton masqué
     const r=b.getBoundingClientRect();
     if(t.clientX>=r.left-M&&t.clientX<=r.right+M&&t.clientY>=r.top-M&&t.clientY<=r.bottom+M)return true;
   }
@@ -2909,10 +3814,12 @@ function attachZoomPan(id,axis,opts){
   };
   const two=e=>[...e.touches].sort((a,b)=>a.identifier-b.identifier);
   let mode=null,pinchAx='main',panAx=null,anchV=0,anchB=0,anchors=null,moved=false,sX=0,sY=0,lastTap=0,pinchMoved=false;
+  let _lastTouchT=0, mDown=false,mMoved=false,mSX=0,mSY=0,mPanAx=null,mAnchV=0,mAnchB=0,mAnchDb=null,mCursor=false,_supClick=false;   // état souris PC
 
   cv.addEventListener('touchstart',e=>{
     if(overOverlayBtn(e,cv))return;   // tap visant une icône superposée : ignoré
     if(off3d())return;
+    _lastTouchT=Date.now();
     e.preventDefault();
     const r=cv.getBoundingClientRect();
     if(e.touches.length>=2){
@@ -2948,7 +3855,7 @@ function attachZoomPan(id,axis,opts){
       const onCursor = cu!=null && Math.abs(u0-cu)<0.05;
       if(onCursor && now-lastTap<300){ if(opts.onCursorRemove)opts.onCursorRemove(); mode=null; lastTap=0; return; } // double-tap SUR le curseur → l'enlever
       if(onCursor){ mode='cursor'; lastTap=now; return; }                     // contact sur le curseur → glissé
-      if(now-lastTap<300){resetView();mode=null;lastTap=0;return;}            // double-tap ailleurs → reset vue
+      if(now-lastTap<300){ if(opts.dblTapMax&&opts.onTap2){opts.onTap2();} else {resetView();} mode=null;lastTap=0;return;}            // double-tap ailleurs → reset vue (spectrogramme : suivi du max)
       lastTap=now;
     }
   },{passive:false});
@@ -3063,23 +3970,87 @@ function attachZoomPan(id,axis,opts){
   });
 
   /* souris : molette = zoom fréq (Maj = zoom temps), clic = curseur */
+  /* ===== MOLETTE PC : molette = axe Y (vertical écran), Ctrl(ou ⌘)+molette = axe X ===== */
+  const wheelDbZoom=(e,r,f)=>{
+    const hpx=Math.max(1,r.height-axH);
+    const uy=Math.max(0,Math.min(1,(e.clientY-r.top)/hpx));   // 0 haut (dB fort) → 1 bas (dB faible)
+    let lo,hi; if(S.dbAuto){lo=S.scale.spec.lo;hi=S.scale.spec.hi;}else{lo=S.dbMin;hi=S.dbMax;}
+    if(!isFinite(lo)||!isFinite(hi)||hi-lo<1){lo=30;hi=90;}
+    const at=hi-uy*(hi-lo);                                    // dB sous le pointeur
+    let span=Math.max(10,Math.min(160,(hi-lo)*f));
+    let nlo=at-(1-uy)*span, nhi=at+uy*span;
+    if(nlo<-20){nhi+=-20-nlo;nlo=-20;} if(nhi>140){nlo-=nhi-140;nhi=140;}
+    S.dbAuto=false; S.dbMin=Math.round(nlo); S.dbMax=Math.round(nhi); ui(); opts.onChange&&opts.onChange();
+  };
   cv.addEventListener('wheel',e=>{
+    if(off3d())return;
     e.preventDefault();
     const r=cv.getBoundingClientRect();
-    if(opts.time&&e.shiftKey){
-      const u=Math.max(0,Math.min(1,uxOf(e,r)));
-      const span=(S.tview.x1-S.tview.x0)*(e.deltaY>0?1.15:1/1.15);
-      applyT(bx(u)-u*span,span);
+    const f=e.deltaY<0?1/1.15:1.15;                            // molette vers le haut = zoom avant
+    const horiz=e.ctrlKey||e.metaKey;                          // Ctrl / ⌘ = axe horizontal
+    if(horiz){
+      if(opts.time){                                           // spectrogramme : X = temps
+        const u=Math.max(0,Math.min(1,uxOf(e,r))), span=(S.tview.x1-S.tview.x0)*f;
+        applyT(bx(u)-u*span,span);
+      }else if(axis==='x'){                                    // spectre : X = fréquence
+        if(opts.freezeMain&&opts.freezeMain())return;
+        const u=Math.max(0,Math.min(1,uxOf(e,r))), ns=spanCur()*f, Vc=Vof(u);
+        apply(Vc-u*ns,ns);
+      }
     }else{
-      if(opts.freezeMain&&opts.freezeMain())return;                       // barres : figées
-      const u=Math.max(0,Math.min(1,uOf(e,r)));
-      const span=spanCur(), Vc=Vof(u);
-      const ns=span*(e.deltaY>0?1.15:1/1.15);
-      apply(axis==='x'?Vc-u*ns:Vc-(1-u)*ns,ns);
+      if(axis==='y'){                                          // spectrogramme : Y = fréquence
+        if(opts.freezeMain&&opts.freezeMain())return;
+        const u=Math.max(0,Math.min(1,uOf(e,r))), ns=spanCur()*f, Vc=Vof(u);
+        apply(Vc-(1-u)*ns,ns);
+      }else if(opts.yZoom){                                    // spectre : Y = dB
+        wheelDbZoom(e,r,f);
+      }
     }
   },{passive:false});
+  /* ===== SOURIS PC : clic-glisser = pan (comme un doigt) ; sur le curseur = le déplacer ===== */
+  cv.addEventListener('mousedown',e=>{
+    if(e.button!==0||off3d())return;
+    if(Date.now()-_lastTouchT<700)return;                      // ignore la souris synthétique post-tactile (iOS)
+    if(overOverlayBtn(e,cv))return;
+    const r=cv.getBoundingClientRect();
+    mDown=true; mMoved=false; mSX=e.clientX; mSY=e.clientY; mPanAx=null;
+    mAnchV=Vof(Math.max(0,Math.min(1,uOf(e,r))));
+    mAnchB=bx(Math.max(0,Math.min(1,uxOf(e,r))));
+    const cu=opts.getCursorU?opts.getCursorU():null, u0=Math.max(0,Math.min(1,uxOf(e,r)));
+    mCursor=cu!=null&&Math.abs(u0-cu)<0.05;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!mDown)return;
+    const r=cv.getBoundingClientRect(), dX=e.clientX-mSX, dY=e.clientY-mSY;
+    if(!mMoved&&Math.hypot(dX,dY)>6){
+      mMoved=true;
+      if(mCursor)mPanAx='cursor';
+      else if(opts.time)mPanAx=Math.abs(dX)>Math.abs(dY)?'time':'main';
+      else if(opts.yZoom&&Math.abs(dY)>Math.abs(dX)*1.3){mPanAx='db'; if(S.dbAuto){S.dbAuto=false;S.dbMin=Math.round(S.scale.spec.lo);S.dbMax=Math.round(S.scale.spec.hi);} mAnchDb={dbLo:S.dbMin,dbHi:S.dbMax,y0:e.clientY};}
+      else mPanAx='main';
+    }
+    if(!mMoved)return;
+    if(mPanAx==='cursor'){ const u=Math.max(0,Math.min(1,uxOf(e,r))); if(opts.onTap)opts.onTap(TFi(Vof(u)),u,u); return; }
+    if(mPanAx==='main'&&opts.freezeMain&&opts.freezeMain())return;
+    if(mPanAx==='time'){ const u=Math.max(0,Math.min(1,uxOf(e,r))); applyT(mAnchB-u*(S.tview.x1-S.tview.x0),S.tview.x1-S.tview.x0); }
+    else if(mPanAx==='db'){ const hpx=Math.max(1,r.height-axH); const dDb=(e.clientY-mAnchDb.y0)/hpx*(mAnchDb.dbHi-mAnchDb.dbLo); let lo=mAnchDb.dbLo+dDb,hi=mAnchDb.dbHi+dDb; if(lo<-20){hi+=-20-lo;lo=-20;} if(hi>140){lo-=hi-140;hi=140;} S.dbMin=Math.round(lo);S.dbMax=Math.round(hi); ui(); opts.onChange&&opts.onChange(); }
+    else { const u=Math.max(0,Math.min(1,uOf(e,r))), span=spanCur(); apply(axis==='x'?mAnchV-u*span:mAnchV-(1-u)*span,span); }
+  });
+  window.addEventListener('mouseup',()=>{ if(mDown&&mMoved)_supClick=true; mDown=false; });
+  cv.addEventListener('dblclick',e=>{
+    if(off3d()||Date.now()-_lastTouchT<700)return;
+    e.preventDefault(); _supClick=true;
+    const r=cv.getBoundingClientRect();
+    const cu=opts.getCursorU?opts.getCursorU():null, u0=Math.max(0,Math.min(1,uxOf(e,r)));
+    if(cu!=null&&Math.abs(u0-cu)<0.05&&opts.onCursorRemove){ opts.onCursorRemove(); return; }  // sur le curseur → retirer
+    if(opts.dblTapMax&&opts.onTap2){ opts.onTap2(); return; }                                    // spectrogramme : double-clic → suivi du max
+    resetView();                                                                                // ailleurs → reset vue
+  });
   cv.addEventListener('click',e=>{
+    if(_supClick){_supClick=false;return;}                     // fin de glissé : pas un tap
     if(overOverlayBtn(e,cv))return;   // tap visant une icône superposée : ignoré
+    if(e.shiftKey&&opts.onTap2){ opts.onTap2(); return; }      // PC : Maj+clic = curseur de suivi du max (équiv. deux doigts)
     if(!opts.onTap)return;
     const r=cv.getBoundingClientRect(), u=uOf(e,r);
     if(u>=0&&u<=1)opts.onTap(TFi(Vof(u)),u);
@@ -3090,7 +4061,7 @@ function attachZoomPan(id,axis,opts){
 
 /* niveau affiché de la courbe FFT à la fréquence f (avec pondération + réf.) */
 function specCurveDb(f){
-  const binPow=S.time==='F'?S.binPowF:S.time==='S'?S.binPowS:S.binPowV;
+  const binPow=S.binPowD;
   if(!binPow||!S.binHz)return -180;
   const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null, n=binPow.length;
   const k=Math.max(1,Math.min(n-1,Math.round(f/S.binHz)));
@@ -3119,9 +4090,11 @@ attachZoomPan('specCv','x',{
   const cv=$('histCv'); if(!cv)return;
   const padL=26, axH=13;
   let mode=null,ax=null,anchors=null,sX=0,sY=0,moved=false,lastTap=0;
+  let _lt=0, mDn=false,mMv=false,mx0=0,my0=0;   // souris PC
   const two=e=>[...e.touches].sort((a,b)=>a.identifier-b.identifier);
   cv.addEventListener('touchstart',e=>{
     if(overOverlayBtn(e,cv))return;   // tap visant une icône superposée : ignoré
+    _lt=Date.now();
     e.preventDefault();
     if(e.touches.length>=2){
       const t=two(e);
@@ -3169,17 +4142,36 @@ attachZoomPan('specCv','x',{
       if(moved){S.histCursor=Math.max(0,Math.min(1,((t.clientX-r.left)-padL)/Math.max(1,r.width-padL-4)));drawHistory();}
     }
   },{passive:false});
-  cv.addEventListener('touchend',e=>{
-    if(mode==='pan'&&!moved){
-      const r=cv.getBoundingClientRect();
-      S.histCursor=Math.max(0,Math.min(1,((sX-r.left)-padL)/Math.max(1,r.width-padL-4)));
-      drawHistory();
+  /* MOLETTE PC : molette = dB (Y) ; Ctrl+molette = temps (X) */
+  cv.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const r=cv.getBoundingClientRect(), f=e.deltaY<0?1/1.15:1.15;
+    if(e.ctrlKey||e.metaKey){
+      const b=histBoundsFull();
+      if(!S.histView)S.histView={t0:b.t0,t1:b.t1};
+      const cur=S.histView, u=Math.max(0,Math.min(1,((e.clientX-r.left)-padL)/Math.max(1,r.width-padL-4)));
+      const span=(cur.t1-cur.t0)*f, at=cur.t0+u*(cur.t1-cur.t0);
+      let a0=at-u*span,a1=at+(1-u)*span;
+      if(a0<b.t0)a0=b.t0; if(a1>b.t1)a1=b.t1; if(a1-a0<0.5)a1=a0+0.5;
+      S.histView={t0:a0,t1:a1}; drawHistory();
+    }else{
+      const hpx=Math.max(1,r.height-axH), uy=Math.max(0,Math.min(1,(e.clientY-r.top)/hpx));
+      let lo,hi; if(S.dbAuto){lo=S.scale.hist.lo;hi=S.scale.hist.hi;}else{lo=S.dbMin;hi=S.dbMax;}
+      if(!isFinite(lo)||!isFinite(hi)||hi-lo<1){lo=30;hi=90;}
+      const at=hi-uy*(hi-lo); let span=Math.max(10,Math.min(160,(hi-lo)*f));
+      let nlo=at-(1-uy)*span,nhi=at+uy*span;
+      if(nlo<-20){nhi+=-20-nlo;nlo=-20;} if(nhi>140){nlo-=nhi-140;nhi=140;}
+      S.dbAuto=false;S.dbMin=Math.round(nlo);S.dbMax=Math.round(nhi);ui();drawHistory();
     }
-    if(e.touches.length===0)mode=null;
-  });
+  },{passive:false});
+  /* SOURIS PC : clic-glisser = déplacer le curseur (comme un doigt) */
+  cv.addEventListener('mousedown',e=>{ if(e.button!==0||Date.now()-_lt<700)return; if(overOverlayBtn(e,cv))return; mDn=true;mMv=false;mx0=e.clientX;my0=e.clientY; e.preventDefault(); });
+  window.addEventListener('mousemove',e=>{ if(!mDn)return; const r=cv.getBoundingClientRect(); if(!mMv&&Math.hypot(e.clientX-mx0,e.clientY-my0)>6)mMv=true; if(mMv){S.histCursor=Math.max(0,Math.min(1,((e.clientX-r.left)-padL)/Math.max(1,r.width-padL-4)));drawHistory();} });
+  window.addEventListener('mouseup',()=>{ mDn=false; });
+  cv.addEventListener('click',e=>{ if(mMv){mMv=false;return;} if(Date.now()-_lt<700)return; const r=cv.getBoundingClientRect(); S.histCursor=Math.max(0,Math.min(1,((e.clientX-r.left)-padL)/Math.max(1,r.width-padL-4))); drawHistory(); });
 })();
-attachZoomPan('sgramCv','y',{time:true,padR:30,
-  onChange:()=>{if(!S.running||S.paused)drawSgram();},
+attachZoomPan('sgramCv','y',{time:true,padR:30,dblTapMax:true,
+  onChange:()=>{if(REPL.on)renderReplayFrame(REPL.i);else if(!S.running||S.paused)drawSgram();},
   onTap:(f,uy,ux)=>{                        // un doigt : viseur figé sur le max local d'une zone
     /* tap SUR le curseur existant (±5 % du cadre) = le fermer */
     if(S.sgCursor&&S.sgCursor.col!=null&&SG.Wp>1){
@@ -3190,16 +4182,16 @@ attachZoomPan('sgramCv','y',{time:true,padR:30,
       const uyTap=(TF(f)-V0)/Math.max(1e-6,V1-V0);
       if(Math.abs(ux-uxCur)<0.05 && Math.abs(uyTap-uyCur)<0.05){
         S.sgCursor=null;
-        if(!S.running||S.paused)drawSgram();
+        if(REPL.on)renderReplayFrame(REPL.i);else if(!S.running||S.paused)drawSgram();
         return;
       }
     }
     pinCursorAt(f,ux);
-    if(!S.running||S.paused)drawSgram();
+    if(REPL.on)renderReplayFrame(REPL.i);else if(!S.running||S.paused)drawSgram();
   },
-  onTap2:()=>{                              // deux doigts : suivi automatique du max global
+  onTap2:()=>{                              // deux doigts OU double-tap : suivi automatique du max
     S.sgCursor=(S.sgCursor&&S.sgCursor.mode==='auto')?null:{mode:'auto',f:0,L:-99,col:null};
-    if(!S.running||S.paused)drawSgram();
+    if(REPL.on)renderReplayFrame(REPL.i);else if(!S.running||S.paused)drawSgram();
   }
 });
 /* pose un viseur figé : max d'amplitude dans une fenêtre temps×fréquence autour du point tapé */
@@ -3251,8 +4243,8 @@ function ui(){
   $('mainLbl').textContent='L'+S.weight+S.time;
   $('unitLbl').textContent='dB('+S.weight+')';
   $('gTitle').textContent=S.screen==='spec'
-    ? 'SPECTRE · '+(S.mode==='toct'?"TIERS D'OCTAVE":S.mode==='oct'?'OCTAVE':'BANDES FINES')+' · POND. '+S.weight
-    : S.screen==='sgram' ? 'SPECTROGRAMME · POND. '+S.weight
+    ? 'SPECTRE · '+(S.mode==='toct'?"1/3 OCT":S.mode==='oct'?'OCTAVE':'BANDE FINE')+' · '+S.weight
+    : S.screen==='sgram' ? 'SPECTROGRAMME · '+S.weight
     : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq'
     : S.screen==='menu' ? 'MODE EXPERT · TRAITEMENT DU SIGNAL'
     : S.screen==='cal' ? 'CALIBRATION · RÉFÉRENCE 0 dBFS' : 'VALEURS DE LA MESURE';
@@ -3260,6 +4252,8 @@ function ui(){
   $('kMode').classList.toggle('locked',S.screen!=='spec');   // ANALYSE n'a de sens que sur le spectre
   /* lignes du mode expert */
   $('mSg3dSmooth').querySelector('b').textContent=['Standard','Lisse','Très lisse'][Math.max(0,Math.min(2,S.sg3dSmooth|0))];
+  $('mSpecFrames').querySelector('b').textContent=(S.specFrames<=1?'Live (1)':String(S.specFrames|0));
+  $('mSpecSmooth').querySelector('b').textContent=(S.specSmooth>0?('1/'+S.specSmooth+' oct'):'Off');
   const fs=S.ctx?S.ctx.sampleRate:48000;
   $('mWin').querySelector('b').textContent=WINS[S.win].name;
   $('mFft').querySelector('b').textContent=S.fftN.toString();
@@ -3279,6 +4273,9 @@ function ui(){
   $('mEmgThr').querySelector('b').textContent=(S.emgThr||10)+' dB';
   $('mEmgThr').style.opacity='1';   // le seuil sert toujours (tableau de valeurs), même bouton ÉMG éteint
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
+  $('mLvlSrc').querySelector('b').textContent=S.lvlSrc==='fft'?'Dérivé FFT':'Temporel IIR';
+  $('mHP').querySelector('b').textContent=S.hpFc>0?(S.hpFc+' Hz'):'Off';
+  $('mLP').querySelector('b').textContent=S.lpFc>0?((S.lpFc/1000)+' kHz'):'Off';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
   $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
   { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=String(S.lsnGain||0); }
@@ -3288,13 +4285,18 @@ function ui(){
   $('kWV').textContent=S.weight;
   $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':S.mode==='oct'?'1/1 oct':'FFT';
-  $('kDurV').textContent=DURL[DURS.indexOf(S.duration)];
-  const offd=Math.abs(S.offset-120.0)>=0.05;
+  $('kDurV').textContent=durLabel(S.duration);
+  const offd=Math.abs(S.offset-130.0)>=0.05;
   $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
   const badge=$('modeBadge');
-  if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
+  if(REPL.on){ badge.textContent=REPL.playing?'REPLAY':'REPLAY · PAUSE'; badge.className=REPL.playing?'badge replay':'badge'; }
+  else if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
   else if(S.running&&!S.paused){badge.textContent='MESURE';badge.className='badge rec';}
   else if(S.paused){badge.textContent='PAUSE';badge.className='badge';}
+  /* liseré LED : tourne pendant l'enregistrement micro (rec-on), se fige et clignote en pause (rec-paused) */
+  document.body.classList.toggle('rec-on', S.running&&!S.paused&&!REPL.on&&!(S.warmT>0));
+  document.body.classList.toggle('rec-paused', S.running&&S.paused&&!REPL.on);
+  if(S.running&&!REPL.on){$('replBar').classList.remove('on'); REPL.buf=null; REPL.meta=null; REPL.frames=null;}   // mesure micro : barre masquée, mémoire libérée
   ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
   $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
   $('bottomStrip').style.visibility = S.screen==='val' ? 'hidden' : 'visible';   // redondant sur Valeurs
@@ -3320,15 +4322,17 @@ $('kMenu').addEventListener('click',()=>{
 /* lignes du MODE EXPERT */
 /* ===== presets d'optimisation du spectrogramme ===== */
 const SG_PRESETS={
-  tonal:     {fftN:32768, win:'blackman', overlap:0.75, colMs:50, fscale:'log', label:'Tonal'},
-  transient: {fftN:4096,  win:'hann',     overlap:0.75, colMs:25, fscale:'log', label:'Transitoire'},
-  balanced:  {fftN:16384, win:'blackman', overlap:0.75, colMs:50, fscale:'log', label:'Équilibré'}
+  tonal:     {fftN:32768, win:'blackman', overlap:0.75, colMs:50, fscale:'log', specFrames:2, specSmooth:0, label:'Tonal'},
+  transient: {fftN:4096,  win:'hann',     overlap:0.75, colMs:25, fscale:'log', specFrames:2, specSmooth:0, label:'Transitoire'},
+  balanced:  {fftN:16384, win:'blackman', overlap:0.75, colMs:50, fscale:'log', specFrames:4, specSmooth:0, label:'Équilibré'}
 };
 function applyPreset(key){
   const p=SG_PRESETS[key]; if(!p)return;
   S.fftN=p.fftN; S.win=p.win; S.overlap=p.overlap; S.colMs=p.colMs;
+  S.specFrames=p.specFrames; S.specSmooth=p.specSmooth;   // moyennage/lissage associés au type de spectre
   if(S.fscale!==p.fscale){ S.fscale=p.fscale; SG.init=false; resetView(); }
   if(S.analyser)configureAnalyser();
+  S.welch=null;
   S.presetName=p.label;
   const b=$('mPresetV'); if(b)b.textContent='✓ '+p.label;
   ui();
@@ -3355,6 +4359,7 @@ $('sg3dBtn').onclick=()=>{
   $('sg3dBtn').textContent=S.sg3d?'2D':'3D';
   $('lsnBtn').style.display=S.sg3d?'none':'flex';   // l'écoute n'a pas d'icône en 3D
   SG._3dKey=''; drawSgram(); renderDynPop();
+  if(S.sg3d)flashBtn($('sg3dBtn')); else unflashBtn($('sg3dBtn'));
 };
 /* rotation légère : glissement HORIZONTAL = azimut (autour vertical) ; glissement VERTICAL
    = tangage léger autour de l'axe des fréquences (vers le bas = vue plus en plongée) */
@@ -3395,17 +4400,17 @@ $('mSgSpeed').onclick=()=>{
   ui();
 };
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
-$('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();drawActive();};
+$('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();if(S.emgOn)flashBtn($('emgBtn'));else unflashBtn($('emgBtn'));drawActive();};
 $('vibBtn').onclick=()=>{vibToggle();};
-$('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; savePrefs(); ui(); if(S.screen==='spec')drawSpectrum(); };
-$('lsnBtn').onclick=()=>{lsnToggle();};
+$('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); if(S.specAvg)flashBtn($('avgBtn')); else unflashBtn($('avgBtn')); if(S.screen==='spec')drawSpectrum(); };
+$('lsnBtn').onclick=()=>{lsnToggle(); if($('lsnBtn').classList.contains('on'))flashBtn($('lsnBtn'));else unflashBtn($('lsnBtn'));};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
-const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['gameboy','Game Boy'],['matrix','Matrice']];
+const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['neon','Néon'],['gameboy','Game Boy'],['matrix','Matrice']];
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
-                   'peakInterp','sgInterp','toctSrc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
-                   'trigDelay','trigLevel','offset','corr','corrName','emgOn','emgThr','specAvg','expBand','sg3dSmooth','lsnSlope','lsnGain','micId'];
+                   'peakInterp','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
+                   'trigDelay','trigLevel','offset','corr','corrName','emgThr','specFrames','specSmooth','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
   if(!_prefsReady)return;                       // ne pas écrire pendant le chargement initial
@@ -3428,7 +4433,7 @@ function resetPrefs(){
   location.reload();
 }
 function applyTheme(){
-  document.body.classList.remove('th-acier','th-clair','th-oled','th-gameboy','th-matrix');
+  document.body.classList.remove('th-acier','th-clair','th-oled','th-neon','th-gameboy','th-matrix');
   SG._3dKey='';
   if(S.theme!=='marine')document.body.classList.add('th-'+S.theme);
   // le fond de la page (html) reprend le métal brossé de la robe du thème : continuité en bas (PWA)
@@ -3440,7 +4445,42 @@ function applyTheme(){
   }catch(e){}
   if(typeof refreshTheme==='function'){refreshTheme(); if(typeof drawActive==='function')drawActive(true);}
 }
-$('hHelp').onclick=()=>{ $('helpPop').classList.add('on'); };
+/* sommaire de l'aide regroupé en 4 GRANDS THÈMES (onglets) : on n'affiche que la rubrique
+   choisie → navigation simple. Le regroupement se fait par ordre des sections (h3), identique
+   dans les 3 langues ; les intitulés des onglets sont traduits. */
+const HELP_GROUPS={
+  fr:['Prise en main','Mesure & indices','Analyse spectre','Réglages & export'],
+  en:['Getting started','Measure & indices','Spectrum analysis','Settings & export'],
+  es:['Inicio','Medición e índices','Análisis espectral','Ajustes y export']
+};
+/* groupe de chaque section, dans l'ordre du document :
+   0 Démarrer,1 Écrans,2 Réglages rapides,3 Gestes,4 Indices,5 Déclenchement,6 Calibration,
+   7 Tiers d'octave,8 Export,9 Émergence,10 Vue 3D,11 Type de spectre,12 Thèmes,13 Préférences,
+   14 Hors ligne,15 Précision,16 Traitement du signal (avancé) */
+const HELP_GROUP_OF=[0,0,0,0, 1,1,1, 2, 3, 1, 2, 2, 3, 3, 3, 0, 2];
+function groupHelp(){
+  const hb=document.querySelector('.helpbody'); if(!hb)return;
+  let idx=-1, grp=0;
+  for(const el of hb.children){
+    if(el.tagName==='H3'){ idx++; grp=(HELP_GROUP_OF[idx]!=null?HELP_GROUP_OF[idx]:0); }
+    el.dataset.grp=grp;
+  }
+}
+function showHelpGroup(g){
+  const hb=document.querySelector('.helpbody'); if(!hb)return;
+  for(const el of hb.children) el.style.display=(String(el.dataset.grp)===String(g))?'':'none';
+  hb.scrollTop=0;
+  const nav=$('helpNav'); if(nav)[...nav.children].forEach((b,i)=>b.classList.toggle('on',i===g));
+}
+function buildHelpNav(){
+  const nav=$('helpNav'); if(!nav)return;
+  groupHelp();
+  const names=HELP_GROUPS[I18.lang]||HELP_GROUPS.fr;
+  nav.innerHTML='';
+  names.forEach((nm,i)=>{ const b=document.createElement('button'); b.textContent=nm; b.onclick=()=>showHelpGroup(i); nav.appendChild(b); });
+  showHelpGroup(0);
+}
+$('hHelp').onclick=()=>{ $('helpPop').classList.add('on'); buildHelpNav(); };
 /* version de l'app : source unique = splash (bumpée à chaque déploiement) */
 const APP_VERSION=($('splashVer')&&$('splashVer').textContent.trim())||'';
 if($('hpVer'))$('hpVer').textContent=APP_VERSION?('v'+APP_VERSION):'';
@@ -3452,6 +4492,10 @@ $('mTheme').onclick=()=>{
   applyTheme(); ui();
 };
 $('mSg3dSmooth').onclick=()=>{ S.sg3dSmooth=((S.sg3dSmooth|0)+1)%3; SG._3dKey=''; if(window.V3)window.V3.sig=''; savePrefs(); ui(); if(S.sg3d)drawSgram(); };
+/* moyennage temporel du spectre : 1 (live) → 2 → 4 → 8 trames */
+$('mSpecFrames').onclick=()=>{ const seq=[1,2,4,8]; let i=seq.indexOf(S.specFrames|0); S.specFrames=seq[(i+1)%seq.length]; savePrefs(); ui(); if(REPL.on)renderReplayFrame(REPL.i); else drawActive(); };
+/* lissage fréquentiel (bande fine) : Off → 1/6 → 1/12 → 1/24 oct */
+$('mSpecSmooth').onclick=()=>{ const seq=[0,6,12,24]; let i=seq.indexOf(S.specSmooth|0); S.specSmooth=seq[(i+1)%seq.length]; savePrefs(); ui(); if(REPL.on)renderReplayFrame(REPL.i); else drawActive(); };
 $('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); savePrefs(); };
 $('lsnGainSel').onchange=(e)=>{ S.lsnGain=+e.target.value||0; lsnSetGain(); savePrefs(); };
 async function applyMicChoice(sel){
@@ -3472,11 +4516,28 @@ async function applyMicChoice(sel){
 }
 $('micSel').onchange=e=>applyMicChoice(e.target);
 $('micSelPop').onchange=e=>applyMicChoice(e.target);
-loadPrefs(); applyTheme(); _prefsReady=true;
+$('outSelPop').onchange=e=>applyOutChoice(e.target);
+loadPrefs(); applyTheme(); _prefsReady=true; applyInputHints();
 $('mToctSrc').onclick=()=>{
   S.toctSrc=S.toctSrc==='fft'?'iir':'fft';
   S.iirBank=null;                                        // (re)construit au prochain passage
   ui();
+};
+$('mLvlSrc').onclick=()=>{
+  if(S.running&&!REPL.on)return;                          // pas de bascule pendant une mesure (mélangerait les Leq)
+  S.lvlSrc=S.lvlSrc==='fft'?'iir':'fft';
+  S._fft=null;                                           // réinitialise l'état de lissage FFT
+  ui();
+};
+$('mHP').onclick=()=>{
+  if(S.running&&!REPL.on)return;                          // coupures figées pendant une mesure
+  const opts=[0,3,10,20]; S.hpFc=opts[(opts.indexOf(S.hpFc)+1)%opts.length];
+  if(S.analyser)configureAnalyser(); savePrefs(); ui(); drawActive();
+};
+$('mLP').onclick=()=>{
+  if(S.running&&!REPL.on)return;
+  const opts=[0,20000,22000]; S.lpFc=opts[(opts.indexOf(S.lpFc)+1)%opts.length];
+  if(S.analyser)configureAnalyser(); savePrefs(); ui(); drawActive();
 };
 /* ===== Popover ÉCHELLES / DYNAMIQUE (affichage seul, réglable en temps réel) ===== */
 const DB_PRESETS=[['Auto',null],['20–110',[20,110]],['30–90',[30,90]],['40–80',[40,80]]];
@@ -3660,7 +4721,9 @@ function saveProfiles(){try{localStorage.setItem(LS_KEY,JSON.stringify(S.profile
 function applyProfile(p){
   S.corrCurve={fc:p.fc.slice(),g:p.gain_dB.slice()};
   S.corrName=p.name; S.corr='profile';
-  if(p.offset!=null)S.offset=p.offset;
+  /* NB : un profil est une COURBE (forme fréquentielle) uniquement. L'offset (référence
+     0 dBFS, défaut iPhone 130 dB) reste indépendant et n'est PAS modifié par le chargement
+     d'un profil — il ne change qu'au calibreur ou via Réinit. offset. */
   if(S.analyser)configureAnalyser();
   ui();drawActive();
 }
@@ -3675,7 +4738,37 @@ async function populateMicList(){
       sel.innerHTML='<option value="">Automatique (défaut système)</option>';
       ins.forEach((d,i)=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||('Entrée '+(i+1)); if(d.deviceId&&d.deviceId===S.micId)o.selected=true; sel.appendChild(o); });
     }
+    /* SORTIE (réécoute) : sélection possible seulement si le navigateur supporte setSinkId
+       (Chrome/Edge desktop). iOS/Safari route en automatique (écouteurs si branchés) → info. */
+    const outSel=$('outSelPop'), note=$('outNote');
+    const canPick = !!(window.AudioContext && (AudioContext.prototype.setSinkId));
+    if(outSel){
+      const outs=devs.filter(d=>d.kind==='audiooutput');
+      if(canPick && outs.length){
+        outSel.disabled=false;
+        outSel.innerHTML='<option value="">Automatique (système)</option>';
+        outs.forEach((d,i)=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||('Sortie '+(i+1)); if(d.deviceId&&d.deviceId===S.outId)o.selected=true; outSel.appendChild(o); });
+        if(note)note.textContent='';
+      } else {
+        outSel.disabled=true;
+        if(outs.length){
+          /* iOS n'autorise pas la sélection, mais expose parfois un nom : on l'AFFICHE (lecture seule) */
+          outSel.innerHTML='';
+          outs.forEach((d,i)=>{ const o=document.createElement('option'); o.textContent=d.label||('Sortie '+(i+1)+' (nom masqué)'); outSel.appendChild(o); });
+          if(note)note.textContent='Sortie détectée (nom ci-dessus) mais non sélectionnable sur iPhone : le système route (écouteurs si branchés, sinon haut-parleur).';
+        } else {
+          outSel.innerHTML='<option value="">Automatique (système)</option>';
+          if(note)note.textContent='iOS n’expose pas le périphérique de sortie au navigateur — impossible d’afficher son nom ni de le choisir. Le système route seul (écouteurs si branchés).';
+        }
+      }
+    }
   }catch(e){}
+}
+/* applique le choix de sortie (si supporté) au contexte audio → réécoute ♪ SON / replay */
+async function applyOutChoice(sel){
+  const id=sel?sel.value:'';
+  S.outId=id||null; savePrefs&&savePrefs();
+  try{ if(S.ctx&&S.ctx.setSinkId) await S.ctx.setSinkId(id||''); }catch(e){ toast('Sortie non modifiable ici'); }
 }
 function showMicInfo(){
   const tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
@@ -3715,53 +4808,42 @@ function drawCurve(){
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   const w=r.width,h=r.height,padL=22,padB=12;
   g.fillStyle=THEME.bg;g.fillRect(0,0,w,h);
-  // courbe active + écart d'offset par rapport à la référence usine (120 dB)
-  const OFF0=120.0, off=S.offset-OFF0;
-  const hasOff=Math.abs(off)>=0.05;
-  const curve = S.corr==='profile'&&S.corrCurve ? S.corrCurve
-              : S.corr==='generic' ? (GENERIC[S.device]||GENERIC.iphone)
-              : null;
-  const offTxt=(off>=0?'+':'')+off.toFixed(1)+' dB';
-  $('curveTitle').textContent = (S.corr==='profile'?('Profil : '+(S.corrName||'—'))
+  // le graphe montre UNIQUEMENT la FORME de correction (0 dB à 1 kHz). L'offset (référence
+  // 0 dBFS, scalaire) est indépendant et n'apparaît pas ici — il ne déforme pas la courbe.
+  const curve = activeCorrCurve();     // recalée 0 dB à 1 kHz (cohérent avec compGain et le filtre temporel)
+  $('curveTitle').textContent = S.corr==='profile'?('Profil : '+(S.corrName||'—'))
                               : S.corr==='generic'?('Générique '+S.device)
-                              : 'Sans courbe')
-                              + (hasOff?' · offset recalé '+offTxt:'');
+                              : 'Sans courbe';
   const fmin=20,fmax=20000;
   const x2=f=>padL+(Math.log(f/fmin)/Math.log(fmax/fmin))*(w-padL-4);
-  // bornes dB dynamiques : incluent la courbe TOTALE (courbe + offset)
-  let gmin=Math.min(-3,off-1),gmax=Math.max(3,off+1);
-  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){if(v+off<gmin)gmin=v+off;if(v+off>gmax)gmax=v+off;}}
+  // bornes dB dynamiques d'après la forme seule
+  let gmin=-3,gmax=3;
+  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){if(v<gmin)gmin=v;if(v>gmax)gmax=v;}}
   gmin=Math.floor((gmin-1)/2)*2; gmax=Math.ceil((gmax+1)/2)*2;
   const y2=v=>(1-(v-gmin)/(gmax-gmin))*(h-padB-2)+2;
   // grille + libellés
   g.strokeStyle=THEME.grid;g.fillStyle=THEME.axis;g.font='7px Arial';g.lineWidth=1;
   g.textAlign='right';
   for(let v=gmin;v<=gmax;v+= (gmax-gmin)>12?4:2){const y=y2(v);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText((v>0?'+':'')+v,padL-2,y+2.5);}
-  // ligne 0 dB accentuée
+  // ligne 0 dB accentuée (= médium, référence de la forme)
   g.strokeStyle='rgba(127,216,255,.35)';g.beginPath();g.moveTo(padL,y2(0));g.lineTo(w-2,y2(0));g.stroke();
-  // ligne pointillée = décalage d'offset seul (recalage 1 kHz / ±0,5)
-  if(hasOff){
-    g.strokeStyle='#FFB454';g.setLineDash([4,3]);g.beginPath();g.moveTo(padL,y2(off));g.lineTo(w-2,y2(off));g.stroke();g.setLineDash([]);
-    g.fillStyle='#FFB454';g.textAlign='left';g.font='bold 7.5px Arial';
-    g.fillText('offset '+offTxt,padL+3,y2(off)-3);
-  }
   g.textAlign='center';g.fillStyle=THEME.axis;g.font='7px Arial';
   for(const f of [31.5,125,500,2000,8000]){g.fillText(f>=1000?(f/1000)+'k':f,x2(f),h-3);}
-  if(!curve&&!hasOff){g.fillStyle=THEME.axis;g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);$('curveRange').textContent=gmin+'…+'+gmax+' dB';return;}
-  // courbe TOTALE effective (fréquentielle + offset), telle qu'appliquée réellement
+  if(!curve){g.fillStyle=THEME.axis;g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);$('curveRange').textContent=gmin+'…+'+gmax+' dB';return;}
+  // courbe de correction (forme fréquentielle, 0 dB à 1 kHz)
   g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.6;
   let st=false;
   for(let px=padL;px<=w-2;px+=2){
     const f=fmin*Math.pow(fmax/fmin,(px-padL)/(w-padL-4));
-    const y=y2((curve?interpCurve(curve,f):0)+off);
+    const y=y2(interpCurve(curve,f));
     st?g.lineTo(px,y):g.moveTo(px,y);st=true;
   }
   g.stroke();
-  // points de mesure du profil (positionnés sur la courbe totale)
-  if(curve){
+  // points de mesure du profil
+  {
     const fc=curve.fc, gg=curve.g||curve.gain_dB;
     g.fillStyle='#7FE9B8';
-    for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(gg[i]+off),2.2,0,7);g.fill();}}
+    for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(gg[i]),2.2,0,7);g.fill();}}
   }
   $('curveRange').textContent=gmin+'…+'+gmax+' dB';
 }
@@ -3782,7 +4864,7 @@ function renderSweep(){
 function bandLevelNow(fc){
   const b=S.bands.indexOf(fc);
   if(b<0)return null;
-  return lvl(S.time==='F'?S.bandPowF[b]:S.time==='S'?S.bandPowS[b]:S.bandPowV[b]);
+  return lvl(S.bandPowD[b]);
 }
 function sweepBand(fc){
   if(!S.running){alert("Démarre la mesure (▶) avant de calibrer : l'iPhone doit capter la source.");return;}
@@ -3855,8 +4937,8 @@ $('cImport').onclick=()=>{
 /* tout changement d'offset s'applique immédiatement : graphes + courbe de calibration */
 function afterOffsetChange(){ui();drawActive();if(S.screen==='cal')renderCal();}
 /* le doigt posé sur la courbe ne doit pas faire défiler le menu de calibration */
-$('curveCv').addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
-$('offReset').onclick=()=>{S.offset=120.0;afterOffsetChange();};
+/* graphe = affichage seul : on laisse le doigt faire défiler le menu (pas de preventDefault) */
+$('offReset').onclick=()=>{S.offset=130.0;afterOffsetChange();};
 /* calibreur 1 kHz : cale l'offset pour que la lecture large bande = référence à 1 kHz */
 $('calDo1k').onclick=()=>{
   if(!S.running){alert('Démarre la mesure (▶) et présente le calibreur 1 kHz.');return;}
@@ -3864,7 +4946,7 @@ $('calDo1k').onclick=()=>{
   if(!isFinite(ref)){alert('Référence invalide.');return;}
   const b=S.bands.indexOf(1000);
   if(b<0){alert('Bande 1 kHz indisponible.');return;}
-  const cur=lvl(S.time==='F'?S.bandPowF[b]:S.time==='S'?S.bandPowS[b]:S.bandPowV[b]);
+  const cur=lvl(S.bandPowD[b]);
   if(cur<=-90){alert('Pas de signal à 1 kHz. Vérifie le calibreur.');return;}
   S.offset+= (ref-cur);
   afterOffsetChange();
@@ -3881,10 +4963,44 @@ $('mResetPrefs').onclick=function(){
   if(confirm("Réinitialiser tous les paramètres (thème, pondération, échelles, calibration…) aux valeurs par défaut ? L'application va redémarrer.")) resetPrefs();
 };
 
-$('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();drawActive();};
-$('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER.length];ui();drawActive();};
+$('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();if(REPL.on)renderReplayFrame(REPL.i);else drawActive();};
+$('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER.length];ui();if(REPL.on)renderReplayFrame(REPL.i);else drawActive();};
 $('kMode').onclick=()=>{S.mode=S.mode==='toct'?'oct':S.mode==='oct'?'fft':'toct';S.cursor=null;ui();drawActive();};
-$('kDur').onclick=()=>{S.duration=DURS[(DURS.indexOf(S.duration)+1)%DURS.length];ui();updateNumbers(-99);};
+/* ===== DURÉE : appui court = cycle · appui long = sous-menu (presets + perso) ===== */
+const DUR_PRESETS=[['∞',0],['10 s',10],['30 s',30],['1 min',60],['5 min',300],['15 min',900]];
+function renderDurPop(){
+  const g=$('durPresets'); if(!g)return; g.innerHTML='';
+  for(const [lbl,val] of DUR_PRESETS){
+    const b=document.createElement('button'); b.textContent=lbl;
+    if(S.duration===val)b.className='on';
+    b.onclick=()=>{ S.duration=val; ui(); updateNumbers(-99); renderDurPop(); };
+    g.appendChild(b);
+  }
+  const ci=$('durCustom');
+  if(ci && document.activeElement!==ci) ci.value=(S.duration>0 && !DURS.includes(S.duration))?S.duration:'';
+}
+function applyDurCustom(){
+  const v=parseInt(($('durCustom').value||'').trim(),10);
+  S.duration=(!isFinite(v)||v<=0)?0:Math.min(86400,v);   // borne 24 h
+  ui(); updateNumbers(-99); renderDurPop();
+}
+$('durApply').onclick=applyDurCustom;
+$('durCustom').addEventListener('change',applyDurCustom);
+$('durClose').onclick=()=>$('durPop').classList.remove('on');
+$('durPop').addEventListener('click',e=>{if(e.target.id==='durPop')$('durPop').classList.remove('on');});
+let durLong=false,durT;
+$('kDur').addEventListener('pointerdown',()=>{
+  durLong=false;
+  if($('kDur').classList.contains('locked'))return;      // verrouillé (mesure/replay) : ni cycle ni menu
+  durT=setTimeout(()=>{ durLong=true; renderDurPop(); $('durPop').classList.add('on'); },500);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kDur').addEventListener(ev,()=>clearTimeout(durT)));
+$('kDur').onclick=()=>{
+  if(durLong){durLong=false;return;}                     // l'appui long a ouvert le menu
+  if($('kDur').classList.contains('locked'))return;
+  S.duration=DURS[(DURS.indexOf(S.duration)+1)%DURS.length];   // perso hors liste → indexOf −1 → repart à ∞
+  ui();updateNumbers(-99);
+};
 
 /* ===== Popover CALIBRATION global (Auto + presets + fin ±0.5 + avancé) ===== */
 const OFFSET_PRESETS=[94,100,110,120,130];
@@ -3927,29 +5043,51 @@ $('cpFull').onclick=()=>{$('calPop').classList.remove('on');S.screen='cal';ui();
 $('kReset').onclick=()=>{if(S.running)stopMeasure(false);resetMeasure();$('modeBadge').textContent='PRÊT';$('modeBadge').className='badge';setLocks();};
 
 /* verrouille/déverrouille les réglages qui biaiseraient une mesure en cours */
+function replFileLoaded(){ return !!(REPL.lastId && REPL.buf && REPL.frames && $('replBar').classList.contains('on')); }
 function setLocks(){
-  const active=S.running;                 // verrouillé dès qu'une mesure tourne (y compris en pause)
-  ['kW','kT','kDur','kCal'].forEach(id=>$(id).classList.toggle('locked',active));
+  const mic=S.running&&!REPL.on;                 // mesure micro : tout verrouillé
+  $('kW').classList.toggle('locked',mic);        // en replay : Pondération/Temps/Correction ACTIFS (instantanés)
+  $('kT').classList.toggle('locked',mic);
+  $('kCal').classList.toggle('locked',mic);
+  $('kDur').classList.toggle('locked',mic||REPL.on);   // durée sans objet en replay
+  $('mLvlSrc').classList.toggle('locked',mic);          // méthode des niveaux figée pendant la mesure
+  $('mHP').classList.toggle('locked',mic); $('mLP').classList.toggle('locked',mic);
 }
 
 /* icônes transport universelles */
 const ICO={
   record:'<svg class="tico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/></svg>',   // START = point d'enregistrement (métaphore enregistreur, pas « lecture »)
   stop:'<svg class="tico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
-  pause:'<svg class="tico" viewBox="0 0 24 24"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>'
+  pause:'<svg class="tico" viewBox="0 0 24 24"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>',
+  play:'<svg class="tico" viewBox="0 0 24 24"><path d="M8 5.6c0-1.2 1.3-1.9 2.3-1.3l9.2 6.4c.9.6.9 1.9 0 2.5l-9.2 6.4c-1 .7-2.3-.1-2.3-1.3V5.6z"/></svg>'
 };
 function setTransport(){
-  const key=(S.running?'R':'r')+(S.paused?'P':'p');
+  const loaded=replFileLoaded();
+  const showStop = S.running || REPL.on || loaded;                 // stop tant qu'une mesure/replay tourne OU qu'un fichier est chargé
+  const replayCtx = REPL.on || loaded;                             // contexte LECTURE (replay ou fichier chargé)
+  const replayPaused = REPL.on ? !REPL.playing : (loaded ? true : false);
+  const recPaused = !replayCtx && S.running && S.paused;           // ENREGISTREMENT en pause
+  const key=(showStop?'R':'r')+'|'+(replayCtx?(replayPaused?'gp':'gl'):(recPaused?'rp':'rr'));
   if(S._transport===key)return;                 // rien n'a changé : ne pas re-rendre les SVG
   S._transport=key;
-  $('kStart').querySelector('.kv').innerHTML=S.running?ICO.stop:ICO.record;
-  $('kStart').classList.toggle('running',S.running);
-  $('kStart').setAttribute('aria-label',S.running?'Arrêter':'Démarrer');
+  $('kStart').querySelector('.kv').innerHTML=showStop?ICO.stop:ICO.record;
+  $('kStart').classList.toggle('running',showStop);
+  $('kStart').setAttribute('aria-label',showStop?'Arrêter':'Démarrer');
   const p=$('kPause');
-  p.querySelector('.kv').innerHTML=ICO.pause;              // ⏸ reste ⏸ (jamais de triangle « lecture »)
-  p.classList.toggle('paused',S.paused);                   // état verrouillé = ambre vif enfoncé
-  p.setAttribute('aria-label',S.paused?'Reprendre':'Pause');
-  p.disabled=!S.running;
+  if(replayCtx){
+    /* LECTURE : play/pause — bouton VERT à triangle BLANC quand on peut lire */
+    p.querySelector('.kv').innerHTML = replayPaused ? ICO.play : ICO.pause;
+    p.classList.remove('pausedrec','paused');
+    p.classList.toggle('playgreen', replayPaused);
+    p.setAttribute('aria-label', replayPaused?'Lire':'Pause');
+  }else{
+    /* ENREGISTREMENT : TOUJOURS l'icône pause ; en pause = effet lumineux (jamais de triangle vert) */
+    p.querySelector('.kv').innerHTML = ICO.pause;
+    p.classList.remove('playgreen','paused');
+    p.classList.toggle('pausedrec', recPaused);
+    p.setAttribute('aria-label', recPaused?'Reprendre':'Pause');
+  }
+  p.disabled=!(S.running||REPL.on||loaded);
 }
 /* ===== menu DÉCLENCHEMENT (appui long sur Démarrer) ===== */
 function renderTrigPop(){
@@ -3983,7 +5121,11 @@ $('kStart').addEventListener('pointerdown',()=>{
 $('kStart').onclick=async function(){
   if(startLong){startLong=false;return;}       // l'appui long a ouvert le menu, pas de démarrage
 
+  if(REPL.on){ replExit(); return; }                    // 1er stop : sortir du replay (retour 0, réglages réactivés, fichier gardé)
+  if(replFileLoaded()){ replUnload(); return; }         // 2e stop : décharger le fichier + réinitialiser les figures
   if(S.running){stopMeasure(false);return;}
+  if(replFileLoaded()){ REPL.buf=null; REPL.frames=null; REPL.meta=null; REPL.lastId=null; $('replBar').classList.remove('on'); }   // libère un replay chargé avant la mesure
+  S.micWanted=true;                                  // le micro n'est demandé QUE par ce geste (et reste dispo ensuite)
   const coldStart=!S.micReady;                       // micro déjà préchauffé ?
   try{
     if(!S.ctx)await initAudio();
@@ -4020,7 +5162,8 @@ $('kStart').onclick=async function(){
   S.running=true;S.paused=false;S.lastT=0;
   S.warmT=1;                   // armement actif
   S.warmAge=0;
-  S.warmMax=coldStart?2.5:0.6; // micro froid → armement long ; déjà chaud → court
+  S.warmMax=coldStart?2.5:0.05; // 1re mesure (micro froid) → armement long ; suivantes (micro déjà actif) → quasi instantané
+  document.body.classList.remove('rec-done');
   S.K=0;
   setTransport();
   setLocks();
@@ -4029,6 +5172,8 @@ $('kStart').onclick=async function(){
   ui();
 };
 $('kPause').onclick=()=>{
+  if(REPL.on){ if(REPL.playing)replPause(); else replPlay(); ui(); return; }   // replay actif : lecture/pause par index
+  if(replFileLoaded()){ replayStart(REPL.lastId,REPL.i*(REPL.frames?REPL.frames.hopSec:0),false); return; }   // fichier chargé : (re)lance la lecture
   if(!S.running)return;
   S.paused=!S.paused;
   setTransport();
@@ -4036,13 +5181,20 @@ $('kPause').onclick=()=>{
   ui();
 };
 function stopMeasure(auto){
+  const wasReplay=REPL.on;
   S.running=false;S.paused=false;
+  document.body.classList.remove('rec-on','rec-paused');
   cancelAnimationFrame(S.raf);
+  replayTeardown();
   setTransport();
   setLocks();
   try{S.wake?.release();S.wake=null;}catch(e){}
   const badge=$('modeBadge');
-  badge.textContent=auto?'FINI · Leq figé':'ARRÊTÉ';badge.className='badge';
+  badge.textContent=wasReplay?(auto?'REPLAY FINI · Leq figé':'REPLAY ARRÊTÉ'):(auto?'FINI · Leq figé':'ARRÊTÉ');badge.className='badge';
+  if(wasReplay){ $('replBar').classList.remove('on'); REPL.i=0; }   // sortie du replay : barre masquée
+  if(auto && !wasReplay){                                            // mesure terminée (durée atteinte) : anneau vert maintenu jusqu'à la prochaine mesure
+    document.body.classList.add('rec-done');
+  }
 }
 
 /* ================= Export CSV ================= */
@@ -4277,7 +5429,7 @@ async function shareOrDownload(blob,name,title){
 }
 function csvBlob(){ return new Blob(["\ufeff"+buildCsv()],{type:'text/csv;charset=utf-8'}); }
 
-$('kCsv').onclick=()=>{ renderExpNote(); document.querySelectorAll('input[name="expBand"]').forEach(r=>r.checked=(r.value===(S.expBand||'toct'))); $('expPop').classList.add('on'); };
+$('kCsv').onclick=()=>{ renderExpNote(); document.querySelectorAll('input[name="expBand"]').forEach(r=>r.checked=(r.value===(S.expBand||'toct'))); if($('arecTgl'))$('arecTgl').checked=!!S.recAudio; arecUi(); renderRecList(); $('expPop').classList.add('on'); };
 $('epClose').onclick=()=>$('expPop').classList.remove('on');
 $('expPop').addEventListener('click',e=>{if(e.target.id==='expPop')$('expPop').classList.remove('on');});
 function renderExpNote(){
@@ -4287,6 +5439,53 @@ function renderExpNote(){
 }
 $('epReport').onclick=()=>generateReport();
 $('epCsvShare').onclick=()=>shareOrDownload(csvBlob(),'sonometre_'+stamp()+'.csv','Mesure sonomètre CETIM');
+/* ===== V2 : capture audio — toggle et exports WAV ===== */
+$('arecTgl').onchange=e=>{
+  S.recAudio=e.target.checked; savePrefs();
+  if(S.recAudio){ if(S.ctx&&S.srcNode)arecWire(); if(!AREC.len)arecReset(); }
+  else { if(AREC.node){try{AREC.node.disconnect();}catch(_){} AREC.node=null;} }
+  arecUi();
+};
+$('arecWavShare').onclick=()=>{ if(AREC.len)shareOrDownload(arecWavBlob(),'sonometre_audio_'+stamp()+'.wav','Audio sonomètre CETIM'); };
+$('arecWavDl').onclick   =()=>{ if(AREC.len)dl(arecWavBlob(),'sonometre_audio_'+stamp()+'.wav'); };
+$('arecSave').onclick    =()=>{ recSave().catch(()=>toast('Sauvegarde impossible (stockage local indisponible)')); };
+/* timeline replay : drag = viser (affichage seul), relâcher = saut effectif.
+   EN PAUSE : le saut est MÉMORISÉ (pendingSeek) et ne s'exécute qu'à la reprise —
+   la lecture ne redémarre jamais toute seule. Les événements souris simulés
+   qu'iOS émet après un toucher sont ignorés (anti double-saut). */
+/* remplit le tampon d'analyse avec les N échantillons du PCM rejoué finissant à t
+   (rééchantillonnage linéaire si la fs de l'enregistrement diffère du contexte).
+   La boucle d'affichage normale fait le reste : le spectre suit le doigt à 60 fps. */
+function replPreviewFill(t){
+  if(!REPL.buf||!S.ring)return false;
+  const N=S.ring.length, ch=REPL.buf.getChannelData(0);
+  const bufFs=REPL.buf.sampleRate, ctxFs=S.ctx?S.ctx.sampleRate:bufFs;
+  const r=bufFs/ctxFs;
+  let pos=t*bufFs-N*r;
+  for(let i=0;i<N;i++){
+    const x=pos+i*r, k=Math.floor(x), fr=x-k;
+    S.ring[i]=(k<0||k+1>=ch.length)?0:(ch[k]*(1-fr)+ch[k+1]*fr);
+  }
+  return true;
+}
+(function(){
+  const tk=$('rbTrack'); if(!tk)return;
+  let lastTouch=0, starting=false;
+  const xToI=e=>{ const r=tk.getBoundingClientRect(); const x=(e.touches&&e.touches.length?e.touches[0].clientX:(e.changedTouches&&e.changedTouches.length?e.changedTouches[0].clientX:e.clientX))-r.left; const u=Math.max(0,Math.min(1,x/r.width)); return REPL.frames?Math.round(u*(REPL.frames.count-1)):0; };
+  const canScrub=()=>REPL.on||(!S.running&&REPL.lastId&&REPL.dur>0&&$('replBar').classList.contains('on'));
+  /* MODÈLE LECTEUR : toucher la barre MET EN PAUSE, glisser déplace l'INDEX (affichage
+     instantané du point, aucun son), relâcher RESTE au point. ▶ reprend la lecture d'ici. */
+  const moveTo=i=>{ if(REPL.on){ if(REPL.playing)replPause(); renderReplayFrame(i); } };
+  ['touchstart','touchmove'].forEach(ev=>tk.addEventListener(ev,e=>{
+    if(!canScrub())return; e.preventDefault(); lastTouch=Date.now();
+    if(!REPL.on){ if(!starting&&REPL.lastId){ starting=true; replayStart(REPL.lastId,0,true).then(()=>{ renderReplayFrame(xToI(e)); }).finally(()=>{starting=false;}); } return; }
+    moveTo(xToI(e));
+  },{passive:false}));
+  tk.addEventListener('mousedown',e=>{ if(!canScrub())return; if(Date.now()-lastTouch<700)return;
+    if(!REPL.on){ if(!starting&&REPL.lastId){ starting=true; replayStart(REPL.lastId,0,true).then(()=>{ renderReplayFrame(xToI(e)); }).finally(()=>{starting=false;}); } return; }
+    moveTo(xToI(e));
+  });
+})();
 $('epCsvDl').onclick   =()=>dl(csvBlob(),'sonometre_'+stamp()+'.csv');
 $('epPngShare').onclick=()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>shareOrDownload(b,'sonometre_'+stamp()+'.png','Graphe sonomètre CETIM'),'image/png'); };
 $('epPngDl').onclick   =()=>{ const c=buildGraphCanvas(); if(!c)return; c.toBlob(b=>dl(b,'sonometre_'+stamp()+'.png'),'image/png'); };
@@ -4344,7 +5543,31 @@ function showValPage(p){
     const dx=t.clientX-x0, dy=t.clientY-y0;
     if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) showValPage(dx<0?1:0);   // gauche = page 2
   },{passive:true});
+  /* PC : points cliquables + molette pour changer de page */
+  const vd0=$('vd0'), vd1=$('vd1');
+  if(vd0&&vd1){ [vd0,vd1].forEach(d=>{d.style.pointerEvents='auto';d.style.cursor='pointer';});
+    vd0.addEventListener('click',()=>showValPage(0)); vd1.addEventListener('click',()=>showValPage(1)); }
+  pane.addEventListener('wheel',e=>{ if(!IS_PC)return; e.preventDefault(); showValPage(e.deltaY>0?1:0); },{passive:false});
 })();
+/* ===== raccourcis clavier PC ===== */
+document.addEventListener('keydown',e=>{
+  if(!IS_PC)return;
+  const tag=(document.activeElement&&document.activeElement.tagName)||'';
+  if(/INPUT|SELECT|TEXTAREA/.test(tag))return;
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const k=e.key;
+  if(k==='ArrowLeft'&&S.screen==='val'){ e.preventDefault(); showValPage(0); }
+  else if(k==='ArrowRight'&&S.screen==='val'){ e.preventDefault(); showValPage(1); }
+  else if(k===' '){ e.preventDefault(); $('kStart').click(); }                     // Espace = démarrer/arrêter
+  else if(k==='r'||k==='R'){                                                        // R = réinitialiser la vue
+    if(S.screen==='spec'||S.screen==='sgram')resetView();
+    else if(S.screen==='hist'){ S.histView=null; S.histCursor=null; drawHistory(); }
+  }
+  else if(k==='m'||k==='M'){                                                        // M = curseur max (auto)
+    if(S.screen==='spec'){ S.maxCur=!S.maxCur; if(!S.running||S.paused)drawSpectrum(); }
+    else if(S.screen==='sgram'){ S.sgCursor=(S.sgCursor&&S.sgCursor.mode==='auto')?null:{mode:'auto',f:0,L:-99,col:null}; if(!S.running||S.paused)drawSgram(); }
+  }
+});
 
 /* ===== retour haptique sur les boutons =====
    navigator.vibrate fonctionne sur Android/Chrome ; iOS Safari ne le supporte pas
@@ -4361,6 +5584,7 @@ document.addEventListener('pointerdown',e=>{
    AVANT toute mesure. Résultat : Démarrer donne une mesure propre immédiatement. */
 async function prewarmMic(){
   if(S.ctx||S.prewarming)return;
+  if(!S.micWanted)return;                      // pas de micro tant que l'utilisateur n'a pas demandé REC/SON
   S.prewarming=true;
   setMicStat('prep');                          // ambre : initialisation en cours
   try{
@@ -4385,7 +5609,7 @@ function armStart(){
   const k=$('kStart');
   if(S.micReady){k.classList.remove('mic-wait');k.disabled=false;}
 }
-['pointerdown','touchstart'].forEach(ev=>window.addEventListener(ev,prewarmMic,{once:true,passive:true}));
+['pointerdown','touchstart'].forEach(ev=>window.addEventListener(ev,prewarmMic,{passive:true}));
 /* iOS exige parfois un GESTE pour relancer l'audio après une interruption : tout toucher réanime si besoin */
 window.addEventListener('pointerdown',()=>{ if(S.ctx && !micAlive()) reviveMic(true); },{passive:true});
 
@@ -4406,7 +5630,7 @@ const TR={
  'Fluide':{en:'Fluid',es:'Fluido'},'Standard':{en:'Standard',es:'Estándar'},'Lisse':{en:'Smooth',es:'Suave'},'Très lisse':{en:'Very smooth',es:'Muy suave'},
  'PRÊT':{en:'READY',es:'LISTO'},'MESURE':{en:'MEASURE',es:'MEDIDA'},'PAUSE':{en:'PAUSED',es:'PAUSA'},'ARRÊTÉ':{en:'STOPPED',es:'PARADO'},'INIT MICRO…':{en:'MIC INIT…',es:'INIC. MIC…'},
  /* lignes du menu expert */
- 'Optimiser le spectrogramme':{en:'Optimize spectrogram',es:'Optimizar espectrograma'},
+ 'Type de spectre':{en:'Spectrum type',es:'Tipo de espectro'},
  'Échelle fréquence':{en:'Frequency scale',es:'Escala de frecuencia'},
  'Type de fenêtre':{en:'Window type',es:'Tipo de ventana'},
  'Nombre de points (FFT)':{en:'FFT size (points)',es:'Puntos FFT'},
@@ -4449,6 +5673,11 @@ const TR={
  'MODE EXPERT · TRAITEMENT DU SIGNAL':{en:'EXPERT MODE · SIGNAL PROCESSING',es:'MODO EXPERTO · PROCESADO DE SEÑAL'},
  'CALIBRATION':{en:'CALIBRATION',es:'CALIBRACIÓN'},
  'Synthèse FFT':{en:'FFT synthesis',es:'Síntesis FFT'},
+ 'Temporel IIR':{en:'Time-domain IIR',es:'Temporal IIR'},
+ 'Dérivé FFT':{en:'FFT-derived',es:'Derivado FFT'},
+ 'Niveaux temps réel (LAF…, Leq)':{en:'Real-time levels (LAF…, Leq)',es:'Niveles en tiempo real (LAF…, Leq)'},
+ 'Passe-haut (limite grave)':{en:'High-pass (low-freq limit)',es:'Paso alto (límite graves)'},
+ 'Passe-bas (limite aigu)':{en:'Low-pass (high-freq limit)',es:'Paso bajo (límite agudos)'},
  'Filtres IEC 61260':{en:'IEC 61260 filters',es:'Filtros IEC 61260'},
  'Oui':{en:'Yes',es:'Sí'},'Non':{en:'No',es:'No'},
  'activer':{en:'enable',es:'activar'},'désactiver':{en:'disable',es:'desactivar'},
@@ -4528,7 +5757,7 @@ function setLang(l){
   I18.lang=l; localStorage.setItem('sono_lang',l);
   const hb=document.querySelector('.helpbody');
   if(hb)hb.innerHTML = l==='en'?HELP_EN : l==='es'?HELP_ES : HELP_FR;
-  translatePass(); try{ui();}catch(e){}
+  translatePass(); try{ui();}catch(e){} try{buildHelpNav();}catch(e){}
 }
 document.querySelectorAll('.langbtn').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
 const HELP_FR=document.querySelector('.helpbody')?document.querySelector('.helpbody').innerHTML:'';
@@ -4571,6 +5800,16 @@ const HELP_EN=`
 <h3>Preferences</h3><p>All settings are <b>saved automatically</b> and restored. Expert menu ▸ Reset settings (↺) restores defaults.</p>
 <h3>Offline & background</h3><p>After a first online load, the app opens without network. Install to home screen for an app-like experience. In background, iOS cuts the mic: the measurement <b>auto-pauses</b> and resumes manually.</p>
 <h3 class="warn">Accuracy — please read</h3><p>A smartphone is not a certified instrument. Uncalibrated, the app is reliable in <b>relative</b> terms. Calibrated, it approaches a class meter over a given range, but cannot claim class 1/2 compliance. State this in any report.</p>
+<h3>Signal processing (advanced)</h3>
+<p>The mic feeds <b>two parallel chains</b>.</p>
+<p><b>Frequency chain (FFT).</b> The block is windowed (Blackman) then transformed. Amplitude is rescaled by <b>Parseval identity</b>: one factor maps spectral energy onto the block's true time-domain RMS. The window's power loss cancels in this ratio → levels stay correct <b>whatever the window</b>. This chain produces the <b>spectra</b> (narrowband, 1/3-octave, spectrogram), <b>emergence</b>, and the <b>Leq when correction is Off</b>.</p>
+<p><b>1/3-octave.</b> Two methods: <i>FFT synthesis</i> (energy sum of each band's bins — level-accurate via Parseval) or <i>IEC 61260 filters</i> (per-band Butterworth bank, no window issue, closer to the mask especially at low frequency).</p>
+<p><b>Tonal line (narrowband).</b> A window spreads a tone over a few bins (ENBW). <b>Integrated energy</b> (band, Leq) stays exact, but the <b>drawn peak</b> is underestimated by ≈ <b>−10·log10(ENBW)</b> (~−2.4 dB with Blackman) — inherent to any windowed FFT. The <b>cursor reading</b> is corrected: snap to the local max then <b>parabolic peak interpolation</b> → true tone frequency and level (⟂ marker).</p>
+<p><b>Time chain (sample by sample).</b> Broadband levels: <b>A/C</b> weightings via IEC 61672 biquads, exponential <b>Fast/Slow/V-Slow</b> integrators, and true C-weighted peak (<b>LCpeak</b>). Exact time response, no FFT-window latency.</p>
+<p><b>Mic correction.</b> The <i>offset</i> (constant dB) applies everywhere. The <i>correction curve</i> acts on both chains: spectra corrected bin by bin; levels (LAF/LAS/LV, LCpeak <i>and</i> Leq) pass through a <b>time-domain filter</b> reproducing the curve — a biquad cascade (low-shelf + ~½-octave peaks + high-shelf) least-squares fitted, applied <b>before</b> A/C weighting. Fidelity &lt; ~0.5 dB from 50 Hz to 12.5 kHz on a smooth (MEMS-like) curve. Leq is then derived from the <b>corrected signal</b> (consistent with real time). Correction Off: original behaviour (FFT-based Leq).</p>
+<p><b>Band limiting.</b> Two adjustable filters (Expert menu) bound the analysed band: a <b>high-pass</b> (Off / 3 / 10 / 20 Hz, default 10 Hz) rejecting DC, wind and infrasound, and a <b>low-pass</b> (Off / 20 / 22 kHz, default 22 kHz). Butterworth biquads (2nd order, −3 dB at cutoff) applied upstream of weighting: levels, Leq and spectrum are bounded consistently. Mainly useful for <b>LZeq</b> (unweighted), otherwise inflated by out-of-band energy.</p>
+<p><b>Selector (diagnostic).</b> Expert menu ▸ <b>Real-time levels</b>: <i>Time-domain IIR</i> (recommended default — A/C via biquads, exact time response) or <i>FFT-derived</i> (levels smoothed from the spectrum, for bench comparison). FFT-derived reintroduces window latency and does not use the time-domain correction filter; use it only to compare. Locked during a measurement.</p>
+<p><b>Validation.</b> Processing is checked offline against analytic and normative references (IEC 61672-1, IEC 61260-1, Parseval); A/C weightings meet <b>class 1</b> from 16 Hz to 12.5 kHz. The correction filter has its own test routine (fidelity, real gain on tones, energy coherence, stability).</p>
 <div class="helpfoot">CETIM · Sound level meter — built-in help<br>Author: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 const HELP_ES=`
 <h3>Primeros pasos</h3>
@@ -4611,6 +5850,16 @@ const HELP_ES=`
 <h3>Preferencias</h3><p>Todos los ajustes se <b>guardan automáticamente</b>. Menú experto ▸ Restablecer ajustes (↺).</p>
 <h3>Sin conexión y segundo plano</h3><p>Tras una primera carga con red, la app abre sin conexión. Instálala en la pantalla de inicio. En segundo plano, iOS corta el micro: la medida se <b>pausa automáticamente</b> y se reanuda a mano.</p>
 <h3 class="warn">Precisión — leer</h3><p>Un smartphone no es un instrumento certificado. Sin calibrar, la app es fiable en <b>relativo</b>. Calibrada, se aproxima a un sonómetro de clase en un rango dado, pero no puede reivindicar clase 1/2. Indícalo en cualquier informe.</p>
+<h3>Tratamiento de señal (avanzado)</h3>
+<p>El micro alimenta <b>dos cadenas paralelas</b>.</p>
+<p><b>Cadena frecuencial (FFT).</b> El bloque se enventana (Blackman) y se transforma. La amplitud se reajusta por <b>identidad de Parseval</b>: un único factor lleva la energía espectral al RMS temporal real del bloque. La pérdida de potencia de la ventana se cancela en esa razón → el nivel es correcto <b>sea cual sea la ventana</b>. Produce los <b>espectros</b> (banda fina, tercio de octava, espectrograma), la <b>emergencia</b> y el <b>Leq cuando la corrección está en Off</b>.</p>
+<p><b>Tercio de octava.</b> Dos métodos: <i>síntesis FFT</i> (suma de energía de las rayas de cada banda — exacto en nivel gracias a Parseval) o <i>filtros IEC 61260</i> (banco Butterworth por banda, sin cuestión de ventana, más fiel a la plantilla en graves).</p>
+<p><b>Raya tonal (banda fina).</b> Una ventana extiende un tono sobre varias rayas (ENBW). La <b>energía integrada</b> (banda, Leq) es exacta, pero el <b>pico dibujado</b> se subestima en ≈ <b>−10·log10(ENBW)</b> (~−2,4 dB con Blackman) — inherente a toda FFT enventanada. La <b>lectura con cursor</b> se corrige: enganche al máximo e <b>interpolación parabólica del pico</b> → frecuencia y nivel reales del tono (marca ⟂).</p>
+<p><b>Cadena temporal (muestra a muestra).</b> Niveles de banda ancha: ponderaciones <b>A/C</b> con biquads IEC 61672, integradores exponenciales <b>Fast/Slow/V-Slow</b> y verdadero pico C (<b>LCpeak</b>). Respuesta temporal exacta, sin latencia de ventana FFT.</p>
+<p><b>Corrección del micro.</b> El <i>offset</i> (dB constante) se aplica en todo. La <i>curva de corrección</i> actúa en ambas cadenas: espectros corregidos raya por raya; niveles (LAF/LAS/LV, LCpeak <i>y</i> Leq) pasan por un <b>filtro temporal</b> que reproduce la curva — una cascada de biquads (low-shelf + peaks ~½ octava + high-shelf) ajustada por mínimos cuadrados, aplicada <b>antes</b> de las ponderaciones A/C. Fidelidad &lt; ~0,5 dB de 50 Hz a 12,5 kHz en curva suave (tipo MEMS). El Leq se deriva entonces de la <b>señal corregida</b>. Corrección Off: comportamiento original (Leq por FFT).</p>
+<p><b>Limitación de banda.</b> Dos filtros ajustables (menú experto) acotan la banda analizada: un <b>paso alto</b> (Off / 3 / 10 / 20 Hz, predet. 10 Hz) que descarta continua, viento e infrasonido, y un <b>paso bajo</b> (Off / 20 / 22 kHz, predet. 22 kHz). Biquads Butterworth (2º orden, −3 dB en el corte), aplicados antes de las ponderaciones: niveles, Leq y espectro se acotan de forma coherente. Útil sobre todo para el <b>LZeq</b> (sin ponderar).</p>
+<p><b>Selector (diagnóstico).</b> Menú experto ▸ <b>Niveles en tiempo real</b>: <i>Temporal IIR</i> (predeterminado recomendado — A/C con biquads, respuesta temporal exacta) o <i>Derivado FFT</i> (niveles suavizados desde el espectro, para comparar). El modo Derivado FFT reintroduce latencia de ventana y no usa el filtro de corrección temporal; úsalo solo para comparar. Bloqueado durante una medida.</p>
+<p><b>Validación.</b> El tratamiento se verifica sin conexión contra referencias analíticas y normativas (IEC 61672-1, IEC 61260-1, Parseval); las ponderaciones A/C cumplen <b>clase 1</b> de 16 Hz a 12,5 kHz. El filtro de corrección tiene su propia rutina de test.</p>
 <div class="helpfoot">CETIM · Sonómetro — ayuda integrada<br>Autor: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 if(I18.lang!=='fr')setLang(I18.lang); else translatePass();
 
