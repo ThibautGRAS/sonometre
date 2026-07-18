@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.89-beta</div>
+  <div class="splashver" id="splashVer">2.0.90-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -768,8 +768,8 @@ if('serviceWorker' in navigator){
     <div class="cp-lbl">SORTIE (réécoute ♪)</div>
     <div class="cp-row"><span>Haut-parleur</span><select id="outSelPop" class="micsel" style="max-width:62%"><option value="">Automatique (système)</option></select></div>
     <div class="cp-note" id="outNote" style="font-size:11px;opacity:.7;padding:2px 0 4px"></div>
-    <div class="cp-row"><span>Correction amplitude</span><button id="cpCorr">Off</button></div>
-    <div class="cp-lbl">OFFSET dBFS → dB SPL</div>
+    <div class="cp-row"><span>Gain fréquentiel</span><button id="cpCorr">Désactivé</button></div>
+    <div class="cp-lbl">OFFSET dBFS → dB SPL <span style="opacity:.6;font-weight:400">· selon modèle (iPhone ≈ 130), à caler au calibreur</span></div>
     <div class="cp-presets" id="cpPresets"></div>
     <div class="cp-fine">
       <button id="cpMinus">−0.5</button>
@@ -943,7 +943,7 @@ if('serviceWorker' in navigator){
 
       <h3>Calibration</h3>
       <p>Écran Calibration (menu expert). <b>Offset</b> : place un calibreur acoustique (94 ou 114 dB) sur le micro, saisis la référence, cale. <b>Correction fréquentielle</b> : balaye les tiers d'octave face à un sonomètre étalon pour bâtir une courbe, enregistrable en profil. La calibration est propre à chaque appareil.</p>
-      <p><b>Comment la correction est appliquée.</b> L'<i>offset</i> (dB constant) s'applique partout. Par défaut, l'app suppose <b>0 dBFS ≈ 130 dB SPL</b> (ordre de grandeur pour un micro d'iPhone — c'est une hypothèse, pas une mesure). Un calibreur remplace cette hypothèse par une valeur exacte : sans calibreur, un écart de référence se traduit par un décalage <b>uniforme</b> de tous les niveaux absolus (LAF, Leq, spectre), sans toucher aux grandeurs <b>relatives</b> (émergence, forme spectrale, comparaisons). La <i>correction fréquentielle</i>, elle, agit sur deux chaînes : (1) les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme) sont corrigés raie par raie ; (2) les <b>niveaux large bande</b> — LAF/LAS/LV, LAFmax, LCpeak <i>et</i> le <b>Leq</b> — passent par un <b>filtre temporel</b> qui reproduit la courbe (cascade de biquads), appliqué au signal <i>avant</i> les pondérations A/C. La courbe est une <b>forme normalisée à 0 dB à 1 kHz</b> (le niveau global reste porté par l'offset, pas par la courbe). Ainsi tout est cohérent, sans latence. Quand la correction est sur <b>Off</b>, le comportement d'origine est conservé (Leq issu de la FFT). Courbe douce (type MEMS) : fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz.</p>
+      <p><b>Comment la correction est appliquée.</b> L'<i>offset</i> (dB constant) s'applique partout. Par défaut, l'app suppose <b>0 dBFS ≈ 130 dB SPL</b> (ordre de grandeur pour un micro d'iPhone — c'est une hypothèse, pas une mesure). Un calibreur remplace cette hypothèse par une valeur exacte : sans calibreur, un écart de référence se traduit par un décalage <b>uniforme</b> de tous les niveaux absolus (LAF, Leq, spectre), sans toucher aux grandeurs <b>relatives</b> (émergence, forme spectrale, comparaisons). La <i>correction fréquentielle</i>, elle, agit sur deux chaînes : (1) les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme) sont corrigés raie par raie ; (2) les <b>niveaux large bande</b> — LAF/LAS/LV, LAFmax, LCpeak <i>et</i> le <b>Leq</b> — passent par un <b>filtre temporel</b> qui reproduit la courbe (cascade de biquads), appliqué au signal <i>avant</i> les pondérations A/C. La courbe est une <b>forme normalisée à 0 dB à 1 kHz</b> (le niveau global reste porté par l'offset, pas par la courbe). Le <b>graphe de calibration</b> affiche le <b>gain total rapporté au dBFS de base</b> de l'appareil (0 dB = base, iPhone ≈ 130 dBFS) : gain(f) = (offset − base) + forme. Ainsi l'offset apparaît comme un <b>décalage vertical</b> — à 128 dB (base 130) toute la courbe descend de 2 dB, et si le gain fréquentiel est <b>désactivé</b> le graphe est une <b>ligne plate</b> à −2 dB. Ainsi tout est cohérent, sans latence. Quand la correction est sur <b>Off</b>, le comportement d'origine est conservé (Leq issu de la FFT). Courbe douce (type MEMS) : fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz.</p>
 
       <h3>Tiers d'octave : FFT ou filtres IEC</h3>
       <p>Deux méthodes commutables dans le menu expert. <b>Synthèse FFT</b> : rapide, somme d'énergie des raies. <b>Filtres IEC 61260</b> : banc de filtres Butterworth par bande, plus fidèle au gabarit normalisé (surtout en basses fréquences), coût de calcul un peu plus élevé.</p>
@@ -4287,7 +4287,7 @@ function ui(){
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':S.mode==='oct'?'1/1 oct':'FFT';
   $('kDurV').textContent=durLabel(S.duration);
   const offd=Math.abs(S.offset-130.0)>=0.05;
-  $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
+  $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Défaut+off':'Défaut'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
   const badge=$('modeBadge');
   if(REPL.on){ badge.textContent=REPL.playing?'REPLAY':'REPLAY · PAUSE'; badge.className=REPL.playing?'badge replay':'badge'; }
   else if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
@@ -4808,44 +4808,50 @@ function drawCurve(){
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   const w=r.width,h=r.height,padL=22,padB=12;
   g.fillStyle=THEME.bg;g.fillRect(0,0,w,h);
-  // le graphe montre UNIQUEMENT la FORME de correction (0 dB à 1 kHz). L'offset (référence
-  // 0 dBFS, scalaire) est indépendant et n'apparaît pas ici — il ne déforme pas la courbe.
-  const curve = activeCorrCurve();     // recalée 0 dB à 1 kHz (cohérent avec compGain et le filtre temporel)
-  $('curveTitle').textContent = S.corr==='profile'?('Profil : '+(S.corrName||'—'))
-                              : S.corr==='generic'?('Générique '+S.device)
-                              : 'Sans courbe';
+  /* Le graphe montre le GAIN TOTAL rapporté au dBFS de BASE de l'appareil (0 dB = base, iPhone 130 dBFS) :
+     gain(f) = (offset - base) + forme fréquentielle (profil/défaut, 0 dB à 1 kHz).
+     -> offset 128 (base 130) : tout descend de 2 dB ; correction désactivée : ligne PLATE à (offset-base). */
+  const BASE=130;                        // dBFS de base (iPhone) — le "0" du graphe
+  const dev=S.offset-BASE;               // déviation de calibration vs base
+  const curve = activeCorrCurve();       // forme (profil/défaut), 0 dB à 1 kHz, ou null si désactivé
+  const shapeAt=f=>curve?interpCurve(curve,f):0;
+  const dispAt=f=>dev+shapeAt(f);        // gain total affiché
+  const devName=S.device||'iPhone';
+  $('curveTitle').textContent = S.corr==='profile'?('Profil perso : '+(S.corrName||'—'))
+                              : S.corr==='generic'?('Défaut '+devName)
+                              : 'Désactivé (plat)';
   const fmin=20,fmax=20000;
   const x2=f=>padL+(Math.log(f/fmin)/Math.log(fmax/fmin))*(w-padL-4);
-  // bornes dB dynamiques d'après la forme seule
-  let gmin=-3,gmax=3;
-  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){if(v<gmin)gmin=v;if(v>gmax)gmax=v;}}
+  // bornes dB dynamiques d'après le gain TOTAL (dev + forme), en incluant 0 (base) et dev
+  let gmin=Math.min(0,dev)-1,gmax=Math.max(0,dev)+1;
+  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){const t=dev+v;if(t<gmin)gmin=t;if(t>gmax)gmax=t;}}
   gmin=Math.floor((gmin-1)/2)*2; gmax=Math.ceil((gmax+1)/2)*2;
   const y2=v=>(1-(v-gmin)/(gmax-gmin))*(h-padB-2)+2;
   // grille + libellés
   g.strokeStyle=THEME.grid;g.fillStyle=THEME.axis;g.font='7px Arial';g.lineWidth=1;
   g.textAlign='right';
   for(let v=gmin;v<=gmax;v+= (gmax-gmin)>12?4:2){const y=y2(v);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText((v>0?'+':'')+v,padL-2,y+2.5);}
-  // ligne 0 dB accentuée (= médium, référence de la forme)
+  // ligne 0 dB = dBFS de BASE (référence absolue de l'appareil)
   g.strokeStyle='rgba(127,216,255,.35)';g.beginPath();g.moveTo(padL,y2(0));g.lineTo(w-2,y2(0));g.stroke();
   g.textAlign='center';g.fillStyle=THEME.axis;g.font='7px Arial';
   for(const f of [31.5,125,500,2000,8000]){g.fillText(f>=1000?(f/1000)+'k':f,x2(f),h-3);}
-  if(!curve){g.fillStyle=THEME.axis;g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);$('curveRange').textContent=gmin+'…+'+gmax+' dB';return;}
-  // courbe de correction (forme fréquentielle, 0 dB à 1 kHz)
+  // ligne de GAIN TOTAL (dev + forme) — tracée même sans courbe (plate à dev)
   g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.6;
   let st=false;
   for(let px=padL;px<=w-2;px+=2){
     const f=fmin*Math.pow(fmax/fmin,(px-padL)/(w-padL-4));
-    const y=y2(interpCurve(curve,f));
+    const y=y2(dispAt(f));
     st?g.lineTo(px,y):g.moveTo(px,y);st=true;
   }
   g.stroke();
-  // points de mesure du profil
-  {
+  // points de mesure du profil (décalés de la déviation de calibration)
+  if(curve){
     const fc=curve.fc, gg=curve.g||curve.gain_dB;
     g.fillStyle='#7FE9B8';
-    for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(gg[i]),2.2,0,7);g.fill();}}
+    for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(dev+gg[i]),2.2,0,7);g.fill();}}
   }
-  $('curveRange').textContent=gmin+'…+'+gmax+' dB';
+  // légende : le 0 = base dBFS, et l'offset courant (déviation)
+  $('curveRange').textContent='0 = '+BASE+' dBFS ('+devName+') · offset '+S.offset.toFixed(1)+(Math.abs(dev)>=0.05?(' → '+(dev>0?'+':'')+dev.toFixed(1)+' dB'):'');
 }
 function renderSweep(){
   const grid=$('sweepGrid'); grid.innerHTML='';
@@ -5014,7 +5020,7 @@ function cpShowMic(){
 }
 function renderCalPop(){
   cpShowMic(); populateMicList();
-  $('cpCorr').textContent=S.corr==='off'?'Off':S.corr==='generic'?'Auto':'Profil';
+  $('cpCorr').textContent=S.corr==='off'?'Désactivé':S.corr==='generic'?('Défaut '+(S.device||'iPhone')):'Profil perso';
   $('cpOff').textContent=S.offset.toFixed(1)+' dB';
   const g=$('cpPresets');g.innerHTML='';
   for(const v of OFFSET_PRESETS){
