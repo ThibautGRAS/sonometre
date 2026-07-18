@@ -568,7 +568,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.90-beta</div>
+  <div class="splashver" id="splashVer">2.0.91-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1077,6 +1077,7 @@ function detectDevice(){
   if(/Android/.test(u))return 'android';
   return 'desktop';
 }
+function devLabel(){ return {iphone:'iPhone',ipad:'iPad',android:'Android',desktop:'PC'}[S.device]||'iPhone'; }
 function interpCurve(curve,f){
   const fc=curve.fc, g=curve.g||curve.gain_dB;
   if(!fc||!fc.length)return 0;
@@ -4792,7 +4793,7 @@ function showMicInfo(){
 }
 function renderCal(){
   showMicInfo(); populateMicList();
-  $('calDev').textContent='Appareil détecté : '+({iphone:'iPhone',ipad:'iPad',android:'Android',desktop:'Ordinateur'}[S.device]||S.device);
+  $('calDev').textContent='Appareil détecté : '+devLabel();
   $('cGenV').textContent=S.corr==='generic'?'actif ✓':'activer';
   $('cProfV').textContent=S.corr==='profile'?(S.corrName||'chargé'):(S.profiles.length?S.profiles.length+' dispo.':'aucun');
   const ov=$('offView'); if(ov)ov.textContent='Offset actuel : '+S.offset.toFixed(1)+' dB';
@@ -4816,9 +4817,9 @@ function drawCurve(){
   const curve = activeCorrCurve();       // forme (profil/défaut), 0 dB à 1 kHz, ou null si désactivé
   const shapeAt=f=>curve?interpCurve(curve,f):0;
   const dispAt=f=>dev+shapeAt(f);        // gain total affiché
-  const devName=S.device||'iPhone';
+  const devName=devLabel();
   $('curveTitle').textContent = S.corr==='profile'?('Profil perso : '+(S.corrName||'—'))
-                              : S.corr==='generic'?('Défaut '+devName)
+                              : S.corr==='generic'?('Défaut '+devName+(S.device==='desktop'?' (plate)':''))
                               : 'Désactivé (plat)';
   const fmin=20,fmax=20000;
   const x2=f=>padL+(Math.log(f/fmin)/Math.log(fmax/fmin))*(w-padL-4);
@@ -5020,7 +5021,7 @@ function cpShowMic(){
 }
 function renderCalPop(){
   cpShowMic(); populateMicList();
-  $('cpCorr').textContent=S.corr==='off'?'Désactivé':S.corr==='generic'?('Défaut '+(S.device||'iPhone')):'Profil perso';
+  $('cpCorr').textContent=S.corr==='off'?'Désactivé':S.corr==='generic'?('Défaut '+devLabel()):'Profil perso';
   $('cpOff').textContent=S.offset.toFixed(1)+' dB';
   const g=$('cpPresets');g.innerHTML='';
   for(const v of OFFSET_PRESETS){
@@ -5226,7 +5227,7 @@ function expSpectrum(band){
 function buildCsv(){
   let csv='SONOMETRE CETIM - export\n';
   csv+='Date;'+new Date().toLocaleString('fr-FR')+';Duree [s];'+(S.eqT>0?S.eqT.toFixed(1):'0')+'\n';
-  csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
+  csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('defaut '+devLabel()):(S.corrName||'profil'))+'\n';
   const _tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
   const _mic=_tr&&_tr.label?_tr.label:'micro';
   const _rate=(S.ctx&&S.ctx.sampleRate)?Math.round(S.ctx.sampleRate)+' Hz':'?';
