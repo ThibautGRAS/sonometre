@@ -477,6 +477,22 @@ if('serviceWorker' in navigator){
   .key[disabled],.key.locked{opacity:.4;pointer-events:none;filter:saturate(.4)}
   .key.locked::after{content:"🔒";position:absolute;top:5px;right:7px;font-size:9px;opacity:.7}
   .key{position:relative}
+  /* ===== MODE RÉTROÉCLAIRAGE : halo lumineux des touches et de l'écran (indépendant du thème) ===== */
+  body.backlit .lcd{ filter:brightness(1.07) saturate(1.08) drop-shadow(0 0 12px rgba(130,205,255,.28)); transition:filter .5s }
+  body.backlit .num{ text-shadow:0 0 12px rgba(140,210,255,.6), 0 0 3px rgba(200,235,255,.5) }
+  body.backlit .badge{ text-shadow:0 0 8px rgba(140,210,255,.6) }
+  body.backlit .key{ filter:drop-shadow(0 0 7px rgba(130,205,255,.55)); transition:transform .05s, box-shadow .05s, filter .3s }
+  body.backlit .key .kf{ color:#dff1ff; text-shadow:0 0 6px rgba(150,215,255,.85), 0 1px 1px rgba(0,0,0,.35) }
+  body.backlit .key .kv{ text-shadow:0 0 8px rgba(160,220,255,.85), 0 1px 1px rgba(0,0,0,.3) }
+  body.backlit .key .dot{ box-shadow:0 0 7px rgba(130,205,255,.6) }
+  body.backlit .key:active{ filter:brightness(1.28) saturate(1.1) drop-shadow(0 0 10px rgba(150,215,255,.8)) }
+  /* teinte du halo suivant le thème */
+  body.backlit.th-neon .lcd{ filter:brightness(1.08) saturate(1.15) drop-shadow(0 0 14px rgba(255,80,110,.3)) }
+  body.backlit.th-neon .key{ filter:drop-shadow(0 0 8px rgba(255,80,110,.6)) }
+  body.backlit.th-matrix .lcd{ filter:brightness(1.07) drop-shadow(0 0 12px rgba(80,255,140,.3)) }
+  body.backlit.th-matrix .key{ filter:drop-shadow(0 0 8px rgba(80,255,140,.55)) }
+  body.backlit.th-gameboy .lcd{ filter:brightness(1.06) drop-shadow(0 0 12px rgba(180,200,90,.32)) }
+  body.backlit.th-gameboy .key{ filter:drop-shadow(0 0 7px rgba(180,200,90,.5)) }
   /* ===== thème Néon : liseré lumineux sur les touches, couleur qui change à l'appui ===== */
   body.th-neon .key{
     border:1.5px solid rgba(79,195,255,.55);
@@ -575,7 +591,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.96-beta</div>
+  <div class="splashver" id="splashVer">2.0.97-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -679,6 +695,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mLsnSlope" data-cat="affichage"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
           <div class="mrow" id="mLsnGain" data-cat="affichage"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="auto">Auto ♪</option><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
           <div class="mrow" id="mTheme" data-cat="affichage"><span>Thème de façade</span><b>Marine</b></div>
+          <div class="mrow" id="mBacklight" data-cat="affichage"><span>Rétroéclairage</span><b>Off</b></div>
           <div class="mrow act red" id="mResetPrefs" data-cat="sys"><span>Réinitialiser les paramètres</span><b>↺</b></div>
           <div class="mnote" data-cat="sys">Remet tous les réglages aux valeurs par défaut. Astuce : réinitialiser max/min/peak-hold se fait en tapant directement l'afficheur max/min.</div>
           <div class="mcredit" data-cat="sys">Sonomètre CETIM · Thibaut Gras · 2026<br>thibaut.gras@cetim.fr</div>
@@ -1062,7 +1079,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -4312,6 +4329,7 @@ function ui(){
   $('mSampleRate').querySelector('b').textContent = S.reqFs?((S.reqFs/1000)+' kHz'):('Auto'+(S.ctx?(' ('+Math.round(S.ctx.sampleRate/1000)+'k)'):''));
   $('mLP').querySelector('b').textContent=S.lpFc>0?((S.lpFc/1000)+' kHz'):'Off';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
+  $('mBacklight').querySelector('b').textContent=S.backlight?'On':'Off';
   $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
   { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=S.lsnAuto?'auto':String(S.lsnGain||0); }
 
@@ -4445,7 +4463,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
-                   'peakInterp','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','lsnGain','lsnAuto','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
+                   'peakInterp','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','lsnGain','lsnAuto','backlight','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
                    'trigDelay','trigLevel','offset','corr','corrName','emgThr','specFrames','specSmooth','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
@@ -4472,6 +4490,7 @@ function applyTheme(){
   document.body.classList.remove('th-acier','th-clair','th-oled','th-neon','th-gameboy','th-matrix');
   SG._3dKey='';
   if(S.theme!=='marine')document.body.classList.add('th-'+S.theme);
+  document.body.classList.toggle('backlit', !!S.backlight);
   // le fond de la page (html) reprend le métal brossé de la robe du thème : continuité en bas (PWA)
   try{
     const face2=getComputedStyle(document.body).getPropertyValue('--face2').trim();
@@ -4527,6 +4546,7 @@ $('mTheme').onclick=()=>{
   S.theme=THEMES[(i+1)%THEMES.length][0];
   applyTheme(); ui();
 };
+$('mBacklight').onclick=()=>{ S.backlight=!S.backlight; document.body.classList.toggle('backlit',!!S.backlight); savePrefs(); ui(); };
 $('mSg3dSmooth').onclick=()=>{ S.sg3dSmooth=((S.sg3dSmooth|0)+1)%3; SG._3dKey=''; if(window.V3)window.V3.sig=''; savePrefs(); ui(); if(S.sg3d)drawSgram(); };
 /* moyennage temporel du spectre : 1 (live) → 2 → 4 → 8 trames */
 $('mSpecFrames').onclick=()=>{ const seq=[1,2,4,8]; let i=seq.indexOf(S.specFrames|0); S.specFrames=seq[(i+1)%seq.length]; savePrefs(); ui(); if(REPL.on)renderReplayFrame(REPL.i); else drawActive(); };
@@ -5728,6 +5748,7 @@ const TR={
  'Pente filtre écoute ♪':{en:'Listen filter slope ♪',es:'Pendiente filtro escucha ♪'},
  'Thème de façade':{en:'Faceplate theme',es:'Tema de fachada'},
  "Fréquence d'échantillonnage":{en:'Sample rate',es:'Frecuencia de muestreo'},
+ 'Rétroéclairage':{en:'Backlight',es:'Retroiluminación'},
  'Calibration / réf. pleine échelle (0 dBFS)':{en:'Calibration / full-scale ref. (0 dBFS)',es:'Calibración / ref. fondo de escala (0 dBFS)'},
  'Mode générique auto':{en:'Generic auto mode',es:'Modo genérico auto'},
  'Profil chargé':{en:'Loaded profile',es:'Perfil cargado'},
