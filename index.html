@@ -1874,7 +1874,7 @@ async function renderRecList(){
   const box=$('recList'); if(!box)return;
   let recs=[], err='';
   try{ recs=await recList(); }catch(e){ err=(e&&(e.name+': '+e.message))||'erreur inconnue'; }
-  /* --- panneau de diagnostic stockage (beta) --- */
+  /* --- panneau de diagnostic stockage --- */
   let diag='';
   try{
     const persisted=navigator.storage&&navigator.storage.persisted?await navigator.storage.persisted():null;

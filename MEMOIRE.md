@@ -317,7 +317,22 @@ Deux chaînes parallèles à partir du même signal micro :
 
 - **2.0.1-beta** : **chantier 1 — capture audio + export WAV**. Captage **continu** par `ScriptProcessorNode(4096)` dédié (`AREC`, l'AnalyserNode d'affichage perd des échantillons entre frames), raccordé à un gain muet vers destination (obligatoire iOS), recâblé à chaque `acquireMic()`. Blocs **Int16** empilés uniquement pendant la mesure effective — mêmes règles que le Leq : rien si `!running`, `paused` ou `S._idle` (miroir du drapeau d'armement posé dans updateNumbers). Reset à chaque `beginRun` si actif. **Garde-fou 20 min** (~115 Mo, arrêt propre + état « plein »). UI : popover export, section **AUDIO · V2 BÊTA** (toggle persisté `recAudio`, état durée/taille/fs, boutons Partager/Télécharger WAV). Encodeur **WAV PCM16 mono** (en-tête RIFF 44 o, fs réelle du contexte). Splash `2.0.1-beta` ; pas de SW sur /beta/.
 
+## Consignes — passage beta test -> version officielle (production main)
+
+Quand on promeut la beta (branche V2) en version officielle a la RACINE de `main` :
+
+1. **La mention « beta » de la version n'existe qu'a UN seul endroit** : le libelle `#splashVer` (ex. « 2.0.89-beta », ligne ~571). Tout le reste en DERIVE : `APP_VERSION` = texte de #splashVer (ligne ~4485), utilise dans les exports/sauvegardes (`app:APP_VERSION`, ligne ~1836) et l'affichage « v »+version (hpVer, ligne ~4486). Donc, pour la prod : mettre #splashVer a « X.Y.Z » **sans** « -beta » -> aucun export/sauvegarde ne portera « beta ».
+2. **La branche V2 et le canal `/beta/` GARDENT le « -beta »** (c'est voulu : ce sont les canaux de test). Ne pas les « nettoyer ».
+3. **NE PAS toucher** a la detection du canal `location.pathname.includes('/beta/')` (lignes ~20-31) ni a la cle sessionStorage `betaPurged` : c'est FONCTIONNEL (ici « beta » designe l'URL du canal de test, pas la version), invisible pour l'utilisateur.
+4. **Recaler le cache SW** (nouveau nom `sono-<ver>-<hash>`) pour forcer la mise a jour (reseau-d'abord -> bascule des utilisateurs).
+5. **Verifier apres promotion** (API `contents/index.html?ref=main`) : #splashVer sans « beta » ; et un export de test ne doit pas contenir « beta ».
+6. Les enregistrements **deja sauvegardes sur la beta** gardent leur estampille `app:...-beta` (donnees historiques, non reecrites) ; les NOUVEAUX sont propres.
+
+`promote_main.py` applique automatiquement les points 1 et 4 (splashVer -beta -> propre + recalage cache).
+
 ## 8ter. Journal des versions (V1 / main)
+
+- **PROMOTION 2.0.89 (production)** : la branche V2 (ex-beta) est promue en PRODUCTION a la racine de `main` (version affichee **2.0.89**, sans -beta ; cache SW `sono-2.0.89-<hash>`, reseau-d'abord -> les utilisateurs V1 basculent sur V2 a la prochaine visite en ligne). L'ancienne V1 (1.35.x) reste dans l'historique git (restaurable via deploy_v1.py) ; la branche V2 et le canal /beta restent inchanges pour le developpement continu. Ref rapport de validation : SONO-VAL-000.
 
 - **1.35.46** : **zones mortes autour des icônes superposées** (portage du correctif 2.0.9-beta) : un tap visant un bouton posé sur un graphe ne pose plus de curseur ni ne déclenche le zoom du canvas en dessous (garde `overOverlayBtn`, marge 10 px, 4 gestionnaires).
 
