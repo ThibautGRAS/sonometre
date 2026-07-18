@@ -325,6 +325,13 @@ if('serviceWorker' in navigator){
 
   /* écran MODE EXPERT */
   .menu{height:100%;display:flex;flex-direction:column;gap:4px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px;touch-action:pan-y}
+  .mtabs{position:sticky;top:0;z-index:5;display:flex;gap:5px;padding:2px 2px 7px;margin:-2px 0 2px;background:rgba(6,16,28,.86);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .mtab{flex:1;padding:8px 4px;border:1px solid rgba(127,216,255,.22);background:rgba(10,31,66,.5);color:#9fc4e0;border-radius:9px;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.01em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
+  .mtab.on{background:rgba(79,195,255,.20);color:#EAF5FF;border-color:rgba(79,195,255,.7)}
+  .mtab:active{background:rgba(79,195,255,.3)}
+  .cell.resettable{cursor:pointer}
+  .cell.resettable .k::after{content:' ↺';opacity:.45;font-size:.82em}
+  .cell.resettable:active{background:rgba(127,216,255,.12);border-radius:8px}
   .menu::-webkit-scrollbar{width:3px}
   .menu::-webkit-scrollbar-thumb{background:rgba(79,195,255,.3);border-radius:2px}
   .mrow{display:flex;justify-content:space-between;align-items:center;background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--lcd-ink);flex:0 0 auto}
@@ -568,7 +575,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.91-beta</div>
+  <div class="splashver" id="splashVer">2.0.92-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -629,8 +636,8 @@ if('serviceWorker' in navigator){
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
           <div class="cell hero"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
-          <div class="cell"><div class="k">LCpeak</div><div class="v red" id="vLCpk">--.-</div></div>
-          <div class="cell"><div class="k">LAFmax</div><div class="v red" id="vMax">--.-</div></div>
+          <div class="cell resettable"><div class="k">LCpeak</div><div class="v red" id="vLCpk">--.-</div></div>
+          <div class="cell resettable"><div class="k">LAFmax</div><div class="v red" id="vMax">--.-</div></div>
           <div class="cell"><div class="k">L10</div><div class="v" id="vL10">--.-</div></div>
           <div class="cell"><div class="k">L90</div><div class="v" id="vL90">--.-</div></div>
         </div>
@@ -640,39 +647,43 @@ if('serviceWorker' in navigator){
           <div class="cell"><div class="k">LCeq</div><div class="v" id="vLCeq">--.-</div></div>
           <div class="cell"><div class="k">LZeq</div><div class="v" id="vLZeq">--.-</div></div>
           <div class="cell"><div class="k">L50</div><div class="v" id="vL50">--.-</div></div>
-          <div class="cell"><div class="k">LAFmin</div><div class="v" id="vMin">--.-</div></div>
+          <div class="cell resettable"><div class="k">LAFmin</div><div class="v" id="vMin">--.-</div></div>
           <div class="cell"><div class="k">Émergence tonale</div><div class="v small" id="vEmg">--</div></div>
         </div>
         <div class="valdots"><span class="vd on" id="vd0"></span><span class="vd" id="vd1"></span></div>
       </div>
       <div class="gpane" id="paneMenu">
         <div class="menu">
-          <div class="mrow" id="mPreset" style="border-color:rgba(79,195,255,.4);background:rgba(79,195,255,.10)"><span>Type de spectre</span><b id="mPresetV" style="color:#4FC3FF;white-space:nowrap">▸ choisir</b></div>
-          <div class="mrow" id="mWin"><span>Type de fenêtre</span><b>Blackman</b></div>
-          <div class="mrow" id="mFft"><span>Nombre de points (FFT)</span><b>16384</b></div>
-          <div class="mrow" id="mRes"><span>Résolution · bande</span><b>2.9 Hz</b></div>
-          <div class="mrow" id="mOverlap"><span>Recouvrement (overlap)</span><b>50 %</b></div>
-          <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
-          <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
-          <div class="mrow" id="mEmgThr"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
-          <div class="mrow" id="mSpecFrames"><span>Moyennage spectre (trames)</span><b>4</b></div>
-          <div class="mrow" id="mSpecSmooth"><span>Lissage fréquentiel (bande fine)</span><b>1/12 oct</b></div>
-          <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
-          <div class="mrow" id="mLvlSrc"><span>Niveaux temps réel (LAF…, Leq)</span><b>Temporel IIR</b></div>
-          <div class="mrow" id="mHP"><span>Passe-haut (limite grave)</span><b>10 Hz</b></div>
-          <div class="mrow" id="mLP"><span>Passe-bas (limite aigu)</span><b>22 kHz</b></div>
-          <div class="mrow" id="mSg3dSmooth"><span>Lissage / perf. 3D</span><b>Lisse</b></div>
-          <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
-          <div class="mrow" id="mLsnGain"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
-          <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
-          <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / réf. pleine échelle (0 dBFS)</span><b style="color:#2FBF83">▸</b></div>
-          <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
-          <div class="mrow act" id="mClrHist"><span>Effacer l'évolution temporelle</span><b>⌫</b></div>
-          <div class="mrow act" id="mClrPeak"><span>Effacer max / min / peak-hold</span><b>⌫</b></div>
-          <div class="mrow act red" id="mClrAll"><span>Tout effacer (remise à zéro)</span><b>⌫</b></div>
-          <div class="mrow act red" id="mResetPrefs"><span>Réinitialiser les paramètres</span><b>↺</b></div>
-          <div class="mcredit">Sonomètre CETIM · Thibaut Gras · 2026<br>thibaut.gras@cetim.fr</div>
-          <div class="mnote">FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s · faire défiler pour voir toutes les options</div>
+          <div class="mtabs" id="mTabs">
+            <button class="mtab on" data-cat="signal">Signal</button>
+            <button class="mtab" data-cat="affichage">Affichage</button>
+            <button class="mtab" data-cat="calib">Calibration</button>
+            <button class="mtab" data-cat="sys">Système</button>
+          </div>
+          <div class="mrow" id="mPreset" data-cat="signal" style="border-color:rgba(79,195,255,.4);background:rgba(79,195,255,.10)"><span>Type de spectre</span><b id="mPresetV" style="color:#4FC3FF;white-space:nowrap">▸ choisir</b></div>
+          <div class="mrow" id="mWin" data-cat="signal"><span>Type de fenêtre</span><b>Blackman</b></div>
+          <div class="mrow" id="mFft" data-cat="signal"><span>Nombre de points (FFT)</span><b>16384</b></div>
+          <div class="mrow" id="mRes" data-cat="signal"><span>Résolution · bande</span><b>2.9 Hz</b></div>
+          <div class="mrow" id="mOverlap" data-cat="signal"><span>Recouvrement (overlap)</span><b>50 %</b></div>
+          <div class="mrow" id="mPeakInterp" data-cat="signal"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
+          <div class="mrow" id="mEmgThr" data-cat="signal"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
+          <div class="mrow" id="mSpecFrames" data-cat="signal"><span>Moyennage spectre (trames)</span><b>4</b></div>
+          <div class="mrow" id="mSpecSmooth" data-cat="signal"><span>Lissage fréquentiel (bande fine)</span><b>1/12 oct</b></div>
+          <div class="mrow" id="mToctSrc" data-cat="signal"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
+          <div class="mrow" id="mLvlSrc" data-cat="signal"><span>Niveaux temps réel (LAF…, Leq)</span><b>Temporel IIR</b></div>
+          <div class="mrow" id="mHP" data-cat="signal"><span>Passe-haut (limite grave)</span><b>10 Hz</b></div>
+          <div class="mrow" id="mLP" data-cat="signal"><span>Passe-bas (limite aigu)</span><b>22 kHz</b></div>
+          <div class="mrow" id="mSgSpeed" data-cat="affichage"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
+          <div class="mrow" id="mSg3dSmooth" data-cat="affichage"><span>Lissage / perf. 3D</span><b>Lisse</b></div>
+          <div class="mrow" id="mLsnSlope" data-cat="affichage"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
+          <div class="mrow" id="mLsnGain" data-cat="affichage"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
+          <div class="mrow" id="mTheme" data-cat="affichage"><span>Thème de façade</span><b>Marine</b></div>
+          <div class="mrow" id="mCalib" data-cat="calib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Ouvrir l'écran de calibration</span><b style="color:#2FBF83">▸</b></div>
+          <div class="mnote" data-cat="calib">Réf. pleine échelle (0 dBFS), gain fréquentiel (défaut appareil / profil perso), calibreur 1 kHz, balayage tiers d'octave et profils.</div>
+          <div class="mrow act red" id="mResetPrefs" data-cat="sys"><span>Réinitialiser les paramètres</span><b>↺</b></div>
+          <div class="mnote" data-cat="sys">Remet tous les réglages aux valeurs par défaut. Astuce : réinitialiser max/min/peak-hold se fait en tapant directement l'afficheur max/min.</div>
+          <div class="mcredit" data-cat="sys">Sonomètre CETIM · Thibaut Gras · 2026<br>thibaut.gras@cetim.fr</div>
+          <div class="mnote" data-cat="signal">FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s.</div>
         </div>
       </div>
       <div class="gpane" id="paneCal">
@@ -2355,7 +2366,7 @@ function resetSg3d(){ if(window.V3){window.V3.frames.length=0;window.V3.ema=null
 /* effacements ciblés (mode expert) */
 function clearSgram(){ if(SG.cols)SG.cols.fill(null); SG.colSeq=0; SG.vScaleKey=''; SG.vSeq=-1; resetSg3d(); S.sgCursor=null; drawActive(); }
 function clearHist(){ S.hist=[]; S.histLast=0; drawActive(); }
-function clearPeak(){ S.lafMax=-Infinity; S.lafMin=Infinity; S.peakHold=0; if(S.bandPeak)S.bandPeak.fill(-99); updateNumbers(-99); drawActive(); }
+function clearPeak(){ S.lafMax=-Infinity; S.lafMin=Infinity; S.peakHold=0; S.lcPeak=-Infinity; if(S.bandPeak)S.bandPeak.fill(-99); updateNumbers(-99); drawActive(); }
 
 /* ================= Boucle ================= */
 const lvl=p=>p>0?10*Math.log10(p)+S.offset:-99;
@@ -4287,8 +4298,9 @@ function ui(){
   $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':S.mode==='oct'?'1/1 oct':'FFT';
   $('kDurV').textContent=durLabel(S.duration);
-  const offd=Math.abs(S.offset-130.0)>=0.05;
-  $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Défaut+off':'Défaut'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
+  const off=Math.round(S.offset*10)/10, offStr=(off%1===0?off.toFixed(0):off.toFixed(1));
+  const dot=S.corr==='off'?'#8aa0b8':S.corr==='generic'?'#4FC3FF':'#2FBF83';   // gris=désactivé · bleu=défaut · vert=profil
+  $('kCalV').innerHTML='<span style="color:'+dot+'">●</span> '+offStr+' dB';
   const badge=$('modeBadge');
   if(REPL.on){ badge.textContent=REPL.playing?'REPLAY':'REPLAY · PAUSE'; badge.className=REPL.playing?'badge replay':'badge'; }
   else if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
@@ -4962,13 +4974,27 @@ $('calDo1k').onclick=()=>{
 
 /* effacements — flash de confirmation sur la ligne touchée */
 function flashDone(el){const b=el.querySelector('b'),o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,700);}
-$('mClrSgram').onclick=function(){clearSgram();flashDone(this);};
-$('mClrHist').onclick=function(){clearHist();flashDone(this);};
-$('mClrPeak').onclick=function(){clearPeak();flashDone(this);};
-$('mClrAll').onclick=function(){clearSgram();resetMeasure();flashDone(this);};
 $('mResetPrefs').onclick=function(){
   if(confirm("Réinitialiser tous les paramètres (thème, pondération, échelles, calibration…) aux valeurs par défaut ? L'application va redémarrer.")) resetPrefs();
 };
+
+/* ===== onglets du menu expert (filtrage par catégorie) ===== */
+function setMenuCat(cat){
+  document.querySelectorAll('#mTabs .mtab').forEach(t=>t.classList.toggle('on',t.dataset.cat===cat));
+  document.querySelectorAll('#paneMenu .mrow, #paneMenu .mnote, #paneMenu .mcredit').forEach(el=>{
+    if(el.dataset.cat) el.style.display = (el.dataset.cat===cat) ? '' : 'none';
+  });
+  S.menuCat=cat;
+  const m=document.querySelector('#paneMenu .menu'); if(m)m.scrollTop=0;
+}
+document.querySelectorAll('#mTabs .mtab').forEach(t=>t.onclick=()=>setMenuCat(t.dataset.cat));
+setMenuCat('signal');   // catégorie par défaut à l'ouverture
+
+/* réinitialiser max / min / peak-hold / LCpeak en tapant l'afficheur correspondant */
+['vMax','vMin','vLCpk'].forEach(id=>{
+  const el=$(id), cell=el&&el.closest('.cell');
+  if(cell) cell.onclick=()=>{ clearPeak(); toast('Max / min / peak réinitialisés'); };
+});
 
 $('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();if(REPL.on)renderReplayFrame(REPL.i);else drawActive();};
 $('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER.length];ui();if(REPL.on)renderReplayFrame(REPL.i);else drawActive();};
