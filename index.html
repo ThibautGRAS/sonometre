@@ -575,7 +575,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.94-beta</div>
+  <div class="splashver" id="splashVer">2.0.95-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -677,7 +677,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mSgSpeed" data-cat="affichage"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
           <div class="mrow" id="mSg3dSmooth" data-cat="affichage"><span>Lissage / perf. 3D</span><b>Lisse</b></div>
           <div class="mrow" id="mLsnSlope" data-cat="affichage"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
-          <div class="mrow" id="mLsnGain" data-cat="affichage"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
+          <div class="mrow" id="mLsnGain" data-cat="affichage"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="auto">Auto ♪</option><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
           <div class="mrow" id="mTheme" data-cat="affichage"><span>Thème de façade</span><b>Marine</b></div>
           <div class="mrow act red" id="mResetPrefs" data-cat="sys"><span>Réinitialiser les paramètres</span><b>↺</b></div>
           <div class="mnote" data-cat="sys">Remet tous les réglages aux valeurs par défaut. Astuce : réinitialiser max/min/peak-hold se fait en tapant directement l'afficheur max/min.</div>
@@ -1062,7 +1062,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -1378,6 +1378,19 @@ function unflashBtn(btn){ if(!btn)return; clearTimeout(btn._ft); btn.classList.r
 const LSN={on:false, nodes:null, lastF:'', warned:false, _raf:0};
 /* source d'entrée de l'écoute filtrée : le son EN COURS — replay si lecture, sinon micro */
 function lsnSrc(){ return (REPL.on&&REPL.src)?REPL.src:S.srcNode; }
+/* gain d'écoute en linéaire : fixe (dB) OU automatique.
+   Auto + relecture : normalise d'après le pic de l'enregistrement (vise ~ -1 dBFS).
+   Auto + live : makeup généreux, un limiteur en aval empêche la saturation. */
+function lsnGainLinear(){
+  if(!S.lsnAuto) return Math.pow(10,(S.lsnGain||0)/20);
+  if(REPL.on && REPL.buf){
+    let pk=0; const ch=REPL.buf.getChannelData(0);
+    for(let i=0;i<ch.length;i++){ const a=ch[i]<0?-ch[i]:ch[i]; if(a>pk)pk=a; }
+    if(pk<1e-4) return 8;
+    return Math.max(0.1, Math.min(64, 0.89/pk));   // meilleur gain sans écrêter l'enregistrement
+  }
+  return Math.pow(10,18/20);                        // live : +18 dB + limiteur
+}
 function lsnBuild(){
   const src=lsnSrc();
   if(!S.ctx||!src)return false;
@@ -1387,12 +1400,17 @@ function lsnBuild(){
   const hp=[],lp=[];
   for(let i=0;i<N;i++){const f=c.createBiquadFilter();f.type='highpass';f.Q.value=0.707;hp.push(f);}
   for(let i=0;i<N;i++){const f=c.createBiquadFilter();f.type='lowpass'; f.Q.value=0.707;lp.push(f);}
-  const gn=c.createGain(); gn.gain.value=Math.pow(10,(S.lsnGain||0)/20);   // gain de rattrapage (dB)
-  const chain=[...hp,...lp,gn];
+  const gn=c.createGain(); gn.gain.value=lsnGainLinear();
+  let lim=null;
+  if(S.lsnAuto){                                    // limiteur (empêche toute saturation en sortie)
+    lim=c.createDynamicsCompressor();
+    lim.threshold.value=-1.0; lim.knee.value=0; lim.ratio.value=20; lim.attack.value=0.003; lim.release.value=0.25;
+  }
+  const chain=[...hp,...lp,gn]; if(lim)chain.push(lim);
   src.connect(chain[0]);
   for(let i=0;i<chain.length-1;i++)chain[i].connect(chain[i+1]);
-  gn.connect(c.destination);
-  LSN.nodes={hp,lp,gn,first:chain[0],srcRef:src};
+  chain[chain.length-1].connect(c.destination);
+  LSN.nodes={hp,lp,gn,lim,first:chain[0],srcRef:src};
   return true;
 }
 /* rebranche l'écoute filtrée sur une nouvelle source (seek/relance du replay, retour micro) */
@@ -1417,6 +1435,7 @@ function lsnOff(){
   if(LSN.nodes){
     try{LSN.nodes.srcRef&&LSN.nodes.srcRef.disconnect(LSN.nodes.first);}catch(e){}
     try{LSN.nodes.gn.disconnect();}catch(e){}
+    try{LSN.nodes.lim&&LSN.nodes.lim.disconnect();}catch(e){}
     LSN.nodes=null;
   }
   LSN.on=false; LSN.lastF='';
@@ -1427,7 +1446,7 @@ function lsnRebuild(){                     // changement de pente pendant l'éco
   if(was && lsnBuild()){LSN.on=true;LSN.lastF='';lsnUpdate();}
 }
 function lsnSetGain(){                     // ajuste le gain sans reconstruire la chaîne
-  if(LSN.nodes&&S.ctx) LSN.nodes.gn.gain.setTargetAtTime(Math.pow(10,(S.lsnGain||0)/20),S.ctx.currentTime,0.05);
+  if(LSN.nodes&&S.ctx) LSN.nodes.gn.gain.setTargetAtTime(lsnGainLinear(),S.ctx.currentTime,0.05);
 }
 /* garde le filtre calé sur la bande zoomée même sans mesure (loop() ne tourne pas alors).
    En mesure, loop() appelle déjà lsnUpdate → ici on ne fait que reprogrammer la frame. */
@@ -2177,6 +2196,7 @@ async function replayStart(id,startAt,startPaused){
   if(S.stream){ try{ for(const t of S.stream.getTracks())t.stop(); }catch(_){} S.stream=null; }
   REPL.savedOff=(REPL.savedOff!=null?REPL.savedOff:S.offset); if(typeof meta.offset==='number')S.offset=meta.offset;
   REPL.on=true; REPL.buf=buf; REPL.meta=meta; REPL.dur=buf.duration; REPL.lastId=meta.id; REPL.playing=false;
+  if(LSN.on&&S.lsnAuto) lsnSetGain();                             // recalcule le meilleur gain d'après l'enregistrement chargé
   resetMeasure();
   S.running=true; S.paused=true; S.lastT=0; S.warmT=0; S.warmAge=0; S.delayT=0; S.trigWait=false; S.K=0;
   clearRunVisuals();
@@ -4291,7 +4311,7 @@ function ui(){
   $('mLP').querySelector('b').textContent=S.lpFc>0?((S.lpFc/1000)+' kHz'):'Off';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
   $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
-  { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=String(S.lsnGain||0); }
+  { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=S.lsnAuto?'auto':String(S.lsnGain||0); }
 
   updScaleLbl();
   $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Expert';
@@ -4423,7 +4443,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
-                   'peakInterp','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
+                   'peakInterp','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','lsnGain','lsnAuto','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
                    'trigDelay','trigLevel','offset','corr','corrName','emgThr','specFrames','specSmooth','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
@@ -4511,7 +4531,13 @@ $('mSpecFrames').onclick=()=>{ const seq=[1,2,4,8]; let i=seq.indexOf(S.specFram
 /* lissage fréquentiel (bande fine) : Off → 1/6 → 1/12 → 1/24 oct */
 $('mSpecSmooth').onclick=()=>{ const seq=[0,6,12,24]; let i=seq.indexOf(S.specSmooth|0); S.specSmooth=seq[(i+1)%seq.length]; savePrefs(); ui(); if(REPL.on)renderReplayFrame(REPL.i); else drawActive(); };
 $('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); savePrefs(); };
-$('lsnGainSel').onchange=(e)=>{ S.lsnGain=+e.target.value||0; lsnSetGain(); savePrefs(); };
+$('lsnGainSel').onchange=(e)=>{
+  const v=e.target.value, wasAuto=S.lsnAuto;
+  if(v==='auto') S.lsnAuto=true; else { S.lsnAuto=false; S.lsnGain=+v||0; }
+  if(S.lsnAuto!==wasAuto) lsnRebuild();   // ajoute/retire le limiteur
+  else lsnSetGain();
+  savePrefs(); ui();
+};
 async function applyMicChoice(sel){
   S.micId=sel.value||''; savePrefs();
   const want=sel.selectedOptions[0]?sel.selectedOptions[0].textContent:'';
