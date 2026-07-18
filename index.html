@@ -1006,7 +1006,7 @@ if('serviceWorker' in navigator){
         <label><input type="radio" name="expBand" value="toct"> Tiers d'octave</label>
         <label><input type="radio" name="expBand" value="oct"> Octave</label>
       </div>
-      <div class="msub">AUDIO · V2 BÊTA</div>
+      <div class="msub">AUDIO · ENREGISTREMENT</div>
       <div class="ep-figs">
         <label><input type="checkbox" id="arecTgl"> Enregistrer l'audio pendant la mesure</label>
       </div>
@@ -1874,7 +1874,7 @@ async function renderRecList(){
   const box=$('recList'); if(!box)return;
   let recs=[], err='';
   try{ recs=await recList(); }catch(e){ err=(e&&(e.name+': '+e.message))||'erreur inconnue'; }
-  /* --- panneau de diagnostic stockage (beta) --- */
+  /* --- panneau de diagnostic stockage --- */
   let diag='';
   try{
     const persisted=navigator.storage&&navigator.storage.persisted?await navigator.storage.persisted():null;
