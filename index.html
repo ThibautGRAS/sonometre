@@ -575,7 +575,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.93-beta</div>
+  <div class="splashver" id="splashVer">2.0.94-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -663,6 +663,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mPreset" data-cat="signal" style="border-color:rgba(79,195,255,.4);background:rgba(79,195,255,.10)"><span>Type de spectre</span><b id="mPresetV" style="color:#4FC3FF;white-space:nowrap">▸ choisir</b></div>
           <div class="mrow" id="mWin" data-cat="signal"><span>Type de fenêtre</span><b>Blackman</b></div>
           <div class="mrow" id="mFft" data-cat="signal"><span>Nombre de points (FFT)</span><b>16384</b></div>
+          <div class="mrow" id="mSampleRate" data-cat="signal"><span>Fréquence d'échantillonnage</span><b>Auto</b></div>
           <div class="mrow" id="mRes" data-cat="signal"><span>Résolution · bande</span><b>2.9 Hz</b></div>
           <div class="mrow" id="mOverlap" data-cat="signal"><span>Recouvrement (overlap)</span><b>50 %</b></div>
           <div class="mrow" id="mPeakInterp" data-cat="signal"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
@@ -688,7 +689,7 @@ if('serviceWorker' in navigator){
         <div class="cal">
           <div class="calhead">
             <span id="calDev">Appareil : —</span>
-            <button class="calx" id="calClose">✕ fermer</button>
+            <button class="calx" id="calClose">✓ Terminé</button>
           </div>
           <div class="calbody">
             <div class="msub">MICRO ACTIF</div>
@@ -1061,7 +1062,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -1752,8 +1753,9 @@ function configureAnalyser(){
   SG.init=false;                       // recartographie bins→lignes (les données sgram sont préservées par sgSetup)
   if(typeof REPL!=='undefined' && REPL.on && !REPL._building){ clearTimeout(REPL._reanaT); REPL._reanaT=setTimeout(replReanalyze,60); }
 }
+function makeCtx(){ const O=window.AudioContext||window.webkitAudioContext; try{ return S.reqFs?new O({sampleRate:S.reqFs}):new O(); }catch(_){ return new O(); } }
 async function initAudio(){
-  S.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  S.ctx=makeCtx();
   try{ if(S.outId&&S.ctx.setSinkId) await S.ctx.setSinkId(S.outId); }catch(_){}   // sortie réécoute (si supportée)
   S.analyser=S.ctx.createAnalyser();
   await acquireMic();
@@ -2280,7 +2282,7 @@ async function reviveMic(fromGesture){
   if(fromGesture && S.ctx.state!=='running'){
     try{
       try{ await S.ctx.close(); }catch(e){}
-      S.ctx=new (window.AudioContext||window.webkitAudioContext)();
+      S.ctx=makeCtx();
       S.analyser=S.ctx.createAnalyser();
       await acquireMic();
       configureAnalyser();
@@ -4285,6 +4287,7 @@ function ui(){
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
   $('mLvlSrc').querySelector('b').textContent=S.lvlSrc==='fft'?'Dérivé FFT':'Temporel IIR';
   $('mHP').querySelector('b').textContent=S.hpFc>0?(S.hpFc+' Hz'):'Off';
+  $('mSampleRate').querySelector('b').textContent = S.reqFs?((S.reqFs/1000)+' kHz'):('Auto'+(S.ctx?(' ('+Math.round(S.ctx.sampleRate/1000)+'k)'):''));
   $('mLP').querySelector('b').textContent=S.lpFc>0?((S.lpFc/1000)+' kHz'):'Off';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
   $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
@@ -4420,7 +4423,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
-                   'peakInterp','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
+                   'peakInterp','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
                    'trigDelay','trigLevel','offset','corr','corrName','emgThr','specFrames','specSmooth','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
@@ -4549,6 +4552,26 @@ $('mLP').onclick=()=>{
   if(S.running&&!REPL.on)return;
   const opts=[0,20000,22000]; S.lpFc=opts[(opts.indexOf(S.lpFc)+1)%opts.length];
   if(S.analyser)configureAnalyser(); savePrefs(); ui(); drawActive();
+};
+/* fréquence d'échantillonnage : Auto (défaut appareil) → 24 → 12 → 8 kHz. Un fs plus bas
+   abaisse le Nyquist mais affine le bas du spectre (résolution) et allège le CPU. */
+async function applySampleRate(){
+  if(!S.ctx){ ui(); return; }                       // pas encore de contexte : appliqué au prochain démarrage
+  try{ await S.ctx.close(); }catch(_){}
+  S.ctx=makeCtx();
+  try{ if(S.outId&&S.ctx.setSinkId) await S.ctx.setSinkId(S.outId); }catch(_){}
+  S.analyser=S.ctx.createAnalyser();
+  if(S.micWanted){ try{ await acquireMic(); }catch(_){ setMicStat('off'); } }
+  configureAnalyser(); S.lastT=0; drawActive(); ui();
+  const got=S.ctx?Math.round(S.ctx.sampleRate):0;
+  if(S.reqFs && got && Math.abs(got-S.reqFs)>50) toast('Appareil : '+(got/1000)+' kHz (réglage non appliqué)');
+  else toast('Échantillonnage : '+(got/1000)+' kHz');
+}
+$('mSampleRate').onclick=async()=>{
+  if(S.running || (typeof REPL!=='undefined'&&REPL.on))return;   // ni en mesure ni en replay (le contexte est utilisé)
+  const opts=[0,24000,12000,8000]; S.reqFs=opts[(opts.indexOf(S.reqFs)+1)%opts.length];
+  savePrefs(); ui();
+  await applySampleRate();
 };
 /* ===== Popover ÉCHELLES / DYNAMIQUE (affichage seul, réglable en temps réel) ===== */
 const DB_PRESETS=[['Auto',null],['20–110',[20,110]],['30–90',[30,90]],['40–80',[40,80]]];
@@ -4723,7 +4746,7 @@ $('dpFMax').addEventListener('change',applyFreqInput);
 $('dpInterp').onclick=()=>{S.sgInterp=!S.sgInterp;SG.vSeq=-1;SG.vViewKey='';drawActive();renderDynPop();};
 $('dpFscale').onclick=()=>{ S.fscale=S.fscale==='log'?'lin':'log'; SG.init=false; resetView(); savePrefs(); ui(); renderDynPop(); };
 /* l'onglet « Calibration » du menu ouvre directement l'écran de calibration (voir setMenuCat) */
-$('calClose').onclick=()=>{S.screen='menu';ui();};
+$('calClose').onclick=()=>{S.screen=(S.prevScreen&&S.prevScreen!=='menu'&&S.prevScreen!=='cal')?S.prevScreen:'spec';ui();};   // Terminé : retour direct à l'écran de mesure
 
 /* ===== Profils (localStorage) ===== */
 const LS_KEY='cetim_sono_profiles';
@@ -5084,6 +5107,7 @@ function setLocks(){
   $('kDur').classList.toggle('locked',mic||REPL.on);   // durée sans objet en replay
   $('mLvlSrc').classList.toggle('locked',mic);          // méthode des niveaux figée pendant la mesure
   $('mHP').classList.toggle('locked',mic); $('mLP').classList.toggle('locked',mic);
+  $('mSampleRate').classList.toggle('locked',mic);
 }
 
 /* icônes transport universelles */
@@ -5675,6 +5699,7 @@ const TR={
  'Rendu 3D spectrogramme':{en:'3D spectrogram render',es:'Render 3D espectrograma'},
  'Pente filtre écoute ♪':{en:'Listen filter slope ♪',es:'Pendiente filtro escucha ♪'},
  'Thème de façade':{en:'Faceplate theme',es:'Tema de fachada'},
+ "Fréquence d'échantillonnage":{en:'Sample rate',es:'Frecuencia de muestreo'},
  'Calibration / réf. pleine échelle (0 dBFS)':{en:'Calibration / full-scale ref. (0 dBFS)',es:'Calibración / ref. fondo de escala (0 dBFS)'},
  'Mode générique auto':{en:'Generic auto mode',es:'Modo genérico auto'},
  'Profil chargé':{en:'Loaded profile',es:'Perfil cargado'},
