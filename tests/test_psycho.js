@@ -4,8 +4,8 @@ const src=fs0.readFileSync("index.html","utf8").match(/<script>([\s\S]*?)<\/scri
 function grab(re){const m=src.match(re);if(!m)throw new Error("grab fail "+re);return m[0];}
 let S={bands:null,curBnd:null,offset:40,fftN:16384,binHz:48000/16384,ctx:{sampleRate:48000}};
 const code=
-  grab(/const PSY_BARK_HI=[\s\S]*?const PSY_CN=[^;]*;/)
- +grab(/function psyBarkOf[\s\S]*?\n\}/)
+  grab(/const ISO_F28=[\s\S]*?function isoCalcSlopes[\s\S]*?\n\}/)
+ +grab(/let ISO_MAP=null;/)
  +grab(/function psyLoudness[\s\S]*?\n\}/)
  +grab(/function psySharpness[\s\S]*?\n\}/)
  +grab(/function fft\(re,im\)[\s\S]*?\n\}/)
@@ -22,9 +22,9 @@ function chk(name,val,lo,hi){const ok=val>=lo&&val<=hi;console.log((ok?"OK  ":"F
 
 // 1) Sonie / Acuité
 S.bands=NOMS; S.curBnd=new Array(NOMS.length).fill(0); S.curBnd[i1k]=1; S.offset=40;
-const L40=psyLoudness(); chk("Sonie 1kHz/40dB (sone)",L40.N,0.85,1.20);
+const L40=psyLoudness(); chk("Sonie 1kHz/40dB (sone)",L40.N,0.85,1.05);
 chk("Acuité 1kHz (acum)",psySharpness(L40.Nspec),0.7,1.2);
-for(const a of [[50,1.7,2.6],[60,3.4,5.0],[70,7.0,10.0],[80,13.5,19.0]]){ S.offset=a[0]; chk("Sonie 1kHz/"+a[0]+"dB",psyLoudness().N,a[1],a[2]); }
+for(const a of [[50,1.6,2.0],[60,3.2,3.8],[70,6.3,7.6],[80,12.8,15.2]]){ S.offset=a[0]; chk("Sonie 1kHz/"+a[0]+"dB",psyLoudness().N,a[1],a[2]); }
 S.offset=40;
 
 // 2) Rugosité multi-bande

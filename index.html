@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.2-beta</div>
+  <div class="splashver" id="splashVer">2.2.3-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1022,7 +1022,7 @@ if('serviceWorker' in navigator){
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <h3>Psychoacoustique (toile)</h3>
-      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (t.u., présence de raies tonales — modèle d'Aures). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. Chaque indicateur est recalculé ~7×/s sur sa propre fenêtre (sonie et acuité 250 ms, rugosité 1 s, tonalité 2 s, fluctuation 5 s) à partir d'un tampon de 5 s. Le polygone <b>plein</b> = valeur actuelle ; <b>MOY</b> = moyenne depuis le début ; le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs s'affichent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). La <b>sonie</b> suit Zwicker (ISO 532-1, avec étalement de masquage, calée à 1 sone pour 1 kHz / 40 dB) et l'<b>acuité</b> la DIN 45692. La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> avec <b>décomposition en canaux auditifs chevauchants</b> (0,5 Bark) et <b>cohérence inter-bandes</b> (analyse sur ~340 ms) ; la <b>fluctuation</b> suit <b>Fastl band-wise</b> — modulation de la sonie spécifique <b>par bande de Bark</b>, indépendante du niveau (fenêtre 5 s) ; la <b>tonalité</b> applique le modèle d'<b>Aures</b> (raies tonales pondérées par la fréquence, pic ~700 Hz, et l'excès de niveau). Rugosité et fluctuation sont calées sur les tons AM de référence (1 asper @70 Hz, 1 vacil @4 Hz), la tonalité sur un son pur 1 kHz. Indicateurs de confort validés sur banc synthétique (confrontation MOSQITO prévue) — non certifiés.</p>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (t.u., présence de raies tonales — modèle d'Aures). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. Chaque indicateur est recalculé ~7×/s sur sa propre fenêtre (sonie et acuité 250 ms, rugosité 1 s, tonalité 2 s, fluctuation 5 s) à partir d'un tampon de 5 s. Le polygone <b>plein</b> = valeur actuelle ; <b>MOY</b> = moyenne depuis le début ; le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs s'affichent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). La <b>sonie</b> applique la méthode <b>tabulée ISO 532-1</b> (DIN 45631, identique à la librairie de référence MOSQITO) et l'<b>acuité</b> la DIN 45692. La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> avec <b>décomposition en canaux auditifs chevauchants</b> (0,5 Bark) et <b>cohérence inter-bandes</b> (analyse sur ~340 ms) ; la <b>fluctuation</b> suit <b>Fastl band-wise</b> — modulation de la sonie spécifique <b>par bande de Bark</b>, indépendante du niveau (fenêtre 5 s) ; la <b>tonalité</b> applique le modèle d'<b>Aures</b> (raies tonales pondérées par la fréquence, pic ~700 Hz, et l'excès de niveau). Rugosité et fluctuation sont calées sur les tons AM de référence (1 asper @70 Hz, 1 vacil @4 Hz), la tonalité sur un son pur 1 kHz. Indicateurs de confort validés sur banc synthétique (confrontation MOSQITO prévue) — non certifiés.</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -3842,7 +3842,7 @@ function updScaleLbl(){
   if(txt!==_scaleLbl){_scaleLbl=txt;$('kDynV').textContent=txt;}
 }
 /* ===================== PSYCHOACOUSTIQUE =====================
-   Sonie N (sone) — Zwicker (ISO 532-1) : sonie spécifique par Bark AVEC étalement de masquage.
+   Sonie N (sone) — ISO 532-1 (méthode tabulée DIN 45631, port fidèle de MOSQITO/norme).
    Acuité S (acum) — pondération DIN 45692 sur la sonie spécifique.
    Rugosité R (asper) — Daniel & Weber : canaux auditifs chevauchants + cohérence inter-bandes.
    Fluctuation F (vacil) — Fastl band-wise : modulation de la sonie spécifique par bande de Bark.
@@ -3857,25 +3857,69 @@ const PSY_BOUNDS={N:100,S:5,R:5,F:3,T:2};
 const PSY_BARK_FC=[50,150,250,350,450,570,700,840,1000,1170,1370,1600,1850,2150,2500,2900,3400,4000,4800,5800,7000,8500,10500,13500];
 const PSY_CN=0.1253;   // calage 1 sone @ 1 kHz/40 dB (modèle avec étalement)
 function psyBarkOf(f){ for(let z=0;z<24;z++) if(f<=PSY_BARK_HI[z]) return z; return 23; }
+/* ===== Sonie ISO 532-1 (tabulée, méthode Zwicker/Fastl DIN 45631) =====
+   Port fidèle du cœur MOSQITO/ISO (validé à la précision machine).
+   Entrée : 28 niveaux de tiers d'octave 25 Hz–12,5 kHz (dB SPL). Sortie : N (sone) + sonie spécifique. */
+const ISO_F28=[25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500];
+const ISO_RAP=[45,55,65,71,80,90,100,120];
+const ISO_DLL=[[-32,-24,-16,-10,-5,0,-7,-3,0,-2,0],[-29,-22,-15,-10,-4,0,-7,-2,0,-2,0],[-27,-19,-14,-9,-4,0,-6,-2,0,-2,0],[-25,-17,-12,-9,-3,0,-5,-2,0,-2,0],[-23,-16,-11,-7,-3,0,-4,-1,0,-1,0],[-20,-14,-10,-6,-3,0,-4,-1,0,-1,0],[-18,-12,-9,-6,-2,0,-3,-1,0,-1,0],[-15,-10,-8,-4,-2,0,-3,-1,0,-1,0]];
+const ISO_LTQ=[30,18,12,8,7,6,5,4,3,3,3,3,3,3,3,3,3,3,3,3];
+const ISO_A0=[0,0,0,0,0,0,0,0,0,0,-0.5,-1.6,-3.2,-5.4,-5.6,-4,-1.5,2,5,12];
+const ISO_DDF=[0,0,0.5,0.9,1.2,1.6,2.3,2.8,3,2,0,-1.4,-2,-1.9,-1,0.5,3,4,4.3,4];
+const ISO_DCB=[-0.25,-0.6,-0.8,-0.8,-0.5,0,0.5,1.1,1.5,1.7,1.8,1.8,1.7,1.6,1.4,1.2,0.8,0.5,0,-0.5];
+const ISO_ZUP=[0.9,1.8,2.8,3.5,4.4,5.4,6.6,7.9,9.2,10.6,12.3,13.8,15.2,16.7,18.1,19.3,20.6,21.8,22.7,23.6,24];
+const ISO_RNS=[21.5,18,15.1,11.5,9,6.1,4.4,3.1,2.13,1.36,0.82,0.42,0.30,0.22,0.15,0.10,0.035,0];
+const ISO_USL=[[13,8.2,6.3,5.5,5.5,5.5,5.5,5.5],[9,7.5,6,5.1,4.5,4.5,4.5,4.5],[7.8,6.7,5.6,4.9,4.4,3.9,3.9,3.9],[6.2,5.4,4.6,4.0,3.5,3.2,3.2,3.2],[4.5,3.8,3.6,3.2,2.9,2.7,2.7,2.7],[3.7,3.0,2.8,2.35,2.2,2.2,2.2,2.2],[2.9,2.3,2.1,1.9,1.8,1.7,1.7,1.7],[2.4,1.7,1.5,1.35,1.3,1.3,1.3,1.3],[1.95,1.45,1.3,1.15,1.1,1.1,1.1,1.1],[1.5,1.2,0.94,0.86,0.82,0.82,0.82,0.82],[0.72,0.67,0.64,0.63,0.62,0.62,0.62,0.62],[0.59,0.53,0.51,0.50,0.42,0.42,0.42,0.42],[0.40,0.33,0.26,0.24,0.24,0.22,0.22,0.22],[0.27,0.21,0.20,0.18,0.17,0.17,0.17,0.17],[0.16,0.15,0.14,0.12,0.11,0.11,0.11,0.11],[0.12,0.11,0.10,0.08,0.08,0.08,0.08,0.08],[0.09,0.08,0.07,0.06,0.06,0.06,0.06,0.05],[0.06,0.05,0.03,0.02,0.02,0.02,0.02,0.02]];
+function isoMainLoudness(spec,field){        // spec: 28 dB -> nm[21] (sonie de cœur par bande critique)
+  const ti=new Array(11);
+  for(let n=0;n<11;n++){ const aux=spec[n]; let corr=ISO_DLL[0][n]; if(aux>ISO_RAP[0]-ISO_DLL[0][n])corr=0;
+    for(let r=1;r<=6;r++){ const a=aux>ISO_RAP[r-1]-ISO_DLL[r-1][n], b=aux>ISO_RAP[r]-ISO_DLL[r][n]; if(a!==b)corr=ISO_DLL[r][n]; }
+    ti[n]=Math.pow(10,(corr+aux)/10); }
+  let g0=0,g1=0,g2=0; for(let k=0;k<6;k++)g0+=ti[k]; for(let k=6;k<9;k++)g1+=ti[k]; for(let k=9;k<11;k++)g2+=ti[k];
+  const lcb=[g0>0?10*Math.log10(g0):0,g1>0?10*Math.log10(g1):0,g2>0?10*Math.log10(g2):0];
+  const s=0.25, nm=new Array(21).fill(0);
+  for(let k=0;k<20;k++){ let le=(k<3)?lcb[k]:spec[8+k]; le-=ISO_A0[k]; if(field==="diffuse")le+=ISO_DDF[k];
+    if(le>ISO_LTQ[k]){ le-=ISO_DCB[k];
+      if(le>ISO_LTQ[k]){ const mp1=0.0635*Math.pow(10,0.025*ISO_LTQ[k]); const mp2=Math.pow(1-s+s*Math.pow(10,0.1*(le-ISO_LTQ[k])),0.25)-1; let v=mp1*mp2; if(v>0)nm[k]=v; } } }
+  const korry=0.4+0.32*Math.pow(nm[0],0.2); if(korry<=1)nm[0]*=korry;
+  return nm;
+}
+function isoRnsIndex(x,eq){ let c=0; for(let j=0;j<18;j++){ if(eq?(x<=ISO_RNS[j]):(x<ISO_RNS[j]))c++; } return c===18?17:c; }
+function isoCalcSlopes(nm){                   // nm[21] -> {N, Ns(240 @0.1 Bark)}
+  const Ns=new Float64Array(240); let N=0,z1=0,n1=0,iz=0,z=0.1;
+  for(let i=0;i<21;i++){ let ig=i-1; if(ig<0)ig=0; if(ig>7)ig=7;
+    while(true){
+      if(n1<=nm[i]+1e-12){ if(n1<nm[i])n1=nm[i];
+        while(z<=ISO_ZUP[i]+1e-9 && iz<240){ Ns[iz++]=n1; z+=0.1; }
+        N+=n1*(ISO_ZUP[i]-z1); z1=ISO_ZUP[i]; break;
+      } else { const j=isoRnsIndex(n1,true); let n2=ISO_RNS[j]; if(n2<nm[i])n2=nm[i];
+        let dz=(n1-n2)/ISO_USL[j][ig], z2=z1+dz;
+        if(z2>=ISO_ZUP[i]){ z2=ISO_ZUP[i]; dz=z2-z1; n2=n1-dz*ISO_USL[j][ig]; }
+        while(z<=z2+1e-9 && iz<240){ Ns[iz++]=n1-(z-z1)*ISO_USL[j][ig]; z+=0.1; }
+        N+=dz*(n1+n2)/2; z1=z2; n1=n2; if(z1>=ISO_ZUP[i]-1e-9)break;
+      }
+    }
+  }
+  if(N<0)N=0; N = N<=16 ? Math.floor(N*1000+0.5)/1000 : Math.floor(N*100+0.5)/100;
+  return {N,Ns};
+}
+let ISO_MAP=null;
 function psyLoudness(){
   if(!S.bands||!S.bands.length||!S.curBnd) return null;
-  /* 1) intensité par bande de Bark (depuis les tiers d'octave) */
-  const I=new Float64Array(24);
-  for(let b=0;b<S.bands.length;b++){ const p=S.curBnd[b]; if(!(p>0))continue; I[psyBarkOf(S.bands[b])]+=Math.pow(10,(10*Math.log10(p)+S.offset)/10); }
-  const Lz=new Float64Array(24);
-  for(let i=0;i<24;i++) Lz[i]= I[i]>0?10*Math.log10(I[i]):-999;
-  /* 2) motif d'excitation avec ÉTALEMENT DE MASQUAGE (ISO 532-1) :
-        pente supérieure dépendante du niveau (24+230/f−0.15·L dB/Bark), pente inférieure 27 dB/Bark */
-  const E=new Float64Array(24);
-  for(let j=0;j<24;j++){ if(Lz[j]<=-990)continue; const Su=Math.max(5,24+230/PSY_BARK_FC[j]-0.15*Lz[j]);
-    for(let i=0;i<24;i++){ const dz=i-j, at=dz>=0?Su*dz:27*(-dz); E[i]+=Math.pow(10,(Lz[j]-at)/10); } }
-  /* 3) sonie spécifique de Zwicker + intégration */
-  const Nspec=new Float64Array(24); let N=0;
-  for(let i=0;i<24;i++){ const Etq=Math.pow(10,PSY_LTQ[i]/10); if(E[i]<=Etq)continue;
-    const ns=PSY_CN*Math.pow(Etq,0.23)*(Math.pow(0.5+0.5*E[i]/Etq,0.23)-1); if(ns>0){Nspec[i]=ns;N+=ns;} }
-  return {N,Nspec};
+  if(!ISO_MAP || S._isoMapN!==S.bands.length){                 // table de correspondance tiers d'octave -> bandes ISO
+    ISO_MAP=ISO_F28.map(f=>{ let bi=-1,bd=0.12; for(let b=0;b<S.bands.length;b++){ const d=Math.abs(Math.log2(S.bands[b]/f)); if(d<bd){bd=d;bi=b;} } return bi; });
+    S._isoMapN=S.bands.length;
+  }
+  const spec=new Array(28);
+  for(let m=0;m<28;m++){ const bi=ISO_MAP[m], p=bi>=0?S.curBnd[bi]:0; spec[m]= p>0 ? 10*Math.log10(p)+S.offset : -60; }
+  const nm=isoMainLoudness(spec,"free");
+  const {N,Ns}=isoCalcSlopes(nm);
+  const Nspec=new Float64Array(24);                            // rebin 0,1 Bark -> sonie par Bark (pour acuité/fluctuation)
+  for(let z=0;z<24;z++){ let s=0; for(let k=10*z;k<10*z+10 && k<240;k++)s+=Ns[k]; Nspec[z]=s*0.1; }
+  return {N,Nspec,Ns};
 }
 function psySharpness(Nspec){
+
   let num=0,den=0;
   for(let z=0;z<24;z++){ const zc=z+0.5, g=zc<15.8?1:(0.15*Math.exp(0.42*(zc-15.8))+0.85); num+=Nspec[z]*g*zc; den+=Nspec[z]; }
   return den>0?0.11*num/den:0;
@@ -3900,7 +3944,7 @@ const PSY_WF=f=>2/((f/4)+(4/f));               // pondération fluctuation (pic 
      fréquence (pic ~700 Hz) et excès de niveau, sommation quadratique. */
 const psyBarkF=f=>13*Math.atan(0.00076*f)+3.5*Math.atan((f/7500)*(f/7500));
 const PSY_RHW=1.0, PSY_RP=1.8;                 // demi-largeur canal (Bark), exposant profondeur de modulation
-const PSY_CAL_R=0.345, PSY_CAL_F=1.384, PSY_CAL_T=1.98;
+const PSY_CAL_R=0.345, PSY_CAL_F=1.44, PSY_CAL_T=1.98;
 function psyModBandP(sig,fs,fLo,fHi,wfun){       // indice de modulation pondéré (Goertzel, somme quadratique)
   const n=sig.length; if(n<8)return 0;
   let m0=0; for(let i=0;i<n;i++)m0+=sig[i]; m0/=n; if(m0<=1e-9)return 0;
