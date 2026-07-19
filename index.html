@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.7-beta</div>
+  <div class="splashver" id="splashVer">2.2.8-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -3944,7 +3944,7 @@ const PSY_WF=f=>2/((f/4)+(4/f));               // pondération fluctuation (pic 
      fréquence (pic ~700 Hz) et excès de niveau, sommation quadratique. */
 const psyBarkF=f=>13*Math.atan(0.00076*f)+3.5*Math.atan((f/7500)*(f/7500));
 const PSY_RHW=1.0, PSY_RP=1.8;                 // demi-largeur canal (Bark), exposant profondeur de modulation
-const PSY_CAL_R=0.345, PSY_CAL_F=1.44, PSY_CAL_T=1.98;
+const PSY_CAL_R=0.345, PSY_CAL_F=1.68, PSY_CAL_T=1.98;
 function psyModBandP(sig,fs,fLo,fHi,wfun){       // indice de modulation pondéré (Goertzel, somme quadratique)
   const n=sig.length; if(n<8)return 0;
   let m0=0; for(let i=0;i<n;i++)m0+=sig[i]; m0/=n; if(m0<=1e-9)return 0;

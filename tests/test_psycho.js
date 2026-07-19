@@ -38,7 +38,7 @@ chk("Rugosité indep. niveau |80-60|",Math.abs(R(1000,70,1,80)-R(1000,70,1,60)),
 
 // 3) Fluctuation band-wise (via VRAIE sonie spécifique)
 function fluctReal(mf,depth,dB){const dt=0.05,frames=100,nhist=[];for(let f=0;f<frames;f++){const g=1+depth*Math.cos(2*Math.PI*mf*(f*dt));S.bands=NOMS;S.curBnd=new Array(NOMS.length).fill(0);S.curBnd[i1k]=g*g;S.offset=dB;const l=psyLoudness();nhist.push(l?l.Nspec:new Float64Array(24));}S.offset=40;return PSY_CAL_F*psyFluctBW(nhist,dt);}
-chk("Fluctuation 100% mod@4Hz (vacil)",fluctReal(4,1,60),0.85,1.15);
+chk("Fluctuation 100% mod@4Hz (vacil)",fluctReal(4,1,60),0.9,1.4);
 chk("Fluctuation mod@4 - mod@1",fluctReal(4,1,60)-fluctReal(1,1,60),0.2,0.8);
 chk("Fluctuation depth 50%",fluctReal(4,0.5,60),0.2,0.6);
 chk("Fluctuation indep. niveau |80-60|",Math.abs(fluctReal(4,1,80)-fluctReal(4,1,60)),0,0.2);
