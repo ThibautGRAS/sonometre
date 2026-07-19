@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.1.9-beta</div>
+  <div class="splashver" id="splashVer">2.2.0-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1032,7 +1032,7 @@ if('serviceWorker' in navigator){
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <h3>Psychoacoustique (toile)</h3>
-      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (émergence d'une raie). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. <b>Touchez un axe</b> pour lire sa valeur réelle et normalisée. Le polygone plein = <b>moyenne</b> sur la fenêtre ; le pointillé = valeur <b>instantanée</b>. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). Sonie et acuité reposent sur une méthode de Zwicker/DIN <b>simplifiée</b> (calée à 1 sone pour 1 kHz / 40 dB). La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> (modulation d'enveloppe, pic ~70 Hz) sur des blocs courts <b>~200 ms</b> ; la <b>fluctuation</b> applique le modèle de <b>Fastl/Osses</b> (modulation de la sonie, pic ~4 Hz) qui exige <b>≥ ~2 s</b> de signal (d'où la fenêtre de 4 s). Les deux sont calées sur les tons AM de référence (1 asper, 1 vacil). Version temps réel calibrée (sans décomposition par bande critique) — indicateurs de confort, non certifiés.</p>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (émergence d'une raie). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. <b>Touchez un axe</b> pour lire sa valeur réelle, normalisée et max. Les indicateurs s'affichent après 2 s ; l'instantané (pointillé) est rafraîchi toutes les 0,5 s, le plein est la moyenne glissante (Signal ▸ fenêtre 2/4/8 s), <b>MOY</b> moyenne tout le signal, et le <b>tic ambre</b> marque le maximum atteint (comme le peak-hold des tiers d'octave). Le polygone plein = <b>moyenne</b> sur la fenêtre ; le pointillé = valeur <b>instantanée</b>. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). Sonie et acuité reposent sur une méthode de Zwicker/DIN <b>simplifiée</b> (calée à 1 sone pour 1 kHz / 40 dB). La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> (modulation d'enveloppe, pic ~70 Hz) sur des blocs courts <b>~200 ms</b> ; la <b>fluctuation</b> applique le modèle de <b>Fastl/Osses</b> (modulation de la sonie, pic ~4 Hz) qui exige <b>≥ ~2 s</b> de signal (d'où la fenêtre de 4 s). Les deux sont calées sur les tons AM de référence (1 asper, 1 vacil). Version temps réel calibrée (sans décomposition par bande critique) — indicateurs de confort, non certifiés.</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -3885,7 +3885,7 @@ function psySharpness(Nspec){
   return den>0?0.11*num/den:0;
 }
 const PSY={samples:[],N:0,S:0,R:0,F:0,T:0,PA:0,N5:0,inst:null,prevBnd:null,_last:0,sel:-1};
-function psyReset(){ PSY.samples=[]; PSY.N=PSY.S=PSY.R=PSY.F=PSY.T=PSY.PA=PSY.N5=0; PSY.inst=null; PSY.prevBnd=null; PSY.sum=null; PSY.cnt=0; PSY.span=0; }
+function psyReset(){ PSY.samples=[]; PSY.N=PSY.S=PSY.R=PSY.F=PSY.T=PSY.PA=PSY.N5=0; PSY.inst=null; PSY.prevBnd=null; PSY.sum=null; PSY.cnt=0; PSY.span=0; PSY.max=null; PSY._instT=0; }
 /* Modèles de modulation (Phase 2).
    Rugosité : modèle de Daniel & Weber — enveloppe du signal, spectre de modulation
    pondéré (pic ~70 Hz), sommation quadratique, calé à 1 asper (1 kHz/100 % AM @70 Hz).
@@ -3928,7 +3928,7 @@ function psyFluct(arr){
 }
 function psyUpdate(){
   const now=performance.now()/1000;
-  if(PSY._last && now-PSY._last<0.05) return;          // ~20 Hz max
+  if(PSY._last && now-PSY._last<0.05) return;          // ~20 Hz max (calcul interne)
   const L=psyLoudness(); if(!L)return; PSY._last=now;
   const win=S.psyWin||4;
   const Sh=psySharpness(L.Nspec);
@@ -3939,19 +3939,28 @@ function psyUpdate(){
   const Ns=arr.map(s=>s.N).sort((a,b)=>b-a);
   const N5=Ns[Math.min(Ns.length-1,Math.floor(0.05*Ns.length))]||0;
   let Nm=0,Sm=0; for(const s of arr){Nm+=s.N;Sm+=s.S;} Nm/=n;Sm/=n;
-  /* Rugosité (Daniel & Weber, modulation d'enveloppe, bloc temporel) — calé à ~8 Hz pour le CPU.
+  /* Rugosité (Daniel & Weber, modulation d'enveloppe, bloc ~200 ms) — calé à ~8 Hz pour le CPU.
      Fluctuation (Fastl/Osses) — modulation de la sonie N(t) sur la fenêtre (~2 s mini). */
   if(!PSY._rT || now-PSY._rT>0.12){ PSY._Rcur=psyRoughness(); PSY._rT=now; }
-  const R=Math.max(0,Math.min(PSY_BOUNDS.R, PSY._Rcur||0));
-  const F=Math.max(0,Math.min(PSY_BOUNDS.F, psyFluct(arr)));
-  const T=Math.max(0,Math.min(1,(S.psyEmg||0)/15));
+  const R=Math.max(0,PSY._Rcur||0), F=Math.max(0,psyFluct(arr)), T=Math.max(0,(S.psyEmg||0)/15);   // valeurs RÉELLES (écrêtage au tracé)
   const wS=Sm>1.75?(Sm-1.75)*0.25*Math.log10(N5+10):0;
   const wFR=(2.18/Math.pow(Math.max(N5,1e-3),0.4))*(0.4*F+0.6*R);
   PSY.N=Nm; PSY.S=Sm; PSY.R=R; PSY.F=F; PSY.T=T; PSY.N5=N5;
   PSY.PA=N5*(1+Math.sqrt(wS*wS+wFR*wFR));
-  PSY.inst={N:L.N,S:Sh,R,F,T};
-  if(!PSY.sum){PSY.sum={N:0,S:0,R:0,F:0,T:0};PSY.cnt=0;}      // moyenne sur toute la mesure (bouton MOY)
+  /* moyenne sur toute la mesure (bouton MOY) */
+  if(!PSY.sum){PSY.sum={N:0,S:0,R:0,F:0,T:0};PSY.cnt=0;}
   PSY.sum.N+=L.N;PSY.sum.S+=Sh;PSY.sum.R+=R;PSY.sum.F+=F;PSY.sum.T+=T;PSY.cnt++;
+  /* max-hold par indicateur (toutes trames) — valeurs de crête atteintes */
+  if(!PSY.max)PSY.max={N:0,S:0,R:0,F:0,T:0};
+  PSY.max.N=Math.max(PSY.max.N,L.N);PSY.max.S=Math.max(PSY.max.S,Sh);
+  PSY.max.R=Math.max(PSY.max.R,R);PSY.max.F=Math.max(PSY.max.F,F);PSY.max.T=Math.max(PSY.max.T,T);
+  /* INSTANT rafraîchi toutes les 0,5 s ; N/S moyennés sur ~0,5 s (fenêtre optimale court-terme) */
+  if(!PSY._instT || now-PSY._instT>=0.5){
+    PSY._instT=now;
+    let sn=0,ss=0,sc=0; const t0=now-0.5;
+    for(let i=arr.length-1;i>=0;i--){ if(arr[i].t<t0)break; sn+=arr[i].N;ss+=arr[i].S;sc++; }
+    PSY.inst={N:sc?sn/sc:L.N, S:sc?ss/sc:Sh, R, F, T};
+  }
 }
 function drawPsycho(){
   const cv=$('psyCv'); if(!cv)return;
@@ -3968,6 +3977,8 @@ function drawPsycho(){
   const K=axes.length, ang=i=>(-Math.PI/2 + i*2*Math.PI/K);
   PSY._geom={cx,cy,R,K};                                   // mémorisé pour le clic
   const accent=(getComputedStyle(document.body).getPropertyValue('--ice')||'#4FC3FF').trim()||'#4FC3FF';
+  const MIN=2, span=PSY.span||0, live=((S.running&&!S.paused)||REPL.on);
+  const ready = span>=MIN || (avg&&PSY.cnt>0);            // au moins 2 s avant d'afficher les indicateurs
   /* clic sur un axe (une seule fois) */
   if(!PSY._wired){ PSY._wired=true;
     cv.addEventListener('pointerdown',e=>{
@@ -3979,50 +3990,59 @@ function drawPsycho(){
       PSY.sel=(PSY.sel===i)?-1:i; drawPsycho();
     });
   }
+  /* grille + rayons */
   g.strokeStyle='rgba(127,176,220,.18)';
   for(let ring=1;ring<=4;ring++){ const rr=R*ring/4; g.beginPath(); for(let i=0;i<=K;i++){const a=ang(i%K), x=cx+rr*Math.cos(a), y=cy+rr*Math.sin(a); i?g.lineTo(x,y):g.moveTo(x,y);} g.stroke(); }
   for(let i=0;i<K;i++){ const a=ang(i); g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a)); g.strokeStyle=(PSY.sel===i)?accent:'rgba(127,176,220,.18)'; g.lineWidth=(PSY.sel===i)?1.5:1; g.stroke(); }
   g.lineWidth=1;
+  /* libellés d'axes (noms toujours ; valeurs seulement quand prêt) */
   g.textAlign='center'; g.textBaseline='middle';
   for(let i=0;i<K;i++){ const a=ang(i), lx=cx+(R+16)*Math.cos(a), ly=cy+(R+13)*Math.sin(a), sel=(PSY.sel===i);
     g.fillStyle=sel?accent:'rgba(200,225,250,.9)'; g.font='bold 9px sans-serif'; g.fillText(axes[i][0],lx,ly-4);
-    g.fillStyle=sel?'rgba(230,245,255,.95)':'rgba(150,180,210,.75)'; g.font='8px sans-serif'; g.fillText(axes[i][2].toFixed(axes[i][3]<=2?2:1)+' '+axes[i][4],lx,ly+5); }
-  const pts=axes.map((ax,i)=>{ const v=Math.max(0,Math.min(1,ax[2]/ax[3])), a=ang(i); return [cx+R*v*Math.cos(a), cy+R*v*Math.sin(a)]; });
-  g.beginPath(); pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.closePath();
-  g.fillStyle='rgba(79,195,255,.18)'; g.strokeStyle=accent; g.lineWidth=2; g.fill(); g.stroke();
-  g.fillStyle=accent; pts.forEach((p,i)=>{g.beginPath();g.arc(p[0],p[1],(PSY.sel===i)?4.5:2.6,0,7);g.fill();});
-  if(PSY.sel>=0){ const p=pts[PSY.sel]; g.strokeStyle='#fff'; g.lineWidth=1.5; g.beginPath(); g.arc(p[0],p[1],6,0,7); g.stroke(); }
-  if(PSY.inst){ const ip=axes.map((ax,i)=>{ const raw=ax[1]==='N'?PSY.inst.N:ax[1]==='S'?PSY.inst.S:ax[1]==='R'?PSY.inst.R:ax[1]==='F'?PSY.inst.F:PSY.inst.T; const v=Math.max(0,Math.min(1,raw/ax[3])), a=ang(i); return [cx+R*v*Math.cos(a),cy+R*v*Math.sin(a)]; });
-    g.beginPath(); ip.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.closePath();
-    g.strokeStyle='rgba(255,255,255,.5)'; g.lineWidth=1; g.setLineDash([3,3]); g.stroke(); g.setLineDash([]); }
+    if(ready){ g.fillStyle=sel?'rgba(230,245,255,.95)':'rgba(150,180,210,.75)'; g.font='8px sans-serif'; g.fillText(axes[i][2].toFixed(axes[i][3]<=2?2:1)+' '+axes[i][4],lx,ly+5); } }
+  if(ready){
+    const pts=axes.map((ax,i)=>{ const v=Math.max(0,Math.min(1,ax[2]/ax[3])), a=ang(i); return [cx+R*v*Math.cos(a), cy+R*v*Math.sin(a)]; });
+    g.beginPath(); pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.closePath();
+    g.fillStyle='rgba(79,195,255,.18)'; g.strokeStyle=accent; g.lineWidth=2; g.fill(); g.stroke();
+    g.fillStyle=accent; pts.forEach((p,i)=>{g.beginPath();g.arc(p[0],p[1],(PSY.sel===i)?4.5:2.6,0,7);g.fill();});
+    if(PSY.sel>=0){ const p=pts[PSY.sel]; g.strokeStyle='#fff'; g.lineWidth=1.5; g.beginPath(); g.arc(p[0],p[1],6,0,7); g.stroke(); }
+    /* polygone instantané (pointillé, rafraîchi 0,5 s) */
+    if(PSY.inst){ const ip=axes.map((ax,i)=>{ const raw=ax[1]==='N'?PSY.inst.N:ax[1]==='S'?PSY.inst.S:ax[1]==='R'?PSY.inst.R:ax[1]==='F'?PSY.inst.F:PSY.inst.T; const v=Math.max(0,Math.min(1,raw/ax[3])), a=ang(i); return [cx+R*v*Math.cos(a),cy+R*v*Math.sin(a)]; });
+      g.beginPath(); ip.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.closePath();
+      g.strokeStyle='rgba(255,255,255,.5)'; g.lineWidth=1; g.setLineDash([3,3]); g.stroke(); g.setLineDash([]); }
+    /* max-hold : petit tic par axe (comme le peak-hold des tiers d'octave) */
+    if(PSY.max){ g.strokeStyle='#FFB454'; g.lineWidth=2;
+      for(let i=0;i<K;i++){ const mx=PSY.max[axes[i][1]]||0, v=Math.max(0,Math.min(1,mx/axes[i][3])); if(v<=0.001)continue;
+        const a=ang(i), rr=R*v, px=cx+rr*Math.cos(a), py=cy+rr*Math.sin(a), tx=-Math.sin(a)*4.5, ty=Math.cos(a)*4.5;
+        g.beginPath(); g.moveTo(px-tx,py-ty); g.lineTo(px+tx,py+ty); g.stroke(); }
+      g.lineWidth=1; }
+  }
+  /* centre : gêne PA (seulement quand prêt) */
   g.textAlign='center'; g.textBaseline='middle';
-  const pa=PSY.PA||0, paC=pa<15?'#2FBF83':pa<40?'#FFB454':'#EF3346';
-  g.fillStyle=paC; g.font='bold 15px sans-serif'; g.fillText(pa.toFixed(0),cx,cy-3);
-  g.fillStyle='rgba(180,205,230,.8)'; g.font='7px sans-serif'; g.fillText('PA (gêne)',cx,cy+9);
-  /* lecture de l'indicateur sélectionné : valeur RÉELLE + NORMALISÉE */
-  if(PSY.sel>=0){ const ax=axes[PSY.sel], val=ax[2], bnd=ax[3], nrm=Math.max(0,Math.min(1,val/bnd));
+  if(ready){ const pa=PSY.PA||0, paC=pa<15?'#2FBF83':pa<40?'#FFB454':'#EF3346';
+    g.fillStyle=paC; g.font='bold 15px sans-serif'; g.fillText(pa.toFixed(0),cx,cy-3);
+    g.fillStyle='rgba(180,205,230,.8)'; g.font='7px sans-serif'; g.fillText('PA (gêne)',cx,cy+9); }
+  /* attente des 2 s : rien affiché, seulement la progression */
+  if(live && !ready){
+    g.fillStyle='rgba(255,180,84,.95)'; g.font='bold 10px sans-serif'; g.fillText('mesure en cours…',cx,cy-4);
+    g.fillStyle='rgba(255,180,84,.85)'; g.font='8px sans-serif'; g.fillText(span.toFixed(1)+' / '+MIN.toFixed(1)+' s',cx,cy+8);
+    g.strokeStyle='rgba(255,180,84,.55)'; g.lineWidth=2; g.beginPath();
+    g.arc(cx,cy,R+7,-Math.PI/2,-Math.PI/2+2*Math.PI*Math.min(1,span/MIN)); g.stroke(); g.lineWidth=1;
+  }
+  /* lecture de l'axe sélectionné : réel + normalisé + max (seulement quand prêt) */
+  if(ready && PSY.sel>=0){ const ax=axes[PSY.sel], val=ax[2], bnd=ax[3], nrm=Math.max(0,Math.min(1,val/bnd)), mx=(PSY.max&&PSY.max[ax[1]])||0;
     const names={Sonie:'Sonie N',Acuité:'Acuité S',Rugosité:'Rugosité R','Fluctuat.':'Fluctuation F',Tonalité:'Tonalité T'};
-    const bx=8, by=h-40, bw=w-16, bh=34;
+    const dec=bnd<=2?2:1, bx=8, by=h-40, bw=w-16, bh=34;
     g.fillStyle='rgba(0,20,45,.72)'; g.strokeStyle=accent; g.lineWidth=1;
     if(g.roundRect){g.beginPath();g.roundRect(bx,by,bw,bh,7);g.fill();g.stroke();}else{g.fillRect(bx,by,bw,bh);g.strokeRect(bx,by,bw,bh);}
     g.textAlign='left'; g.textBaseline='middle';
     g.fillStyle=accent; g.font='bold 11px sans-serif'; g.fillText(names[ax[0]]||ax[0], bx+10, by+11);
-    g.fillStyle='rgba(230,245,255,.95)'; g.font='11px sans-serif';
-    g.fillText('réel : '+val.toFixed(bnd<=2?2:1)+' '+ax[4], bx+10, by+24);
+    g.fillStyle='rgba(230,245,255,.95)'; g.font='11px sans-serif'; g.fillText('réel '+val.toFixed(dec)+' '+ax[4], bx+10, by+24);
     g.textAlign='right';
     g.fillStyle='#fff'; g.font='bold 13px sans-serif'; g.fillText(Math.round(nrm*100)+' %', bx+bw-10, by+11);
-    g.fillStyle='rgba(180,205,230,.85)'; g.font='9px sans-serif'; g.fillText('normalisé · borne '+bnd+' '+ax[4], bx+bw-10, by+24);
-  } else {
-    g.textAlign='center'; g.fillStyle='rgba(150,180,210,.6)'; g.font='8px sans-serif'; g.fillText('touchez un axe pour la valeur réelle + normalisée', cx, h-8);
-  }
-  /* remplissage de la fenêtre glissante : montre que la moyenne se cale sur la durée choisie */
-  const win=S.psyWin||4, span=PSY.span||0;
-  if(((S.running&&!S.paused)||REPL.on) && span<win-0.15){
-    g.textAlign='left'; g.textBaseline='top';
-    g.fillStyle='rgba(255,180,84,.9)'; g.font='8px sans-serif';
-    g.fillText('stabilisation '+span.toFixed(1)+'/'+win+' s', 8, 6);
-    g.strokeStyle='rgba(255,180,84,.55)'; g.lineWidth=2; g.beginPath();
-    g.arc(cx,cy,R+7,-Math.PI/2,-Math.PI/2+2*Math.PI*Math.min(1,span/win)); g.stroke(); g.lineWidth=1;
+    g.fillStyle='#FFB454'; g.font='10px sans-serif'; g.fillText('max '+mx.toFixed(dec)+' '+ax[4], bx+bw-10, by+24);
+  } else if(ready){
+    g.textAlign='center'; g.fillStyle='rgba(150,180,210,.6)'; g.font='8px sans-serif'; g.fillText('touchez un axe · plein = moyenne · pointillé = instantané · tic = max', cx, h-8);
   }
 }
 
