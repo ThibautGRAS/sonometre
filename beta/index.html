@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.4-beta</div>
+  <div class="splashver" id="splashVer">2.2.5-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1022,7 +1022,7 @@ if('serviceWorker' in navigator){
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <h3>Psychoacoustique (toile)</h3>
-      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (t.u., présence de raies tonales — modèle d'Aures). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. Chaque indicateur est recalculé ~7×/s sur sa propre fenêtre (sonie et acuité 250 ms, rugosité 1 s, tonalité 2 s, fluctuation 5 s) à partir d'un tampon de 5 s. Le polygone <b>plein</b> = valeur actuelle ; <b>MOY</b> = moyenne depuis le début ; le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs s'affichent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). La <b>sonie</b> applique la méthode <b>tabulée ISO 532-1</b> (DIN 45631, identique à la librairie de référence MOSQITO) et l'<b>acuité</b> la DIN 45692. La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> avec <b>décomposition en canaux auditifs chevauchants</b> (0,5 Bark) et <b>cohérence inter-bandes</b> (analyse sur ~340 ms) ; la <b>fluctuation</b> suit <b>Fastl band-wise</b> — modulation de la sonie spécifique <b>par bande de Bark</b>, indépendante du niveau (fenêtre 5 s) ; la <b>tonalité</b> applique le modèle d'<b>Aures</b> (raies tonales pondérées par la fréquence, pic ~700 Hz, et l'excès de niveau). En complément, un clic sur l'axe <b>Tonalité</b> affiche le <b>TNR</b> et le <b>PR</b> normatifs (<b>ECMA-74</b> : tone-to-noise et prominence ratio, en dB, validés identiques à la librairie MOSQITO) et la raie dominante. Rugosité et fluctuation sont calées sur les tons AM de référence (1 asper @70 Hz, 1 vacil @4 Hz), la tonalité sur un son pur 1 kHz. Indicateurs de confort validés sur banc synthétique (confrontation MOSQITO prévue) — non certifiés.</p>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (t.u., présence de raies tonales — modèle d'Aures). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. Chaque indicateur est recalculé ~7×/s sur sa propre fenêtre (sonie et acuité 250 ms, rugosité 1 s, tonalité 2 s, fluctuation 5 s) à partir d'un tampon de 5 s. Le polygone <b>plein</b> = valeur actuelle ; <b>MOY</b> = moyenne depuis le début ; le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs s'affichent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). La <b>sonie</b> applique la méthode <b>tabulée ISO 532-1</b> (DIN 45631, identique à la librairie de référence MOSQITO) et l'<b>acuité</b> la DIN 45692. La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> avec <b>décomposition en canaux auditifs chevauchants</b> (0,5 Bark) et <b>cohérence inter-bandes</b> (analyse sur ~340 ms) ; la <b>fluctuation</b> suit <b>Fastl band-wise</b> — modulation de la sonie spécifique <b>par bande de Bark</b>, indépendante du niveau (fenêtre 5 s) ; la <b>tonalité</b> applique le modèle d'<b>Aures</b> (raies tonales pondérées par la fréquence, pic ~700 Hz, et l'excès de niveau). En complément, un clic sur l'axe <b>Tonalité</b> affiche le <b>TNR</b> et le <b>PR</b> normatifs (<b>ECMA-74</b> : tone-to-noise et prominence ratio, en dB, validés identiques à la librairie MOSQITO) et la raie dominante. Un clic sur l'axe <b>Rugosité</b> lance en plus le <b>modèle Daniel &amp; Weber complet</b> (calcul précis à la demande : 47 canaux ½-Bark, excitation par FFT, pondérations Hi(f_mod), corrélation croisée, dépendance au niveau — validé identique à MOSQITO), affiché en asper à côté de la valeur live. Rugosité et fluctuation sont calées sur les tons AM de référence (1 asper @70 Hz, 1 vacil @4 Hz), la tonalité sur un son pur 1 kHz. Indicateurs de confort validés sur banc synthétique (confrontation MOSQITO prévue) — non certifiés.</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -3930,7 +3930,7 @@ const PSY={buf:[],cur:null,mean:null,p95:null,PA:0,N5:0,span:0,
 const PSY_WIN={N:0.25,S:0.25,R:1.0,T:2.0,F:5.0};   // fenêtres propres à chaque indicateur (s)
 const PSY_BUFSEC=5;                                 // tampon circulaire audio/indices (s)
 function psyReset(){ PSY.buf=[]; PSY.cur=PSY.mean=PSY.p95=null; PSY.PA=0; PSY.N5=0; PSY.span=0;
-  PSY._sum=null; PSY._cnt=0; PSY._hist=null; PSY._recalcT=0; PSY._rT=0; PSY._Rcur=0; PSY._tT=0; PSY._Tcur=0; PSY._tpT=0; PSY.tnrT=0; PSY.prT=0; PSY.tones=[];
+  PSY._sum=null; PSY._cnt=0; PSY._hist=null; PSY._recalcT=0; PSY._rT=0; PSY._Rcur=0; PSY._tT=0; PSY._Tcur=0; PSY._tpT=0; PSY.tnrT=0; PSY.prT=0; PSY.tones=[]; PSY.rdw=0; PSY.rdwT=0;
   PSY.N=PSY.S=PSY.R=PSY.F=PSY.T=0; }
 const PSY_WR=f=>(f/70)*Math.exp(1-f/70);       // pondération rugosité (pic 70 Hz)
 const PSY_WF=f=>2/((f/4)+(4/f));               // pondération fluctuation (pic 4 Hz)
@@ -3998,6 +3998,79 @@ function psyRoughness(){
   try{ an.getFloatTimeDomainData(tap); }catch(_){ return PSY.R||0; }
   const fs=(S.ctx&&S.ctx.sampleRate)||48000;
   return Math.max(0, PSY_CAL_R*psyRoughMB(tap,fs));
+}
+/* Rugosité D&W précise, calcul unique (à la demande) sur le tap psycho — pas de calibration (modèle déjà calé sur 1 asper). */
+function psyRoughDWnow(){ const an=S.psyAn||S.analyser, tap=S.psyAn?S.psyTap:S.tap; if(!an||!tap)return;
+  try{ an.getFloatTimeDomainData(tap); const fs=(S.ctx&&S.ctx.sampleRate)||48000;
+    let N=1; while(N*2<=tap.length)N*=2; const seg=tap.subarray(0,N);
+    PSY.rdw=Math.max(0,psyRoughDW(seg,fs)); PSY.rdwT=performance.now()/1000;
+  }catch(_){ } }
+/* ===== Rugosité Daniel & Weber COMPLÈTE (ECMA/D&W 1997, port fidèle MOSQITO — validé identique) =====
+   47 canaux ½-Bark, excitation par IFFT, pondérations Hi(f_mod), corrélation croisée i±2, dépendance au niveau.
+   Coûteux (~70 ms) : calcul À LA DEMANDE (tap sur l'axe Rugosité), fenêtre 8192 (radix-2). */
+const RDW_BF=[0,50,100,150,200,250,300,350,400,450,510,570,630,700,770,840,920,1000,1080,1170,1270,1370,1480,1600,1720,1850,2000,2150,2320,2500,2700,2900,3150,3400,3700,4000,4400,4800,5300,5800,6400,7000,7700,8500,9500,10500,12000,13500,15500,20000];
+const RDW_BZ=(()=>{const a=[];for(let i=0;i<50;i++)a.push(i*0.5);return a;})();
+function rdwInterp(x,xp,yp){ if(x<=xp[0])return yp[0]; if(x>=xp[xp.length-1])return yp[yp.length-1]; let i=1; while(xp[i]<x)i++; const t=(x-xp[i-1])/(xp[i]-xp[i-1]); return yp[i-1]+t*(yp[i]-yp[i-1]); }
+const rdwBark=f=>rdwInterp(f,RDW_BF,RDW_BZ), rdwUnbark=z=>rdwInterp(z,RDW_BZ,RDW_BF);
+const RDW_EX=[0,10,12,13,14,15,16,16.5,17,18,18.5,19,20,21,21.5,22,22.5,23,23.5,24,25,26],RDW_EY=[0,0,1.15,2.31,3.85,5.62,6.92,7.38,6.92,4.23,2.31,0,-1.43,-2.59,-3.57,-5.19,-7.41,-11.3,-20,-40,-130,-999];
+const rdwEar=z=>rdwInterp(z,RDW_EX,RDW_EY);
+const RDW_GX=(()=>{const a=[];for(let i=0;i<25;i++)a.push(i);return a;})(),RDW_GY=[0.15,0.26,0.38,0.47,0.54,0.65,0.76,0.83,0.90,0.98,0.98,0.90,0.80,0.70,0.62,0.54,0.49,0.43,0.39,0.35,0.30,0.30,0.30,0.30,0.30];
+const rdwGzi=z=>rdwInterp(z,RDW_GX,RDW_GY);
+const RDW_LX=(()=>{const a=[];for(let i=0;i<49;i++)a.push(i*0.5);return a;})(),RDW_LY=[130,44.29,25,20,15,13.08,11.15,9.46,8.1,7.2,6.3,5.65,5,4.62,4.25,3.88,3.5,3.25,3,2.75,2.5,2.3,2.1,1.9,1.7,1.05,0.39,-0.29,-1.03,-1.76,-2.5,-3.25,-4,-3.85,-3.7,-2.6,-1.5,-0.05,1.4,2.6,3.8,4.4,5,6.25,7.5,11.25,15,31.5,48];
+const rdwLtq=z=>rdwInterp(z,RDW_LX,RDW_LY);
+const RDW_HC={H2:[[0,17,23,25,32,37,48,67,90,114,171,206,247,294,358],[0,0.8,0.95,0.975,1,0.975,0.9,0.8,0.7,0.6,0.4,0.3,0.2,0.1,0]],H5:[[0,32,43,56,69,92,120,142,165,231,277,331,397,502],[0,0.8,0.95,1,0.975,0.9,0.8,0.7,0.6,0.4,0.3,0.2,0.1,0]],H16:[[0,23.5,34,47,56,63,79,100,115,135,159,172,194,215,244,290,348,415,500,645],[0,0.4,0.6,0.8,0.9,0.95,1,0.975,0.95,0.9,0.85,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]],H21:[[0,19,44,52.5,58,75,101.5,114.5,132.5,143.5,165.5,197.5,241,290,348,415,500,645],[0,0.4,0.8,0.9,0.95,1,0.95,0.9,0.85,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]],H42:[[0,15,41,49,53,64,71,88,94,106,115,137,180,238,290,348,415,500,645],[0,0.4,0.8,0.9,0.965,0.99,1,0.95,0.9,0.85,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]]};
+let RDW_H=null,RDW_Hn=0,RDW_gzi=null;
+function rdwBuildH(n,fs){ const H=[]; for(let i=0;i<47;i++)H.push(new Float64Array(n));
+  const fill=(row,c)=>{const cx=c[0],cy=c[1],last=Math.floor(cx[cx.length-1]/fs*n);for(let j=2;j<last;j++)H[row][j]=rdwInterp(j*fs/n,cx,cy);};
+  fill(1,RDW_HC.H2);fill(4,RDW_HC.H5);fill(15,RDW_HC.H16);fill(20,RDW_HC.H21);fill(41,RDW_HC.H42);
+  H[0]=H[2]=H[3]=H[1]; for(let i=5;i<15;i++)H[i]=H[4]; for(let i=16;i<20;i++)H[i]=H[15]; for(let i=21;i<41;i++)H[i]=H[20]; for(let i=42;i<47;i++)H[i]=H[41];
+  return H; }
+function rdwIFFT(re,im){ const n=re.length; for(let i=0;i<n;i++)im[i]=-im[i]; fft(re,im); for(let i=0;i<n;i++){re[i]/=n;im[i]=-im[i]/n;} }
+function psyRoughDW(pcm,fs){
+  let N=1; while(N*2<=pcm.length)N*=2; if(N<4096)return 0; const n=N, L=N>>1;
+  if(RDW_Hn!==n){ RDW_H=rdwBuildH(n,fs); RDW_Hn=n; RDW_gzi=[]; for(let i=1;i<48;i++)RDW_gzi.push(rdwGzi(i/2)); }
+  const H=RDW_H, gzi=RDW_gzi;
+  // comp_spectrum Blackman
+  const re=new Float64Array(n),im=new Float64Array(n); let sw=0; const w=new Float64Array(N);
+  for(let i=0;i<N;i++){ w[i]=0.42-0.5*Math.cos(2*Math.PI*i/(N-1))+0.08*Math.cos(4*Math.PI*i/(N-1)); sw+=w[i]; }
+  for(let i=0;i<N;i++)re[i]=pcm[i]*w[i]/sw;
+  fft(re,im);
+  const sr=new Float64Array(L),si=new Float64Array(L); for(let k=0;k<L;k++){sr[k]=re[k]*1.42;si[k]=im[k]*1.42;}
+  // 2-sided
+  const Re=new Float64Array(n),Im=new Float64Array(n);
+  for(let k=0;k<L;k++){Re[k]=sr[k];Im[k]=si[k];} for(let k=0;k<L;k++){Re[L+k]=sr[L-1-k];Im[L+k]=si[L-1-k];}
+  const freq=new Float64Array(L),bark=new Float64Array(L); for(let k=0;k<L;k++){freq[k]=(k+1)*fs/n;bark[k]=rdwBark(freq[k]);}
+  for(let k=0;k<L;k++){const a=Math.pow(10,0.05*rdwEar(bark[k]));Re[k]*=a;Im[k]*=a;} for(let k=L;k<n;k++){Re[k]=0;Im[k]=0;}
+  const module=new Float64Array(L),specDb=new Float64Array(L); for(let k=0;k<L;k++){module[k]=Math.hypot(Re[k],Im[k]); specDb[k]=20*Math.log10((module[k]===0?2e-12:module[k])/2e-5);}
+  const thr=new Float64Array(L); for(let k=0;k<L;k++)thr[k]=rdwLtq(bark[k]);
+  const aud=[]; for(let k=0;k<L;k++)if(specDb[k]>thr[k])aud.push(k); const na=aud.length; if(!na)return 0;
+  const NCH=47, nZ=[]; for(let i=1;i<=L;i++)nZ.push(i);
+  const zb=[]; for(let i=1;i<=NCH;i++)zb.push(rdwUnbark(i/2)*n/fs);
+  const minExc=zb.map(v=>rdwInterp(v,nZ,thr));
+  const s1=-27,s2=new Float64Array(na); for(let k=0;k<na;k++)s2[k]=Math.min(-24-230/freq[aud[k]]+0.2*specDb[aud[k]],0);
+  const chLow=new Int32Array(na),chHigh=new Int32Array(na); for(let i=0;i<na;i++){chLow[i]=Math.floor(2*bark[aud[i]])-1;chHigh[i]=Math.ceil(2*bark[aud[i]])-1;}
+  const slopes=Array.from({length:na},()=>new Float64Array(NCH));
+  for(let k=0;k<na;k++){const lev=specDb[aud[k]],b=bark[aud[k]];
+    for(let j=0;j<=chLow[k];j++){const sl=s1*(b-(j+1)*0.5)+lev; if(sl>minExc[j])slopes[k][j]=Math.pow(10,0.05*sl)*2e-5;}
+    for(let j=chHigh[k];j<NCH;j++){const sl=s2[k]*((j+1)*0.5-b)+lev; if(sl>minExc[j])slopes[k][j]=Math.pow(10,0.05*sl)*2e-5;}}
+  const hBP=Array.from({length:NCH},()=>new Float64Array(n)),md=new Float64Array(NCH);
+  const er=new Float64Array(n),ei=new Float64Array(n);
+  for(let i=0;i<NCH;i++){ er.fill(0);ei.fill(0);
+    for(let j=0;j<na;j++){const ind=aud[j]; let ampl; if(chLow[j]===i||chHigh[j]===i)ampl=1; else if(chHigh[j]>i)ampl=slopes[j][i+1]/module[ind]; else ampl=slopes[j][i-1]/module[ind]; er[ind]=ampl*Re[ind]; ei[ind]=ampl*Im[ind]; }
+    const tr=er.slice(),ti=ei.slice(); rdwIFFT(tr,ti);
+    const te=new Float64Array(n); let h0=0; for(let k=0;k<n;k++){te[k]=Math.abs(n*tr[k]);h0+=te[k];} h0/=n;
+    const fr2=new Float64Array(n),fi2=new Float64Array(n); for(let k=0;k<n;k++)fr2[k]=te[k]-h0;
+    fft(fr2,fi2); for(let k=0;k<n;k++){fr2[k]*=H[i][k];fi2[k]*=H[i][k];} rdwIFFT(fr2,fi2);
+    let rms=0; for(let k=0;k<n;k++){hBP[i][k]=2*fr2[k];rms+=hBP[i][k]*hBP[i][k];} rms=Math.sqrt(rms/n);
+    md[i]=h0>0?Math.min(1,rms/h0):0;
+  }
+  const ki=new Float64Array(47), cc=(a,b)=>{let ma=0,mb=0;for(let k=0;k<n;k++){ma+=a[k];mb+=b[k];}ma/=n;mb/=n;let sa=0,sb=0,sab=0;for(let k=0;k<n;k++){const da=a[k]-ma,db=b[k]-mb;sa+=da*da;sb+=db*db;sab+=da*db;}return(sa>0&&sb>0)?sab/Math.sqrt(sa*sb):0;};
+  for(let i=0;i<45;i++)ki[i]=cc(hBP[i],hBP[i+2]);
+  const Rs=new Float64Array(47);
+  Rs[0]=gzi[0]*Math.pow(md[0]*ki[0],2); Rs[1]=gzi[1]*Math.pow(md[1]*ki[1],2);
+  for(let i=2;i<45;i++)Rs[i]=gzi[i]*Math.pow(md[i]*ki[i]*ki[i-2],2);
+  Rs[45]=gzi[45]*Math.pow(md[45]*ki[43],2); Rs[46]=gzi[46]*Math.pow(md[46]*ki[44],2);
+  let R=0; for(let i=0;i<47;i++)R+=Rs[i]; return 0.25*R;
 }
 /* ---- Fluctuation band-wise (helper pur, testable) ---- */
 function psyFluctBW(nhist,dt){
@@ -4202,7 +4275,7 @@ function drawPsycho(){
   const meta=[['Sonie','N',B.N,'sone'],['Acuité','S',B.S,'acum'],['Rugosité','R',B.R,'asper'],['Fluctuat.','F',B.F,'vacil'],['Tonalité','T',B.T,'tu']];
   const axes=meta.map(m=>[m[0],m[1],src[m[1]]||0,m[2],m[3]]);
   const K=axes.length, ang=i=>(-Math.PI/2 + i*2*Math.PI/K);
-  PSY._geom={cx,cy,R,K};
+  PSY._geom={cx,cy,R,K,keys:axes.map(a=>a[1])};
   const accent=(getComputedStyle(document.body).getPropertyValue('--ice')||'#4FC3FF').trim()||'#4FC3FF';
   const MIN=2, span=PSY.span||0, live=((S.running&&!S.paused)||REPL.on);
   const ready = (PSY.cur && span>=MIN) || (avg&&PSY._cnt>0);
@@ -4213,7 +4286,7 @@ function drawPsycho(){
       if(d<G.R*0.12){ PSY.sel=-1; drawPsycho(); return; }
       let a=Math.atan2(y,x)+Math.PI/2; if(a<0)a+=2*Math.PI;
       const i=Math.round(a/(2*Math.PI/G.K))%G.K;
-      PSY.sel=(PSY.sel===i)?-1:i; drawPsycho();
+      PSY.sel=(PSY.sel===i)?-1:i; if(PSY.sel>=0 && G.keys && G.keys[PSY.sel]==='R') psyRoughDWnow(); drawPsycho();
     });
   }
   g.strokeStyle='rgba(127,176,220,.18)';
@@ -4251,7 +4324,7 @@ function drawPsycho(){
     const winTxt={N:'250 ms',S:'250 ms',R:'1 s',F:'5 s',T:'2 s'};
     const cval=(PSY.cur&&PSY.cur[k])||0, mval=(PSY.mean&&PSY.mean[k])||0, pval=(PSY.p95&&PSY.p95[k])||0;
     const nrm=Math.max(0,Math.min(1,cval/bnd));
-    const isT=(k==='T'), bh=isT?58:40;
+    const isT=(k==='T'), isR=(k==='R'), bh=(isT||isR)?58:40;
     const bx=8, by=h-bh-6, bw=w-16;
     g.fillStyle='rgba(0,20,45,.75)'; g.strokeStyle=accent; g.lineWidth=1;
     if(g.roundRect){g.beginPath();g.roundRect(bx,by,bw,bh,7);g.fill();g.stroke();}else{g.fillRect(bx,by,bw,bh);g.strokeRect(bx,by,bw,bh);}
@@ -4264,6 +4337,9 @@ function drawPsycho(){
       const t1=(PSY.tnrT>0)?('TNR '+PSY.tnrT.toFixed(1)+' dB · PR '+PSY.prT.toFixed(1)+' dB (ECMA-74)'):'ECMA-74 : aucune raie proéminente';
       const top=(PSY.tones&&PSY.tones[0])?('   raie '+(PSY.tones[0].f>=1000?(PSY.tones[0].f/1000).toFixed(2)+' k':Math.round(PSY.tones[0].f))+'Hz +'+PSY.tones[0].tnr.toFixed(0)+'dB'):'';
       g.fillText(t1+top, bx+10, by+45); }
+    if(isR){ g.textAlign='left'; g.fillStyle='rgba(180,215,255,.9)'; g.font='9px sans-serif';
+      const rr=(PSY.rdw!=null&&PSY.rdwT)?('Daniel & Weber (précis) : '+PSY.rdw.toFixed(2)+' asper'):'D&W précis : calcul…';
+      g.fillText(rr+'   ·   modèle MOSQITO', bx+10, by+45); }
   } else if(ready){
     g.textAlign='center'; g.fillStyle='rgba(150,180,210,.6)'; g.font='8px sans-serif'; g.fillText('touchez un axe · plein = actuel (MOY = moyenne) · tic = P95', cx, h-8);
   }
