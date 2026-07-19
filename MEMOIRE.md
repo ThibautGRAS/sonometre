@@ -139,6 +139,8 @@ Deux chaînes parallèles à partir du même signal micro :
 
 ## 8. Journal des versions (V2)
 
+- **2.0.98-beta** : rétroéclairage revu. (1) Halo **permanent** (pas seulement a l'appui) : glow de base des touches renforce (drop-shadow 9px, alpha .72) + textes/LED, renforce encore a l'appui. (2) **Couleur du halo liee au theme** via variable `--glowRGB` definie par theme (marine 79,195,255 · acier 150,190,235 · clair 60,120,210 · oled 100,190,255 · neon 255,90,110 · gameboy 150,168,70 · matrix 80,255,140) ; le halo utilise rgba(var(--glowRGB),a). Suppression des surcharges par theme codees en dur.
+
 - **2.0.97-beta** : mode **Rétroéclairage** (onglet Affichage, `mBacklight`, On/Off). Classe `body.backlit` : halo lumineux (filter drop-shadow + brightness) sur l'ecran (.lcd), la valeur (.num), le badge, et les touches (.key) avec glow des libelles (.kf/.kv) et de la LED (.dot) ; renforce a l'appui. Teinte du halo suivant le theme (neon rouge, matrix vert, gameboy olive ; bleu par defaut). Independant du theme, persiste (backlight), applique dans applyTheme + au toggle. i18n 'Retroeclairage'.
 
 - **2.0.96-beta** : gain d'ecoute Auto plus FORT. Live : makeup **+30 dB** (au lieu de +18) + limiteur. Relecture : normalisation sur le **RMS** (vise ~ -15 dBFS RMS, borne 0.2..64x) au lieu du pic -> bien plus fort a l'oreille, le limiteur (-1 dB, ratio 20) tenant les cretes. Sous-echantillonnage du buffer pour le calcul RMS sur gros enregistrements.
