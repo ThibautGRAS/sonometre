@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.3-beta</div>
+  <div class="splashver" id="splashVer">2.2.4-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1022,7 +1022,7 @@ if('serviceWorker' in navigator){
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <h3>Psychoacoustique (toile)</h3>
-      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (t.u., présence de raies tonales — modèle d'Aures). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. Chaque indicateur est recalculé ~7×/s sur sa propre fenêtre (sonie et acuité 250 ms, rugosité 1 s, tonalité 2 s, fluctuation 5 s) à partir d'un tampon de 5 s. Le polygone <b>plein</b> = valeur actuelle ; <b>MOY</b> = moyenne depuis le début ; le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs s'affichent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). La <b>sonie</b> applique la méthode <b>tabulée ISO 532-1</b> (DIN 45631, identique à la librairie de référence MOSQITO) et l'<b>acuité</b> la DIN 45692. La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> avec <b>décomposition en canaux auditifs chevauchants</b> (0,5 Bark) et <b>cohérence inter-bandes</b> (analyse sur ~340 ms) ; la <b>fluctuation</b> suit <b>Fastl band-wise</b> — modulation de la sonie spécifique <b>par bande de Bark</b>, indépendante du niveau (fenêtre 5 s) ; la <b>tonalité</b> applique le modèle d'<b>Aures</b> (raies tonales pondérées par la fréquence, pic ~700 Hz, et l'excès de niveau). Rugosité et fluctuation sont calées sur les tons AM de référence (1 asper @70 Hz, 1 vacil @4 Hz), la tonalité sur un son pur 1 kHz. Indicateurs de confort validés sur banc synthétique (confrontation MOSQITO prévue) — non certifiés.</p>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (t.u., présence de raies tonales — modèle d'Aures). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. Chaque indicateur est recalculé ~7×/s sur sa propre fenêtre (sonie et acuité 250 ms, rugosité 1 s, tonalité 2 s, fluctuation 5 s) à partir d'un tampon de 5 s. Le polygone <b>plein</b> = valeur actuelle ; <b>MOY</b> = moyenne depuis le début ; le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs s'affichent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). La <b>sonie</b> applique la méthode <b>tabulée ISO 532-1</b> (DIN 45631, identique à la librairie de référence MOSQITO) et l'<b>acuité</b> la DIN 45692. La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> avec <b>décomposition en canaux auditifs chevauchants</b> (0,5 Bark) et <b>cohérence inter-bandes</b> (analyse sur ~340 ms) ; la <b>fluctuation</b> suit <b>Fastl band-wise</b> — modulation de la sonie spécifique <b>par bande de Bark</b>, indépendante du niveau (fenêtre 5 s) ; la <b>tonalité</b> applique le modèle d'<b>Aures</b> (raies tonales pondérées par la fréquence, pic ~700 Hz, et l'excès de niveau). En complément, un clic sur l'axe <b>Tonalité</b> affiche le <b>TNR</b> et le <b>PR</b> normatifs (<b>ECMA-74</b> : tone-to-noise et prominence ratio, en dB, validés identiques à la librairie MOSQITO) et la raie dominante. Rugosité et fluctuation sont calées sur les tons AM de référence (1 asper @70 Hz, 1 vacil @4 Hz), la tonalité sur un son pur 1 kHz. Indicateurs de confort validés sur banc synthétique (confrontation MOSQITO prévue) — non certifiés.</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -3930,7 +3930,7 @@ const PSY={buf:[],cur:null,mean:null,p95:null,PA:0,N5:0,span:0,
 const PSY_WIN={N:0.25,S:0.25,R:1.0,T:2.0,F:5.0};   // fenêtres propres à chaque indicateur (s)
 const PSY_BUFSEC=5;                                 // tampon circulaire audio/indices (s)
 function psyReset(){ PSY.buf=[]; PSY.cur=PSY.mean=PSY.p95=null; PSY.PA=0; PSY.N5=0; PSY.span=0;
-  PSY._sum=null; PSY._cnt=0; PSY._hist=null; PSY._recalcT=0; PSY._rT=0; PSY._Rcur=0; PSY._tT=0; PSY._Tcur=0;
+  PSY._sum=null; PSY._cnt=0; PSY._hist=null; PSY._recalcT=0; PSY._rT=0; PSY._Rcur=0; PSY._tT=0; PSY._Tcur=0; PSY._tpT=0; PSY.tnrT=0; PSY.prT=0; PSY.tones=[];
   PSY.N=PSY.S=PSY.R=PSY.F=PSY.T=0; }
 const PSY_WR=f=>(f/70)*Math.exp(1-f/70);       // pondération rugosité (pic 70 Hz)
 const PSY_WF=f=>2/((f/4)+(4/f));               // pondération fluctuation (pic 4 Hz)
@@ -4031,6 +4031,119 @@ function psyTonalAures(binPow,df){
   }
   return PSY_CAL_T*Math.sqrt(s);
 }
+/* ===== Tonalité normative TNR / PR (ECMA-74, port fidèle MOSQITO — validé T-TNR/T-PR identiques) =====
+   Entrées : spectre fin en dB SPL + axe des fréquences. Sorties : T-TNR, T-PR globaux + raies. */
+const tnrLOG=Math.log10;
+function tnrLTH(f){let fmean,fstd,a1,a2,a3,a4,a5;
+  if(f>=20&&f<305){fmean=167.5;fstd=87.3212;a1=1.415532;a2=-2.451068;a3=1.498869;a4=-6.983224;a5=8.621226;}
+  else if(f>=305&&f<2230){fmean=1157.5;fstd=488.582;a1=0.397994;a2=-0.891839;a3=-0.815138;a4=-1.221319;a5=-7.600754;}
+  else if(f>=2230&&f<14000){fmean=7250;fstd=3033.25;a1=1.584978;a2=-2.766599;a3=-6.9061912;a4=10.138553;a5=-3.149339;}
+  else {fmean=16990;fstd=4049;a1=-5.775593;a2=-9.200034;a3=26.59115;a4=52.16712;a5=15.61552048;}
+  const x=(f-fmean)/fstd; return a1*x**4+a2*x**3+a3*x**2+a4*x+a5;
+}
+function tnrCB(f0){const d=25+75*Math.pow(1+1.4*(f0/1000)**2,0.69);
+  if(f0<500)return[f0-d/2,f0+d/2]; const f1=-d/2+Math.sqrt(d*d+4*f0*f0)/2; return[f1,f1+d];}
+function tnrLowCB(f0){const f2=tnrCB(f0)[0];let c0,c1,c2;
+  if(f0<171.4){c0=20;c1=0;c2=0;}else if(f0<=1600){c0=-149.5;c1=1.001;c2=-6.9e-5;}else{c0=6.8;c1=0.806;c2=-8.2e-6;}
+  return[c0+c1*f0+c2*f0*f0,f2];}
+function tnrUpCB(f0){const [,f1]=tnrCB(f0);let c0,c1,c2;
+  if(f0<=1600){c0=149.5;c1=1.035;c2=7.7e-5;}else{c0=3.3;c1=1.215;c2=2.16e-5;}
+  return[f1,c0+c1*f0+c2*f0*f0];}
+function tnrArgmin(fr,v){let bi=0,bd=Infinity;for(let i=0;i<fr.length;i++){const d=Math.abs(fr[i]-v);if(d<bd){bd=d;bi=i;}}return bi;}
+function tnrNthOct(low,high,N){const G=Math.pow(10,3/10);const xr=x=>1000*Math.pow(G,x/N);
+  let xmin=Math.ceil(N*Math.log(low/1000)/Math.log(G)), xmax=Math.floor(N*Math.log(high/1000)/Math.log(G));
+  const b=[];for(let x=xmin;x<=xmax;x++){const fc=xr(x);b.push([fc*Math.pow(G,-1/(2*N)),fc,fc*Math.pow(G,1/(2*N))]);}
+  if(b.length){b[0][0]=low;b[b.length-1][2]=high;}return b;}
+function tnrSmooth(freqs,specDb,noct,low,high){
+  const bands=tnrNthOct(low,high,noct); const sm=new Float64Array(freqs.length);
+  const bandDb=[];const kept=[];
+  for(const bd of bands){ const idx=[];for(let k=0;k<freqs.length;k++)if(freqs[k]>=bd[0]&&freqs[k]<=bd[2])idx.push(k);
+    if(!idx.length)continue; let s=0;for(const k of idx)s+=Math.pow(10,specDb[k]/10); bandDb.push(10*tnrLOG(s/idx.length)); kept.push(bd);}
+  for(let j=0;j<kept.length;j++){ const lo=tnrArgmin(freqs,kept[j][0]), hi=tnrArgmin(freqs,kept[j][2]); for(let k=lo;k<hi;k++)sm[k]=bandDb[j]; }
+  return sm;
+}
+function tnrPeakLvl(spec,pk){ const Li=spec[pk]; let L=spec[pk];
+  let t=pk+1; if(t!==spec.length){ let Lt=Li; while(Lt-Math.abs(spec[t])>0){ if(Li-spec[t]<10){Lt=spec[t];L=10*tnrLOG(10**(L/10)+10**(spec[t]/10));t++;if(t===spec.length){t--;Lt=-1;}}else Lt=-1; } }
+  t=pk-1; if(t!==-1){ let Lt=Li; while(Lt-Math.abs(spec[t])>0){ if(Li-spec[t]<10){Lt=spec[t];L=10*tnrLOG(10**(L/10)+10**(spec[t]/10));t--;if(t<0){t++;Lt=-1;}}else Lt=-1; } }
+  return L;
+}
+function tnrScreen(freqs,spec,low,high){
+  const sm=tnrSmooth(freqs,spec,24,low,high);
+  const maxima=[]; for(let k=1;k<spec.length-1;k++){ if(spec[k]>spec[k-1]&&spec[k]>=spec[k+1]) maxima.push(k); }
+  const cand=[]; for(const k of maxima){ if(spec[k]>sm[k]+6 && spec[k]>tnrLTH(freqs[k])+10) cand.push(k); }
+  cand.sort((a,b)=>a-b);
+  let index=cand.slice(); const tones=[];
+  while(index.length>0){ let pk=index[0]; let lo=pk,hi=pk;
+    let t=pk+1; while(t<spec.length && spec[t]>sm[t]+6){ if(spec[t]>spec[pk])pk=t; hi++; t++; }
+    t=pk-1; while(t>=0 && spec[t]>sm[t]+6){ if(spec[t]>spec[pk])pk=t; lo--; t--; }
+    const [f1,f2]=tnrCB(freqs[pk]); const cbw=f2-f1, tw=freqs[hi]-freqs[lo];
+    if(tw<cbw) tones.push(pk);
+    index=index.filter(x=>x>hi);
+  }
+  return tones;
+}
+function tnrFindHi(freqs,spec,index,nb,ind){
+  const f=freqs[ind]; const [f1,f2]=tnrCB(f);
+  const lo=tnrArgmin(freqs,f1),hi=tnrArgmin(freqs,f2);
+  let mult=index.filter(x=>x>lo&&x<hi);
+  if(mult.length>1){ mult.sort((a,b)=>spec[b]-spec[a]); const ind_p=mult[0],ind_s=mult[1];
+    for(let s=2;s<mult.length;s++){ const j=index.indexOf(mult[s]); if(j>=0){index.splice(j,1);nb--;} }
+    if(ind_p!==ind) return tnrFindHi(freqs,spec,index,nb,ind_p);
+    return [ind_p,ind_s,index,nb];
+  }
+  return [ind,null,index,nb];
+}
+function psyTnrMain(specDbFull,freqFull){
+  const idx=[];for(let k=0;k<freqFull.length;k++)if(freqFull[k]>89.1&&freqFull[k]<11200)idx.push(k);
+  const fr=idx.map(k=>freqFull[k]), spec=idx.map(k=>specDbFull[k]);
+  let peaks=tnrScreen(fr,spec,90,11200); let nb=peaks.length;
+  const tnr=[],tones=[],prom=[];
+  while(nb>0){ let ind=peaks[0],ind_p,ind_s;
+    if(peaks.length>1){ [ind_p,ind_s,peaks,nb]=tnrFindHi(fr,spec,peaks.slice(),nb,ind); } else {ind_p=ind;ind_s=null;}
+    let Lt,f1,f2;
+    if(ind_s!=null){ const fp=fr[ind_p],fsq=fr[ind_s];
+      const df_=21*Math.pow(10,1.2*Math.pow(Math.abs(tnrLOG(fp/212)),1.8));
+      if(Math.abs(fsq-fp)<df_){ const Lp=tnrPeakLvl(spec,ind_p),Ls=tnrPeakLvl(spec,ind_s); Lt=10*tnrLOG(10**(Lp/10)+10**(Ls/10));
+        [f1,f2]=tnrCB(fp); const su=peaks.indexOf(ind_s); if(su>=0){peaks.splice(su,1);nb--;} }
+      else { Lt=spec[ind_p]; [f1,f2]=tnrCB(fr[ind_p]); }
+    } else { Lt=tnrPeakLvl(spec,ind_p); [f1,f2]=tnrCB(fr[ind_p]); }
+    const lo=tnrArgmin(fr,f1),hi=tnrArgmin(fr,f2);
+    let ss=0;for(let k=lo;k<hi;k++)ss+=10**(spec[k]/10); const Ltot=10*tnrLOG(ss);
+    const dfc=f2-f1; const dft=fr[1]-fr[0]; const dftot=freqFull[hi]-freqFull[lo];
+    const Ln=10*tnrLOG(10**(Ltot/10)-10**(Lt/10))+10*tnrLOG(dfc/(dftot-dft));
+    const f=fr[ind_p], dt=Lt-Ln;
+    if(dt>0){ tones.push(f); tnr.push(dt);
+      let pr_; if(f>=89.1&&f<1000)pr_=dt>=8+8.33*tnrLOG(1000/f); else pr_=dt>=8; prom.push(pr_); }
+    const su=peaks.indexOf(ind_p); if(su>=0){peaks.splice(su,1);nb--;}
+  }
+  let acc=0;for(let i=0;i<tnr.length;i++)if(prom[i])acc+=10**(tnr[i]/10);
+  return {t:acc>0?10*tnrLOG(acc):0,freqs:tones,vals:tnr,prom};
+}
+
+
+function psyPrMain(specDbFull,freqFull){
+  const idx=[];for(let k=0;k<freqFull.length;k++)if(freqFull[k]>89.1&&freqFull[k]<11200)idx.push(k);
+  const fr=idx.map(k=>freqFull[k]), spec=idx.map(k=>specDbFull[k]);
+  let peaks=tnrScreen(fr,spec,90,11200); let nb=peaks.length;
+  const pr=[],tones=[],prom=[]; const sumdb=(lo,hi)=>{let s=0;for(let k=lo;k<hi;k++)s+=10**(spec[k]/10);return s;};
+  while(nb>0){ let ind=peaks[0];
+    if(peaks.length>1){ let _s; [ind,_s,peaks,nb]=tnrFindHi(fr,spec,peaks.slice(),nb,ind); }
+    const ft=fr[ind];
+    let [f1,f2]=tnrCB(ft); const lo=tnrArgmin(fr,f1),hi=tnrArgmin(fr,f2); let ss=sumdb(lo,hi); const Lm=ss!==0?10*tnrLOG(ss):0;
+    let [lf1,lf2]=tnrLowCB(ft); const llo=tnrArgmin(fr,lf1),lhi=tnrArgmin(fr,lf2); ss=sumdb(llo,lhi); const Ll=ss!==0?10*tnrLOG(ss):0; const dfl=lf2-lf1;
+    let [uf1,uf2]=tnrUpCB(ft); const ulo=tnrArgmin(fr,uf1),uhi=tnrArgmin(fr,uf2); ss=sumdb(ulo,uhi); const Lu=ss!==0?10*tnrLOG(ss):0;
+    let delta; if(ft<=171.4) delta=10*tnrLOG(10**(0.1*Lm))-10*tnrLOG(((100/dfl)*10**(0.1*Ll)+10**(0.1*Lu))*0.5);
+    else delta=10*tnrLOG(10**(0.1*Lm))-10*tnrLOG((10**(0.1*Ll)+10**(0.1*Lu))*0.5);
+    if(delta>0){ tones.push(ft); pr.push(delta); let p; if(ft>=89.1&&ft<=1000)p=delta>=9+10*tnrLOG(1000/ft); else p=delta>=9; prom.push(p); }
+    peaks=peaks.filter(x=>!(x>=lo&&x<=hi)); nb=peaks.length;
+  }
+  let acc=0;for(let i=0;i<pr.length;i++)if(prom[i])acc+=10**(pr[i]/10);
+  return {t:acc>0?10*tnrLOG(acc):0,freqs:tones,vals:pr,prom};
+}
+
+
+function psyTnrPr(specDb,freq){ const t=psyTnrMain(specDb,freq), p=psyPrMain(specDb,freq);
+  return {tnrT:t.t, prT:p.t, tnrTones:t.freqs, tnrVals:t.vals, tnrProm:t.prom, prTones:p.freqs, prVals:p.vals, prProm:p.prom}; }
 function psyPctile(arr,q){ if(!arr||!arr.length)return 0; const a=arr.slice().sort((x,y)=>x-y); return a[Math.min(a.length-1,Math.max(0,Math.round(q*(a.length-1))))]; }
 function psyUpdate(){
   const now=performance.now()/1000;
@@ -4052,6 +4165,15 @@ function psyUpdate(){
   const meanOver=(k,sec)=>{ const t0=now-sec; let s=0,c=0; for(let i=PSY.buf.length-1;i>=0;i--){ if(PSY.buf[i].t<t0)break; s+=PSY.buf[i][k]; c++; } return c?s/c:0; };
   const Ncur=meanOver('N',PSY_WIN.N), Scur=meanOver('S',PSY_WIN.S), Rcur=meanOver('R',PSY_WIN.R), Tcur=meanOver('T',PSY_WIN.T);
   const Fcur=Math.max(0,psyFluct(PSY.buf));                                   // fluctuation sur ~5 s (tampon complet)
+  /* TNR/PR normatifs (ECMA-74) — plus lourd, recalcul ~0,5 s */
+  if(S.binPowD && (!PSY._tpT || now-PSY._tpT>0.5)){ PSY._tpT=now;
+    const nb=S.binPowD.length, df=S.binHz||((S.ctx?S.ctx.sampleRate:48000)/(S.fftN||4096));
+    const specDb=new Float64Array(nb), frq=new Float64Array(nb);
+    for(let k=0;k<nb;k++){ const p=S.binPowD[k]; specDb[k]=p>0?10*Math.log10(p)+S.offset:-180; frq[k]=k*df; }
+    try{ const r=psyTnrPr(specDb,frq); PSY.tnrT=r.tnrT; PSY.prT=r.prT;
+      PSY.tones=r.tnrTones.map((ff,i)=>({f:ff,tnr:r.tnrVals[i],prom:r.tnrProm[i]})).filter(t=>t.prom).sort((a,b)=>b.tnr-a.tnr).slice(0,4);
+    }catch(_){}
+  }
   const Ns=PSY.buf.map(s=>s.N).sort((a,b)=>b-a);
   const N5=Ns[Math.min(Ns.length-1,Math.floor(0.05*Ns.length))]||0;
   const wS=Scur>1.75?(Scur-1.75)*0.25*Math.log10(N5+10):0;
@@ -4129,7 +4251,8 @@ function drawPsycho(){
     const winTxt={N:'250 ms',S:'250 ms',R:'1 s',F:'5 s',T:'2 s'};
     const cval=(PSY.cur&&PSY.cur[k])||0, mval=(PSY.mean&&PSY.mean[k])||0, pval=(PSY.p95&&PSY.p95[k])||0;
     const nrm=Math.max(0,Math.min(1,cval/bnd));
-    const bx=8, by=h-46, bw=w-16, bh=40;
+    const isT=(k==='T'), bh=isT?58:40;
+    const bx=8, by=h-bh-6, bw=w-16;
     g.fillStyle='rgba(0,20,45,.75)'; g.strokeStyle=accent; g.lineWidth=1;
     if(g.roundRect){g.beginPath();g.roundRect(bx,by,bw,bh,7);g.fill();g.stroke();}else{g.fillRect(bx,by,bw,bh);g.strokeRect(bx,by,bw,bh);}
     g.textAlign='left'; g.textBaseline='middle';
@@ -4137,6 +4260,10 @@ function drawPsycho(){
     g.fillStyle='rgba(230,245,255,.95)'; g.font='10px sans-serif';
     g.fillText('actuel '+cval.toFixed(dec)+' '+u+'   ·   moy '+mval.toFixed(dec)+'   ·   P95 '+pval.toFixed(dec), bx+10, by+27);
     g.textAlign='right'; g.fillStyle='#fff'; g.font='bold 13px sans-serif'; g.fillText(Math.round(nrm*100)+' %', bx+bw-10, by+11);
+    if(isT){ g.textAlign='left'; g.fillStyle='rgba(180,215,255,.9)'; g.font='9px sans-serif';
+      const t1=(PSY.tnrT>0)?('TNR '+PSY.tnrT.toFixed(1)+' dB · PR '+PSY.prT.toFixed(1)+' dB (ECMA-74)'):'ECMA-74 : aucune raie proéminente';
+      const top=(PSY.tones&&PSY.tones[0])?('   raie '+(PSY.tones[0].f>=1000?(PSY.tones[0].f/1000).toFixed(2)+' k':Math.round(PSY.tones[0].f))+'Hz +'+PSY.tones[0].tnr.toFixed(0)+'dB'):'';
+      g.fillText(t1+top, bx+10, by+45); }
   } else if(ready){
     g.textAlign='center'; g.fillStyle='rgba(150,180,210,.6)'; g.font='8px sans-serif'; g.fillText('touchez un axe · plein = actuel (MOY = moyenne) · tic = P95', cx, h-8);
   }
