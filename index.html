@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.1.8-beta</div>
+  <div class="splashver" id="splashVer">2.1.9-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -860,7 +860,7 @@ if('serviceWorker' in navigator){
     <div id="dpSecPsy">
       <div class="cp-lbl" style="margin-top:10px">BORNES DES INDICATEURS (NORMALISATION → 100 %)</div>
       <div id="dpPsyRows"></div>
-      <div class="cp-fine"><button id="dpPsyReset" class="cp-ok" style="width:100%">Valeurs littérature</button></div>
+      <div class="cp-fine"><button id="dpPsyReset" class="cp-ok" style="width:100%">Valeurs par défaut</button></div>
     </div>
 
     <div class="cp-row" id="dpSecInterp" style="margin-top:10px"><span>Interpolation spectrogramme</span><button id="dpInterp" class="cp-tog">Activée</button></div>
@@ -1032,7 +1032,7 @@ if('serviceWorker' in navigator){
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <h3>Psychoacoustique (toile)</h3>
-      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (émergence d'une raie). Chaque axe est <b>normalisé</b> par des bornes issues de la littérature (N 40 sone, S 4 acum, R et F 1,0 — valeurs typiquement &lt; 1 asper/vacil, T 1). <b>Touchez un axe</b> pour lire sa valeur réelle et normalisée. Le polygone plein = <b>moyenne</b> sur la fenêtre ; le pointillé = valeur <b>instantanée</b>. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). Sonie et acuité reposent sur une méthode de Zwicker/DIN <b>simplifiée</b> (calée à 1 sone pour 1 kHz / 40 dB). La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> (modulation d'enveloppe, pic ~70 Hz) sur des blocs courts <b>~200 ms</b> ; la <b>fluctuation</b> applique le modèle de <b>Fastl/Osses</b> (modulation de la sonie, pic ~4 Hz) qui exige <b>≥ ~2 s</b> de signal (d'où la fenêtre de 4 s). Les deux sont calées sur les tons AM de référence (1 asper, 1 vacil). Version temps réel calibrée (sans décomposition par bande critique) — indicateurs de confort, non certifiés.</p>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (émergence d'une raie). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. <b>Touchez un axe</b> pour lire sa valeur réelle et normalisée. Le polygone plein = <b>moyenne</b> sur la fenêtre ; le pointillé = valeur <b>instantanée</b>. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). Sonie et acuité reposent sur une méthode de Zwicker/DIN <b>simplifiée</b> (calée à 1 sone pour 1 kHz / 40 dB). La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> (modulation d'enveloppe, pic ~70 Hz) sur des blocs courts <b>~200 ms</b> ; la <b>fluctuation</b> applique le modèle de <b>Fastl/Osses</b> (modulation de la sonie, pic ~4 Hz) qui exige <b>≥ ~2 s</b> de signal (d'où la fenêtre de 4 s). Les deux sont calées sur les tons AM de référence (1 asper, 1 vacil). Version temps réel calibrée (sans décomposition par bande critique) — indicateurs de confort, non certifiés.</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -1100,10 +1100,10 @@ const S = {
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
-  fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
+  fscale:'log', fftN:4096, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, psyAvg:false, psyBnd:{N:40,S:4,R:1,F:1,T:1}, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, psyAvg:false, psyBnd:{N:100,S:5,R:5,F:3,T:2}, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -3855,10 +3855,9 @@ function updScaleLbl(){
    PA — gêne psychoacoustique de Zwicker (combine N5, S, R, F). */
 const PSY_BARK_HI=[100,200,300,400,510,630,770,920,1080,1270,1480,1720,2000,2320,2700,3150,3700,4400,5300,6400,7700,9500,12000,15500];
 const PSY_LTQ=[30,18,12,8,7,6,5,4,3,3,3,3,3,3,3,3,3,3,3,4,5,7,12,20];   // seuil en champ approx par Bark (dB)
-/* Bornes de normalisation (→1) d'après la littérature qualité sonore :
-   sonie 40 sone (~93 phon, « fort ») ; acuité 4 acum (sons aigus/sifflants) ;
-   rugosité et fluctuation ~1 (valeurs typiquement < 1 asper / < 1 vacil) ; tonalité 0–1 (Aures). */
-const PSY_BOUNDS={N:40,S:4,R:1.0,F:1.0,T:1};
+/* Bornes de normalisation (valeur → 100 %). Défauts pleine échelle usuels :
+   sonie 0–100 sone, acuité 0–5 acum, rugosité 0–5 asper, fluctuation 0–3 vacil, tonalité 0–2 t.u. */
+const PSY_BOUNDS={N:100,S:5,R:5,F:3,T:2};
 const PSY_BARK_FC=[50,150,250,350,450,570,700,840,1000,1170,1370,1600,1850,2150,2500,2900,3400,4000,4800,5800,7000,8500,10500,13500];
 const PSY_CN=0.1253;   // calage 1 sone @ 1 kHz/40 dB (modèle avec étalement)
 function psyBarkOf(f){ for(let z=0;z<24;z++) if(f<=PSY_BARK_HI[z]) return z; return 23; }
@@ -4716,6 +4715,12 @@ function loadPrefs(){
     for(const k of PREF_FIELDS) if(o[k]!==undefined) S[k]=o[k];
     // migration : ancien réglage de thème isolé
     const t=localStorage.getItem('sono_theme'); if(t&&o.theme===undefined) S.theme=t;
+    /* migration 2.1.9 : nouvelles bornes psycho + fenêtre FFT par défaut (une seule fois) */
+    if(!localStorage.getItem('sono_mig219')){
+      const b=S.psyBnd; if(b&&b.N===40&&b.S===4&&b.R===1&&b.F===1&&b.T===1) S.psyBnd={N:100,S:5,R:5,F:3,T:2};
+      if(S.fftN===16384) S.fftN=4096;
+      localStorage.setItem('sono_mig219','1');
+    }
   }catch(e){}
   if(!THEMES.some(x=>x[0]===S.theme)) S.theme='oled';
 }
@@ -4894,8 +4899,8 @@ function renderDynPop(){
   { const fb=$('dpFscale'); if(fb){ fb.textContent=S.fscale==='log'?'LOG':'LIN'; fb.classList.toggle('on',S.fscale==='log'); } }
   /* ---- bornes psychoacoustiques (normalisation de la toile) ---- */
   if(isPsy){
-    if(!S.psyBnd)S.psyBnd={N:40,S:4,R:1,F:1,T:1};
-    const rows=[['N','Sonie','sone',5,10,100],['S','Acuité','acum',0.5,1,10],['R','Rugosité','asper',0.1,0.3,3],['F','Fluctuation','vacil',0.1,0.3,3],['T','Tonalité','tu',0.1,0.3,2]];
+    if(!S.psyBnd)S.psyBnd={N:100,S:5,R:5,F:3,T:2};
+    const rows=[['N','Sonie','sone',5,10,200],['S','Acuité','acum',0.5,1,10],['R','Rugosité','asper',0.5,0.5,10],['F','Fluctuation','vacil',0.5,0.5,6],['T','Tonalité','tu',0.5,0.5,4]];
     const box=$('dpPsyRows'); box.innerHTML='';
     for(const [k,lbl,unit,step,mn,mx] of rows){
       const row=document.createElement('div'); row.className='cp-fine'; row.style.marginTop='4px';
@@ -5006,7 +5011,7 @@ $('kDyn').addEventListener('pointerdown',()=>{
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kDyn').addEventListener(ev,()=>clearTimeout(dynT)));
 $('kDyn').addEventListener('click',()=>{ if(dynLong){dynLong=false;return;} openDynPop(); });
 $('dpClose').onclick=()=>$('dynPop').classList.remove('on');
-$('dpPsyReset').onclick=()=>{ S.psyBnd={N:40,S:4,R:1,F:1,T:1}; savePrefs(); if(S.screen==='psy')drawActive(); renderDynPop(); };
+$('dpPsyReset').onclick=()=>{ S.psyBnd={N:100,S:5,R:5,F:3,T:2}; savePrefs(); if(S.screen==='psy')drawActive(); renderDynPop(); };
 $('dynPop').addEventListener('click',e=>{if(e.target.id==='dynPop')$('dynPop').classList.remove('on');});
 function dbStep(which,d){
   if(which==='min'){S.dbMin=Math.max(-20,Math.min(S.dbMax-10,S.dbMin+d));}
