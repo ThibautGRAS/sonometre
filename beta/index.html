@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.1.6-beta</div>
+  <div class="splashver" id="splashVer">2.1.7-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2622,7 +2622,7 @@ function loop(ts){
   const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
   if(warm){
     /* ARMEMENT : on jette les premières 1,5 s (transitoire de gain iOS + pop d'amorçage).
-       Délai fixe = simple et fiable ; l'affichage tourne mais rien n'est intégré. */
+       Délai fixe = simple et fiable ; RIEN n'est calculé ni affiché (spectre, Leq, psycho). */
     S.warmAge=(S.warmAge||0)+dt;
     if(S.warmAge>=(S.warmMax||1.5)){
       S.warmT=0; S.warmAge=0;
@@ -2630,7 +2630,7 @@ function loop(ts){
       S.trigWait=!!S.trigLevel;           // puis attente de seuil éventuelle
       if(S.delayT<=0 && !S.trigWait) beginRun();
     }
-    updateNumbers(L); drawActive();
+    blankInit();                          // affichage vierge pendant l'init (pas de drawActive → pas de psyUpdate)
     return;
   }
   /* ---- phase DÉPART DIFFÉRÉ : décompte, rien n'est intégré NI affiché en accumulation ---- */
@@ -2673,6 +2673,20 @@ function loop(ts){
 
 /* ================= Chiffres ================= */
 function fmt(v){return (v<=-90||!isFinite(v))?'--.-':v.toFixed(1);}
+function blankInit(){
+  /* état d'init micro : aucune valeur affichée */
+  const dash='--.-';
+  const num=$('mainVal'); if(num)num.textContent=dash;
+  ['vL10','vL50','vL90','vLCpk','vLCpeak','vLAE','vDLF','sLAeq','sLCeq','vLAeq','vLCeq','vLZeq','vMax','vMin','vLAF','vLeq']
+    .forEach(id=>{const e=$(id); if(e)e.textContent=dash;});
+  const id=S.screen==='spec'?'specCv':S.screen==='sgram'?'sgramCv':S.screen==='hist'?'histCv':S.screen==='psy'?'psyCv':null;
+  if(id){ const cv=$(id); if(cv){ const r=cv.getBoundingClientRect(); if(r.width>4){
+    const dpr=Math.min(2,window.devicePixelRatio||1); cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+    const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,r.width,r.height);
+    g.fillStyle='rgba(150,180,210,.5)'; g.textAlign='center'; g.textBaseline='middle'; g.font='11px sans-serif';
+    g.fillText('INIT MICRO…', r.width/2, r.height/2);
+  }}}
+}
 function updateNumbers(L){
   $('mainVal').textContent=fmt(L).padStart(5,' ');
   /* indices statistiques (percentiles du LAF échantillonné à 10 Hz), recalcul 1×/s */
@@ -4015,7 +4029,7 @@ function drawPsycho(){
 
 function drawActive(force){
   updScaleLbl();
-  if((S.running&&!S.paused)||REPL.on) psyUpdate();   // alimente la toile psychoacoustique (auto-limité ~20 Hz)
+  if(((S.running&&!S.paused)||REPL.on) && !(S.warmT>0)) psyUpdate();   // alimente la toile (jamais pendant l'init micro)
   if(S.screen==='spec')drawSpectrum();
   else if(S.screen==='sgram')drawSgram();
   else if(S.screen==='hist')drawHistory();
