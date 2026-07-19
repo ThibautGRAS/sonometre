@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.1.4-beta</div>
+  <div class="splashver" id="splashVer">2.1.5-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -892,6 +892,16 @@ if('serviceWorker' in navigator){
   <!-- menu EXPORT -->
   <!-- page AIDE -->
   <!-- popover PRESET spectrogramme -->
+  <div id="screenPop" class="calpop"><div class="calpop-in">
+    <div class="cp-head">CHOISIR LA VUE <button id="scpClose">✕</button></div>
+    <div class="ppbody">
+      <button class="ppopt" data-scr="spec"><b>Spectre</b><span>Spectre FFT / tiers d'octave instantané.</span></button>
+      <button class="ppopt" data-scr="sgram"><b>Spectrogramme</b><span>Évolution temps-fréquence (cascade).</span></button>
+      <button class="ppopt" data-scr="hist"><b>Évolution</b><span>Niveau L et Leq au cours du temps.</span></button>
+      <button class="ppopt" data-scr="val"><b>Valeurs</b><span>Indices numériques (L, Leq, LCpeak, émergence…).</span></button>
+      <button class="ppopt" data-scr="psy"><b>Psycho (toile)</b><span>Sonie, acuité, rugosité, fluctuation, tonalité + gêne PA.</span></button>
+    </div>
+  </div></div>
   <div id="psyWinPop" class="calpop"><div class="calpop-in">
     <div class="cp-head">FENÊTRE PSYCHO (TOILE) <button id="pwClose">✕</button></div>
     <div class="ppbody">
@@ -3893,6 +3903,7 @@ function psyRoughness(){
 function psyFluct(arr){
   const n=arr.length; if(n<8)return 0;
   const dt=(arr[n-1].t-arr[0].t)/(n-1); if(!(dt>0))return 0;                        // besoin de ~2 s pour ~4 Hz
+  if((arr[n-1].t-arr[0].t)<1.2)return 0;                                            // pas assez de données -> pas fiable
   const N=new Float64Array(n); for(let i=0;i<n;i++)N[i]=arr[i].N;
   return Math.max(0, PSY_CAL_F*psyModBandP(N,1/dt,0.2,8,PSY_WF));
 }
@@ -3905,6 +3916,7 @@ function psyUpdate(){
   PSY.samples.push({t:now,N:L.N,S:Sh});
   while(PSY.samples.length && now-PSY.samples[0].t>win) PSY.samples.shift();
   const arr=PSY.samples, n=arr.length; if(!n)return;
+  PSY.span = n>1 ? (now-arr[0].t) : 0;                 // durée réellement couverte par le tampon
   const Ns=arr.map(s=>s.N).sort((a,b)=>b-a);
   const N5=Ns[Math.min(Ns.length-1,Math.floor(0.05*Ns.length))]||0;
   let Nm=0,Sm=0; for(const s of arr){Nm+=s.N;Sm+=s.S;} Nm/=n;Sm/=n;
@@ -3980,6 +3992,15 @@ function drawPsycho(){
     g.fillStyle='rgba(180,205,230,.85)'; g.font='9px sans-serif'; g.fillText('normalisé · borne '+bnd+' '+ax[4], bx+bw-10, by+24);
   } else {
     g.textAlign='center'; g.fillStyle='rgba(150,180,210,.6)'; g.font='8px sans-serif'; g.fillText('touchez un axe pour la valeur réelle + normalisée', cx, h-8);
+  }
+  /* remplissage de la fenêtre glissante : montre que la moyenne se cale sur la durée choisie */
+  const win=S.psyWin||4, span=PSY.span||0;
+  if(((S.running&&!S.paused)||REPL.on) && span<win-0.15){
+    g.textAlign='left'; g.textBaseline='top';
+    g.fillStyle='rgba(255,180,84,.9)'; g.font='8px sans-serif';
+    g.fillText('stabilisation '+span.toFixed(1)+'/'+win+' s', 8, 6);
+    g.strokeStyle='rgba(255,180,84,.55)'; g.lineWidth=2; g.beginPath();
+    g.arc(cx,cy,R+7,-Math.PI/2,-Math.PI/2+2*Math.PI*Math.min(1,span/win)); g.stroke(); g.lineWidth=1;
   }
 }
 
@@ -4541,13 +4562,22 @@ function ui(){
 
 /* ================= Touches ================= */
 /* ÉCRAN : cycle des affichages. Le MODE EXPERT a désormais sa touche dédiée (MENU) */
+function goScreen(s){ S.screen=s; if(s!=='sgram')S.sgCursor=null; if(s!=='hist')S.histCursor=null; ui(); requestAnimationFrame(()=>{sizeAll();}); }
 $('kScreen').addEventListener('click',()=>{
-  if(S.screen==='menu'||S.screen==='cal'){S.screen=S.prevScreen||'spec';}     // sortie du menu : écran précédent
-  else S.screen=S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':S.screen==='val'?'psy':'spec';
-  if(S.screen!=='sgram')S.sgCursor=null;
-  if(S.screen!=='hist')S.histCursor=null;
-  ui();requestAnimationFrame(()=>{sizeAll();});
+  if(S._longScreen){ S._longScreen=false; return; }                           // appui long déjà traité
+  if(S.screen==='menu'||S.screen==='cal'){goScreen(S.prevScreen||'spec');return;}
+  goScreen(S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':S.screen==='val'?'psy':'spec');
 });
+/* appui long sur ÉCRAN → choix direct de la vue */
+(()=>{ const el=$('kScreen'); let t=null;
+  const start=()=>{ t=setTimeout(()=>{ S._longScreen=true; $('screenPop').classList.add('on'); },500); };
+  const cancel=()=>{ if(t){clearTimeout(t);t=null;} };
+  el.addEventListener('pointerdown',start); el.addEventListener('pointerup',cancel);
+  el.addEventListener('pointerleave',cancel); el.addEventListener('pointercancel',cancel);
+})();
+$('scpClose').onclick=()=>$('screenPop').classList.remove('on');
+$('screenPop').addEventListener('click',e=>{ if(e.target.id==='screenPop')$('screenPop').classList.remove('on'); });
+$('screenPop').querySelectorAll('.ppopt').forEach(b=>{ b.onclick=()=>{ goScreen(b.getAttribute('data-scr')); $('screenPop').classList.remove('on'); }; });
 /* MENU : bascule du mode expert */
 $('kMenu').addEventListener('click',()=>{
   if(S.screen==='menu'){S.screen=S.prevScreen||'spec';}
