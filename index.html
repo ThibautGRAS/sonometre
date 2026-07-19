@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.6-beta</div>
+  <div class="splashver" id="splashVer">2.2.7-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -5902,6 +5902,41 @@ function expSpectrum(band){
   const names=[],L=[]; for(let b=0;b<th.length;b++){ names.push(th[b]); L.push(lvl(en[b]/S.eqT)); }
   return {names,L};
 }
+/* ===== Bloc psychoacoustique pour l'export (CSV + rapport) ===== */
+function psyStats(){ if(!PSY||!PSY._cnt||!PSY.mean)return null;
+  const g=(o,k)=>(o&&o[k]!=null)?o[k]:0;
+  return { rows:[
+      ['Sonie N','sone',1,g(PSY.cur,'N'),g(PSY.mean,'N'),g(PSY.p95,'N')],
+      ['Acuité S','acum',2,g(PSY.cur,'S'),g(PSY.mean,'S'),g(PSY.p95,'S')],
+      ['Rugosité R','asper',2,g(PSY.cur,'R'),g(PSY.mean,'R'),g(PSY.p95,'R')],
+      ['Fluctuation F','vacil',2,g(PSY.cur,'F'),g(PSY.mean,'F'),g(PSY.p95,'F')],
+      ['Tonalité T','tu',2,g(PSY.cur,'T'),g(PSY.mean,'T'),g(PSY.p95,'T')] ],
+    PA:PSY.PA||0, N5:PSY.N5||0, tnrT:PSY.tnrT||0, prT:PSY.prT||0, tones:(PSY.tones||[]).slice(0,4) };
+}
+function psyCsvBlock(){ const p=psyStats(); if(!p)return '';
+  let s='\nINDICATEURS PSYCHOACOUSTIQUES (fenetre glissante)\nIndicateur;Unite;Actuel;Moyenne;P95\n';
+  for(const r of p.rows){ const d=r[2]; s+=r[0]+';'+r[1]+';'+r[3].toFixed(d)+';'+r[4].toFixed(d)+';'+r[5].toFixed(d)+'\n'; }
+  s+='Gene psychoacoustique PA;-;'+p.PA.toFixed(1)+';;\n';
+  s+='N5 (sonie, percentile 5%);sone;'+p.N5.toFixed(1)+';;\n';
+  s+='\nTONALITE NORMATIVE (ECMA-74)\nT-TNR global [dB];'+p.tnrT.toFixed(1)+';T-PR global [dB];'+p.prT.toFixed(1)+'\n';
+  if(p.tones.length){ s+='Raies proeminentes;f [Hz];TNR [dB]\n'; for(const t of p.tones)s+=';'+Math.round(t.f)+';'+t.tnr.toFixed(1)+'\n'; }
+  else s+='Raies proeminentes;aucune\n';
+  return s;
+}
+function psyReportBlock(){ const p=psyStats(); if(!p)return '';
+  let rows=''; for(const r of p.rows){ const d=r[2]; rows+='<tr><td><b>'+r[0]+'</b> <span class="u">'+r[1]+'</span></td><td>'+r[3].toFixed(d)+'</td><td>'+r[4].toFixed(d)+'</td><td>'+r[5].toFixed(d)+'</td></tr>'; }
+  let tones=''; if(p.tones.length){ tones=p.tones.map(t=>fmtF(t.f)+' Hz ('+t.tnr.toFixed(1)+' dB)').join(', '); } else tones='aucune raie proéminente';
+  return '<div class="rep-sec rep-avoid">Indicateurs psychoacoustiques</div>'+
+    '<table class="rep-psy rep-avoid"><thead><tr><th>Indicateur</th><th>Actuel</th><th>Moyenne</th><th>P95</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div class="rep-grid rep-avoid" style="margin-top:6px">'+
+      '<div><span>Gêne psychoacoustique PA</span><b>'+p.PA.toFixed(1)+'</b></div>'+
+      '<div><span>N5 (sonie, P5)</span><b>'+p.N5.toFixed(1)+' sone</b></div>'+
+      '<div><span>Tonalité T-TNR (ECMA-74)</span><b>'+p.tnrT.toFixed(1)+' dB</b></div>'+
+      '<div><span>Tonalité T-PR (ECMA-74)</span><b>'+p.prT.toFixed(1)+' dB</b></div>'+
+      '<div style="grid-column:1/3"><span>Raies proéminentes</span><b style="text-align:right;max-width:70%">'+tones+'</b></div>'+
+    '</div>'+
+    '<div style="font-size:8.5px;color:#7a8398;margin-top:3px">Sonie ISO 532-1 · Acuité DIN 45692 · Rugosité Daniel &amp; Weber · Fluctuation Fastl · Tonalité Aures (t.u.) &amp; ECMA-74 (TNR/PR). Modèles validés vs MOSQITO ; indicatifs, non certifiés.</div>';
+}
 function buildCsv(){
   let csv='SONOMETRE CETIM - export\n';
   csv+='Date;'+new Date().toLocaleString('fr-FR')+';Duree [s];'+(S.eqT>0?S.eqT.toFixed(1):'0')+'\n';
@@ -5920,6 +5955,7 @@ function buildCsv(){
   const _sp=expSpectrum();
   csv+='SPECTRE Leq (ponderation '+S.weight+' - '+(_sp.names.length&&S.expBand==='oct'?'octave':'tiers d octave')+' - '+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+')\nfc [Hz];Leq [dB]\n';
   for(let b=0;b<_sp.names.length;b++)csv+=_sp.names[b]+';'+fmt(_sp.L[b])+'\n';
+  csv+=psyCsvBlock();
   csv+='\nHISTORIQUE (10 Hz)\nt [s];L'+S.weight+S.time+' [dB];L'+S.weight+'eq [dB]\n';
   for(const pt of S.hist)csv+=pt.t.toFixed(1)+';'+pt.L.toFixed(1)+';'+pt.Leq.toFixed(1)+'\n';
   return csv;
@@ -6003,6 +6039,12 @@ const REPORT_CSS=
   '.rep-spec{columns:3;column-gap:16px;font-size:9.5px;margin-top:2px}'+
   '.rep-spec>div{display:flex;justify-content:space-between;break-inside:avoid;border-bottom:1px dotted #e5e9f0;padding:1px 0}'+
   '.rep-note{white-space:pre-wrap;font-size:10.5px;border:1px solid #dde3ec;border-radius:5px;padding:7px;min-height:32px}'+
+  '.rep-psy{width:100%;border-collapse:collapse;font-size:10px;margin-top:3px}'+
+  '.rep-psy th,.rep-psy td{border:1px solid #dde3ec;padding:3px 7px;text-align:right}'+
+  '.rep-psy th{background:#eef2f8;color:#001E50;font-size:8.5px;letter-spacing:.03em;text-transform:uppercase}'+
+  '.rep-psy td:first-child,.rep-psy th:first-child{text-align:left}'+
+  '.rep-psy td:first-child b{color:#001E50}'+
+  '.rep-psy .u{color:#889;font-size:8.5px}'+
   '.rep-foot{margin-top:14px;font-size:8.5px;color:#7a8398;border-top:1px solid #cfd8e6;padding-top:5px}'+
   '@media screen and (max-width:600px){#report{padding:16px 14px}.rep-h{gap:10px}.rep-logo svg{height:22px}.rep-bar{min-height:24px}.rep-t1{font-size:12.5px;letter-spacing:.05em}.rep-t2{font-size:9.5px}.rep-htxt{flex-basis:0}.rep-meta{flex-basis:100%;order:3;margin:8px 0 0;text-align:left;font-size:9.5px;display:flex;flex-wrap:wrap;gap:2px 16px}.rep-meta>div{white-space:nowrap}.rep-meta .rl{margin-right:5px}}'+
   '@media print{@page{size:A4;margin:12mm}html,body{background:#fff}.noprint{display:none}#report{margin:0;max-width:none;box-shadow:none;padding:0}.rep-avoid{break-inside:avoid}.rep-fig{break-before:page;break-inside:avoid}.rep-fig .rep-img{max-height:225mm;object-fit:contain}}';
@@ -6083,6 +6125,7 @@ function buildReportHTML(figs){
   '</div>'+
   figs.map(f=>f&&f.img?'<div class="rep-fig"><div class="rep-sec">'+f.title+'</div><img class="rep-img" src="'+f.img+'"></div>':'').join('')+
   (spec?'<div class="rep-sec">Spectre par '+(S.expBand==='oct'?'octave':'tiers d\'octave')+' (Leq '+S.weight+')</div><div class="rep-spec">'+spec+'</div>':'')+
+  psyReportBlock()+
   '<div class="rep-sec">Commentaire</div><div class="rep-note">'+(note||'—')+'</div>'+
   '<div class="rep-foot">Généré par le sonomètre CETIM · thibautgras.github.io/sonometre — '+now+'.<br>'+
     'Mesure indicative à titre d\'orientation : le microphone d\'un smartphone n\'est pas un capteur métrologique (réponse non garantie, notamment &lt; 50 Hz et en niveau absolu). '+
