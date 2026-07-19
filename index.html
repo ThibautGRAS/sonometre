@@ -274,9 +274,9 @@ if('serviceWorker' in navigator){
   .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:40px;height:22px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:10px;letter-spacing:.04em;border-radius:7px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
   .sg3dbtn.on{background:#FFA92E;color:#2A1400;border-color:#FFD08A;box-shadow:0 0 12px rgba(255,169,46,.85), inset 0 0 6px rgba(255,220,150,.6);text-shadow:none;font-weight:800}
-  #avgBtn.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY actif = vert */
+  #avgBtn.on, #psyAvgBtn.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY actif = vert */
   #vibBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
-  #avgBtn.dis{opacity:.35}
+  #avgBtn.dis, #psyAvgBtn.dis{opacity:.35}
   #lsnBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
   /* icônes du spectrogramme : côte à côte à gauche, dégagées de l'ordonnée (padL≈26) */
   #sg3dBtn{right:auto;left:30px;top:6px}
@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.1.5-beta</div>
+  <div class="splashver" id="splashVer">2.1.6-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -643,7 +643,7 @@ if('serviceWorker' in navigator){
       <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="avgBtn">MOY</button><button class="sg3dbtn" id="emgBtn" style="right:54px">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="display:none">VIB</button></div>
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
-      <div class="gpane" id="panePsy"><canvas id="psyCv"></canvas></div>
+      <div class="gpane" id="panePsy"><canvas id="psyCv"></canvas><button class="sg3dbtn" id="psyAvgBtn">MOY</button></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
           <div class="cell hero"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
@@ -691,7 +691,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mLsnGain" data-cat="affichage"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="auto">Auto ♪</option><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
           <div class="mrow" id="mTheme" data-cat="affichage"><span>Thème de façade</span><b>Marine</b></div>
           <div class="mrow" id="mBacklight" data-cat="affichage"><span>Rétroéclairage</span><b>Off</b></div>
-          <div class="mrow" id="mPsyWin" data-cat="affichage"><span>Fenêtre psycho (toile)</span><b>4 s</b></div>
+          <div class="mrow" id="mPsyWin" data-cat="signal"><span>Fenêtre psycho (toile)</span><b>4 s</b></div>
           <div class="mrow act red" id="mResetPrefs" data-cat="sys"><span>Réinitialiser les paramètres</span><b>↺</b></div>
           <div class="mnote" data-cat="sys">Remet tous les réglages aux valeurs par défaut. Astuce : réinitialiser max/min/peak-hold se fait en tapant directement l'afficheur max/min.</div>
           <div class="mcredit" data-cat="sys">Sonomètre CETIM · Thibaut Gras · 2026<br>thibaut.gras@cetim.fr</div>
@@ -855,6 +855,12 @@ if('serviceWorker' in navigator){
         <input class="cin" id="dpFMax" type="number" inputmode="numeric" min="10" step="100" value="20000" style="width:70px">
         <button id="dpFApply" class="cp-ok">OK</button>
       </div>
+    </div>
+
+    <div id="dpSecPsy">
+      <div class="cp-lbl" style="margin-top:10px">BORNES DES INDICATEURS (NORMALISATION → 100 %)</div>
+      <div id="dpPsyRows"></div>
+      <div class="cp-fine"><button id="dpPsyReset" class="cp-ok" style="width:100%">Valeurs littérature</button></div>
     </div>
 
     <div class="cp-row" id="dpSecInterp" style="margin-top:10px"><span>Interpolation spectrogramme</span><button id="dpInterp" class="cp-tog">Activée</button></div>
@@ -1097,7 +1103,7 @@ const S = {
   fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, psyAvg:false, psyBnd:{N:40,S:4,R:1,F:1,T:1}, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -3866,7 +3872,7 @@ function psySharpness(Nspec){
   return den>0?0.11*num/den:0;
 }
 const PSY={samples:[],N:0,S:0,R:0,F:0,T:0,PA:0,N5:0,inst:null,prevBnd:null,_last:0,sel:-1};
-function psyReset(){ PSY.samples=[]; PSY.N=PSY.S=PSY.R=PSY.F=PSY.T=PSY.PA=PSY.N5=0; PSY.inst=null; PSY.prevBnd=null; }
+function psyReset(){ PSY.samples=[]; PSY.N=PSY.S=PSY.R=PSY.F=PSY.T=PSY.PA=PSY.N5=0; PSY.inst=null; PSY.prevBnd=null; PSY.sum=null; PSY.cnt=0; PSY.span=0; }
 /* Modèles de modulation (Phase 2).
    Rugosité : modèle de Daniel & Weber — enveloppe du signal, spectre de modulation
    pondéré (pic ~70 Hz), sommation quadratique, calé à 1 asper (1 kHz/100 % AM @70 Hz).
@@ -3931,6 +3937,8 @@ function psyUpdate(){
   PSY.N=Nm; PSY.S=Sm; PSY.R=R; PSY.F=F; PSY.T=T; PSY.N5=N5;
   PSY.PA=N5*(1+Math.sqrt(wS*wS+wFR*wFR));
   PSY.inst={N:L.N,S:Sh,R,F,T};
+  if(!PSY.sum){PSY.sum={N:0,S:0,R:0,F:0,T:0};PSY.cnt=0;}      // moyenne sur toute la mesure (bouton MOY)
+  PSY.sum.N+=L.N;PSY.sum.S+=Sh;PSY.sum.R+=R;PSY.sum.F+=F;PSY.sum.T+=T;PSY.cnt++;
 }
 function drawPsycho(){
   const cv=$('psyCv'); if(!cv)return;
@@ -3940,9 +3948,10 @@ function drawPsycho(){
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   const w=r.width,h=r.height; g.clearRect(0,0,w,h);
   const cx=w/2, cy=h/2+4, R=Math.min(w,h)*0.36;
-  const axes=[['Sonie','N',PSY.N,PSY_BOUNDS.N,'sone'],['Acuité','S',PSY.S,PSY_BOUNDS.S,'acum'],
-              ['Rugosité','R',PSY.R,PSY_BOUNDS.R,'asper'],['Fluctuat.','F',PSY.F,PSY_BOUNDS.F,'vacil'],
-              ['Tonalité','T',PSY.T,PSY_BOUNDS.T,'tu']];
+  const B=S.psyBnd||PSY_BOUNDS, avg=S.psyAvg&&PSY.cnt>0, gv=(k,win)=>avg?(PSY.sum[k]/PSY.cnt):win;
+  const axes=[['Sonie','N',gv('N',PSY.N),B.N,'sone'],['Acuité','S',gv('S',PSY.S),B.S,'acum'],
+              ['Rugosité','R',gv('R',PSY.R),B.R,'asper'],['Fluctuat.','F',gv('F',PSY.F),B.F,'vacil'],
+              ['Tonalité','T',gv('T',PSY.T),B.T,'tu']];
   const K=axes.length, ang=i=>(-Math.PI/2 + i*2*Math.PI/K);
   PSY._geom={cx,cy,R,K};                                   // mémorisé pour le clic
   const accent=(getComputedStyle(document.body).getPropertyValue('--ice')||'#4FC3FF').trim()||'#4FC3FF';
@@ -4521,6 +4530,7 @@ function ui(){
   $('avgBtn').style.display='block';   // INST⇄MOY : tous modes de spectre, tout à droite
   $('avgBtn').classList.toggle('on',S.specAvg);
   $('avgBtn').classList.toggle('dis',!(S.eqT>0));   // pas de moyenne tant qu'aucune mesure
+  $('psyAvgBtn').classList.toggle('on',S.psyAvg); $('psyAvgBtn').classList.toggle('dis',!(PSY.cnt>0));
   $('lsnBtn').classList.toggle('on',LSN.on);
   $('lsnBtn').style.display=S.sg3d?'none':'flex';
   $('mEmgThr').querySelector('b').textContent=(S.emgThr||10)+' dB';
@@ -4669,13 +4679,14 @@ $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
 $('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();if(S.emgOn)flashBtn($('emgBtn'));else unflashBtn($('emgBtn'));drawActive();};
 $('vibBtn').onclick=()=>{vibToggle();};
 $('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); if(S.specAvg)flashBtn($('avgBtn')); else unflashBtn($('avgBtn')); if(S.screen==='spec')drawSpectrum(); };
+$('psyAvgBtn').onclick=()=>{ S.psyAvg=!S.psyAvg; savePrefs(); ui(); if(S.psyAvg)flashBtn($('psyAvgBtn')); else unflashBtn($('psyAvgBtn')); if(S.screen==='psy')drawActive(); };
 $('lsnBtn').onclick=()=>{lsnToggle(); if($('lsnBtn').classList.contains('on'))flashBtn($('lsnBtn'));else unflashBtn($('lsnBtn'));};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
 const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['neon','Néon'],['gameboy','Game Boy'],['matrix','Matrice']];
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
-                   'peakInterp','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','lsnGain','lsnAuto','backlight','psyWin','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
+                   'peakInterp','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','lsnGain','lsnAuto','backlight','psyWin','psyAvg','psyBnd','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
                    'trigDelay','trigLevel','offset','corr','corrName','emgThr','specFrames','specSmooth','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
@@ -4856,16 +4867,34 @@ function histBoundsFull(){
 }
 function renderDynPop(){
   const scr=S.screen;
-  const isSpec=(scr==='spec'), isSgram=(scr==='sgram'), isHist=(scr==='hist');
+  const isSpec=(scr==='spec'), isSgram=(scr==='sgram'), isHist=(scr==='hist'), isPsy=(scr==='psy');
   /* titre + visibilité des sections selon l'écran */
-  $('dpTitle').childNodes[0].nodeValue = 'ÉCHELLES · '+(isSgram?'SPECTROGRAMME ':isHist?'ÉVOLUTION ':'SPECTRE ');
+  $('dpTitle').childNodes[0].nodeValue = 'ÉCHELLES · '+(isSgram?'SPECTROGRAMME ':isHist?'ÉVOLUTION ':isPsy?'PSYCHO ':'SPECTRE ');
   $('dpSecTime').style.display   = (isSgram||isHist)?'block':'none';
   $('dpSecDb').style.display     = (isSpec||isHist)?'block':'none';
   $('dpSecColor').style.display  = isSgram?'block':'none';
   $('dpSecFreq').style.display   = (isSpec||isSgram)?'block':'none';
   $('dpSecInterp').style.display = isSgram?'flex':'none';
+  $('dpSecPsy').style.display    = isPsy?'block':'none';
   $('dpFLbl').textContent = isSgram?'FRÉQUENCE (Y)':'FRÉQUENCE (X)';
   { const fb=$('dpFscale'); if(fb){ fb.textContent=S.fscale==='log'?'LOG':'LIN'; fb.classList.toggle('on',S.fscale==='log'); } }
+  /* ---- bornes psychoacoustiques (normalisation de la toile) ---- */
+  if(isPsy){
+    if(!S.psyBnd)S.psyBnd={N:40,S:4,R:1,F:1,T:1};
+    const rows=[['N','Sonie','sone',5,10,100],['S','Acuité','acum',0.5,1,10],['R','Rugosité','asper',0.1,0.3,3],['F','Fluctuation','vacil',0.1,0.3,3],['T','Tonalité','tu',0.1,0.3,2]];
+    const box=$('dpPsyRows'); box.innerHTML='';
+    for(const [k,lbl,unit,step,mn,mx] of rows){
+      const row=document.createElement('div'); row.className='cp-fine'; row.style.marginTop='4px';
+      const nm=document.createElement('span'); nm.className='cp-mini'; nm.style.width='96px'; nm.style.textAlign='left'; nm.textContent=lbl;
+      const bm=document.createElement('button'); bm.textContent='−';
+      const val=document.createElement('span'); val.className='cp-val'; val.textContent=(+S.psyBnd[k]).toFixed(step<1?1:0)+' '+unit;
+      const bp=document.createElement('button'); bp.textContent='+';
+      const clamp=v=>Math.max(mn,Math.min(mx,Math.round(v/step)*step));
+      bm.onclick=()=>{ S.psyBnd[k]=clamp((+S.psyBnd[k])-step); savePrefs(); if(S.screen==='psy')drawActive(); renderDynPop(); };
+      bp.onclick=()=>{ S.psyBnd[k]=clamp((+S.psyBnd[k])+step); savePrefs(); if(S.screen==='psy')drawActive(); renderDynPop(); };
+      row.append(nm,bm,val,bp); box.appendChild(row);
+    }
+  }
 
   /* ---- presets dB (Y) : spectre / évolution ---- */
   if(isSpec||isHist){
@@ -4963,6 +4992,7 @@ $('kDyn').addEventListener('pointerdown',()=>{
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kDyn').addEventListener(ev,()=>clearTimeout(dynT)));
 $('kDyn').addEventListener('click',()=>{ if(dynLong){dynLong=false;return;} openDynPop(); });
 $('dpClose').onclick=()=>$('dynPop').classList.remove('on');
+$('dpPsyReset').onclick=()=>{ S.psyBnd={N:40,S:4,R:1,F:1,T:1}; savePrefs(); if(S.screen==='psy')drawActive(); renderDynPop(); };
 $('dynPop').addEventListener('click',e=>{if(e.target.id==='dynPop')$('dynPop').classList.remove('on');});
 function dbStep(which,d){
   if(which==='min'){S.dbMin=Math.max(-20,Math.min(S.dbMax-10,S.dbMin+d));}
