@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.1-beta</div>
+  <div class="splashver" id="splashVer">2.2.2-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1022,7 +1022,7 @@ if('serviceWorker' in navigator){
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <h3>Psychoacoustique (toile)</h3>
-      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (émergence d'une raie). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. Chaque indicateur est recalculé ~7×/s sur sa propre fenêtre (sonie et acuité 250 ms, rugosité 1 s, tonalité 2 s, fluctuation 5 s) à partir d'un tampon de 5 s. Le polygone <b>plein</b> = valeur actuelle ; <b>MOY</b> = moyenne depuis le début ; le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs s'affichent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée. Le polygone plein = <b>moyenne</b> sur la fenêtre ; le pointillé = valeur <b>instantanée</b>. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). Sonie et acuité reposent sur une méthode de Zwicker/DIN <b>simplifiée</b> (calée à 1 sone pour 1 kHz / 40 dB). La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> (modulation d'enveloppe, pic ~70 Hz) sur des blocs courts <b>~200 ms</b> ; la <b>fluctuation</b> applique le modèle de <b>Fastl/Osses</b> (modulation de la sonie, pic ~4 Hz) qui exige <b>≥ ~2 s</b> de signal (d'où la fenêtre de 4 s). Les deux sont calées sur les tons AM de référence (1 asper, 1 vacil). Version temps réel calibrée (sans décomposition par bande critique) — indicateurs de confort, non certifiés.</p>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (t.u., présence de raies tonales — modèle d'Aures). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. Chaque indicateur est recalculé ~7×/s sur sa propre fenêtre (sonie et acuité 250 ms, rugosité 1 s, tonalité 2 s, fluctuation 5 s) à partir d'un tampon de 5 s. Le polygone <b>plein</b> = valeur actuelle ; <b>MOY</b> = moyenne depuis le début ; le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs s'affichent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). La <b>sonie</b> suit Zwicker (ISO 532-1, avec étalement de masquage, calée à 1 sone pour 1 kHz / 40 dB) et l'<b>acuité</b> la DIN 45692. La <b>rugosité</b> applique le modèle de <b>Daniel &amp; Weber</b> avec <b>décomposition en canaux auditifs chevauchants</b> (0,5 Bark) et <b>cohérence inter-bandes</b> (analyse sur ~340 ms) ; la <b>fluctuation</b> suit <b>Fastl band-wise</b> — modulation de la sonie spécifique <b>par bande de Bark</b>, indépendante du niveau (fenêtre 5 s) ; la <b>tonalité</b> applique le modèle d'<b>Aures</b> (raies tonales pondérées par la fréquence, pic ~700 Hz, et l'excès de niveau). Rugosité et fluctuation sont calées sur les tons AM de référence (1 asper @70 Hz, 1 vacil @4 Hz), la tonalité sur un son pur 1 kHz. Indicateurs de confort validés sur banc synthétique (confrontation MOSQITO prévue) — non certifiés.</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -1747,6 +1747,9 @@ function configureAnalyser(){
   const an=S.analyser;
   an.fftSize=Math.min(32768,N); an.smoothingTimeConstant=0;
   S.tap=new Float32Array(an.fftSize);
+  /* analyseur DÉDIÉ psycho : fenêtre temporelle fixe (~341 ms) indépendante de la FFT choisie,
+     nécessaire pour la rugosité multi-bande (résolution de modulation) */
+  if(S.psyAn){ S.psyAn.fftSize=16384; S.psyAn.smoothingTimeConstant=0; if(!S.psyTap||S.psyTap.length!==16384)S.psyTap=new Float32Array(16384); }
   /* ring buffer : accumule le signal pour fenêtrer N points même si le tap est plus court */
   S.ring=new Float32Array(N);
   /* fenêtre + normalisation cohérente (somme des carrés pour la puissance) */
@@ -1810,6 +1813,7 @@ async function initAudio(){
   S.ctx=makeCtx();
   try{ if(S.outId&&S.ctx.setSinkId) await S.ctx.setSinkId(S.outId); }catch(_){}   // sortie réécoute (si supportée)
   S.analyser=S.ctx.createAnalyser();
+  S.psyAn=S.ctx.createAnalyser();
   await acquireMic();
   configureAnalyser();
 }
@@ -2176,7 +2180,7 @@ function replSetIndex(i,{audio}={}){
 function replAudioTo(t){
   if(!REPL.buf||!S.ctx)return;
   if(REPL.src){ try{REPL.src.onended=null;REPL.src.stop();}catch(_){} try{REPL.src.disconnect();}catch(_){} REPL.src=null; }
-  const src=S.ctx.createBufferSource(); src.buffer=REPL.buf; src.connect(S.analyser);
+  const src=S.ctx.createBufferSource(); src.buffer=REPL.buf; src.connect(S.analyser); psyTapWire(src);
   src.onended=()=>{};   // la fin est gérée par l'index (replPlayTick), pas par l'audio
   REPL.src=src; src.start(0,Math.max(0,Math.min(REPL.dur-0.02,t))); lsnRetarget(src);
 }
@@ -2273,6 +2277,7 @@ function replUnload(){
   setTransport(); setLocks();
   const b=$('modeBadge'); if(b){b.textContent='PRÊT';b.className='badge';}
 }
+function psyTapWire(src){ try{ if(S.ctx&&!S.psyAn)S.psyAn=S.ctx.createAnalyser(); if(S.psyAn){ S.psyAn.fftSize=16384; S.psyAn.smoothingTimeConstant=0; if(!S.psyTap||S.psyTap.length!==16384)S.psyTap=new Float32Array(16384); if(src)src.connect(S.psyAn); } }catch(_){} }
 function replayTeardown(){
   if(!REPL.on) return;
   clearTimeout(REPL._reanaT);
@@ -2280,7 +2285,7 @@ function replayTeardown(){
   REPL.on=false; S._previewRing=false;
   if(REPL.savedOff!=null){ S.offset=REPL.savedOff; REPL.savedOff=null; }
   if(S.ctx&&S.ctx.state==='suspended'){ try{S.ctx.resume();}catch(_){} }
-  if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} arecWire(); }
+  if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} psyTapWire(S.srcNode); arecWire(); }
   if(LSN.on) lsnRetarget(S.srcNode||null);
   ui();
 }
@@ -2293,6 +2298,7 @@ async function acquireMic(){
   S.stream=await navigator.mediaDevices.getUserMedia({audio:ac});
   S.srcNode=S.ctx.createMediaStreamSource(S.stream);
   S.srcNode.connect(S.analyser);
+  psyTapWire(S.srcNode);
   arecWire();                                   // V2 : rebranche le captage continu (srcNode neuf)
   S.lcLastCt=S.ctx.currentTime;                 // évite un saut de bloc dans les filtres temporels
   const tr=S.stream.getAudioTracks()[0];
@@ -3835,14 +3841,14 @@ function updScaleLbl(){
   const txt=(S.dbAuto&&S.sgAuto&&fullF&&fullT)?'Auto':'Manuel';
   if(txt!==_scaleLbl){_scaleLbl=txt;$('kDynV').textContent=txt;}
 }
-/* ===================== PSYCHOACOUSTIQUE (Phase 1) =====================
-   Sonie N (sone) — méthode de Zwicker simplifiée à partir des tiers d'octave (sonie
-   spécifique par Bark, sans étalement de masquage → à valider en P3).
+/* ===================== PSYCHOACOUSTIQUE =====================
+   Sonie N (sone) — Zwicker (ISO 532-1) : sonie spécifique par Bark AVEC étalement de masquage.
    Acuité S (acum) — pondération DIN 45692 sur la sonie spécifique.
-   Tonalité T — dérivée de l'émergence tonale (estimation).
-   Rugosité R / Fluctuation F — ESTIMATIONS (flux spectral / modulation de N), modèles
-   complets (Daniel & Weber / Osses) prévus en P2.
-   PA — gêne psychoacoustique de Zwicker (combine N5, S, R, F). */
+   Rugosité R (asper) — Daniel & Weber : canaux auditifs chevauchants + cohérence inter-bandes.
+   Fluctuation F (vacil) — Fastl band-wise : modulation de la sonie spécifique par bande de Bark.
+   Tonalité T (t.u.) — Aures : raies tonales pondérées (fréquence ~700 Hz, excès de niveau).
+   PA — gêne psychoacoustique de Zwicker (combine N5, S, R, F).
+   Validation banc (test_psycho.js). Confrontation MOSQITO prévue. */
 const PSY_BARK_HI=[100,200,300,400,510,630,770,920,1080,1270,1480,1720,2000,2320,2700,3150,3700,4400,5300,6400,7700,9500,12000,15500];
 const PSY_LTQ=[30,18,12,8,7,6,5,4,3,3,3,3,3,3,3,3,3,3,3,4,5,7,12,20];   // seuil en champ approx par Bark (dB)
 /* Bornes de normalisation (valeur → 100 %). Défauts pleine échelle usuels :
@@ -3880,18 +3886,21 @@ const PSY={buf:[],cur:null,mean:null,p95:null,PA:0,N5:0,span:0,
 const PSY_WIN={N:0.25,S:0.25,R:1.0,T:2.0,F:5.0};   // fenêtres propres à chaque indicateur (s)
 const PSY_BUFSEC=5;                                 // tampon circulaire audio/indices (s)
 function psyReset(){ PSY.buf=[]; PSY.cur=PSY.mean=PSY.p95=null; PSY.PA=0; PSY.N5=0; PSY.span=0;
-  PSY._sum=null; PSY._cnt=0; PSY._hist=null; PSY._recalcT=0; PSY._rT=0; PSY._Rcur=0;
+  PSY._sum=null; PSY._cnt=0; PSY._hist=null; PSY._recalcT=0; PSY._rT=0; PSY._Rcur=0; PSY._tT=0; PSY._Tcur=0;
   PSY.N=PSY.S=PSY.R=PSY.F=PSY.T=0; }
-/* Modèles de modulation (Phase 2).
-   Rugosité : modèle de Daniel & Weber — enveloppe du signal, spectre de modulation
-   pondéré (pic ~70 Hz), sommation quadratique, calé à 1 asper (1 kHz/100 % AM @70 Hz).
-   Fluctuation : modèle de Fastl/Osses — modulation de la sonie N(t) sur la fenêtre,
-   pondération pic ~4 Hz, calé à 1 vacil (100 % AM @4 Hz).
-   (Version temps réel calibrée, sans décomposition par bande critique ni corrélation
-   inter-bandes — raffinement + validation MOSQITO prévus en P3.) */
 const PSY_WR=f=>(f/70)*Math.exp(1-f/70);       // pondération rugosité (pic 70 Hz)
 const PSY_WF=f=>2/((f/4)+(4/f));               // pondération fluctuation (pic 4 Hz)
-const PSY_CAL_R=1.0113, PSY_CAL_F=1.0;
+/* Modèles multi-bandes (Phase 3).
+   Rugosité : Daniel & Weber — décomposition en canaux auditifs CHEVAUCHANTS (0,5 Bark,
+     demi-largeur 1 Bark), enveloppe par canal via autocorrélation spectrale, indice de
+     modulation pondéré (pic 70 Hz), COHÉRENCE inter-bandes entre canaux voisins, sommation.
+   Fluctuation : Fastl band-wise — modulation de la sonie spécifique N'(z,t) par bande de
+     Bark, moyenne de profondeur pondérée par la sonie de bande (indépendante du niveau).
+   Tonalité : Aures — détection des raies tonales (émergence > 6 dB), pondérations
+     fréquence (pic ~700 Hz) et excès de niveau, sommation quadratique. */
+const psyBarkF=f=>13*Math.atan(0.00076*f)+3.5*Math.atan((f/7500)*(f/7500));
+const PSY_RHW=1.0, PSY_RP=1.8;                 // demi-largeur canal (Bark), exposant profondeur de modulation
+const PSY_CAL_R=0.345, PSY_CAL_F=1.384, PSY_CAL_T=1.98;
 function psyModBandP(sig,fs,fLo,fHi,wfun){       // indice de modulation pondéré (Goertzel, somme quadratique)
   const n=sig.length; if(n<8)return 0;
   let m0=0; for(let i=0;i<n;i++)m0+=sig[i]; m0/=n; if(m0<=1e-9)return 0;
@@ -3904,23 +3913,79 @@ function psyModBandP(sig,fs,fLo,fHi,wfun){       // indice de modulation pondér
   }
   return Math.sqrt(acc)/m0;
 }
-let PSY_env=null;
+/* ---- Rugosité multi-bande (helper pur, testable) ---- */
+let PSY_rRe=null,PSY_rIm=null,PSY_rBk=null,PSY_rN=0;
+function psyRoughMB(pcm,fs){
+  let Np=1; while(Np*2<=pcm.length)Np*=2; if(Np<2048)return 0;
+  if(PSY_rN!==Np){ PSY_rRe=new Float64Array(Np); PSY_rIm=new Float64Array(Np); PSY_rBk=new Float64Array(Np>>1); PSY_rN=Np; }
+  const re=PSY_rRe, im=PSY_rIm; im.fill(0);
+  for(let i=0;i<Np;i++)re[i]=pcm[i]*(0.5-0.5*Math.cos(2*Math.PI*i/(Np-1)));   // fenêtre de Hann
+  fft(re,im);
+  const df=fs/Np, half=Np>>1;
+  const dMin=Math.max(1,Math.round(20/df)), dMax=Math.min(half-1,Math.round(300/df));
+  const barkBin=PSY_rBk; for(let k=1;k<half;k++)barkBin[k]=psyBarkF(k*df);
+  const chans=[]; const zmax=Math.min(20,psyBarkF(fs/2)); for(let zc=1.0; zc<=zmax; zc+=0.5) chans.push(zc);
+  const nc=chans.length, winC=new Array(nc), dcC=new Float64Array(nc); let dcmax=0;
+  for(let ci=0;ci<nc;ci++){ const zc=chans[ci]; let dc=0; const win=[];
+    for(let k=1;k<half;k++){ const dz=Math.abs(barkBin[k]-zc); if(dz>PSY_RHW)continue; const wg=1-dz/PSY_RHW; win.push(k); win.push(wg); dc+=(re[k]*re[k]+im[k]*im[k])*wg*wg; }
+    winC[ci]=win; dcC[ci]=dc; if(dc>dcmax)dcmax=dc; }
+  const dcThr=Math.max(1e-15,dcmax*1e-3);
+  const modv=new Array(nc), rz=new Float64Array(nc);
+  for(let ci=0;ci<nc;ci++){ const win=winC[ci], dc=dcC[ci], zc=chans[ci];
+    if(dc<dcThr||win.length<6){modv[ci]=null;continue;}
+    const mv=new Float64Array(dMax+1); let acPow=0;
+    for(let d=dMin;d<=dMax;d++){ let Cre=0,Cim=0;
+      for(let w=0;w<win.length;w+=2){ const k=win[w],wk=win[w+1], kk=k-d; if(kk<1)continue; const dz2=Math.abs(barkBin[kk]-zc); if(dz2>PSY_RHW)continue; const wkk=(1-dz2/PSY_RHW)*wk;
+        Cre+=(re[k]*re[kk]+im[k]*im[kk])*wkk; Cim+=(im[k]*re[kk]-re[k]*im[kk])*wkk; }
+      const mag=Math.sqrt(Cre*Cre+Cim*Cim); mv[d]=mag; const g=mag*PSY_WR(d*df); acPow+=g*g;
+    }
+    modv[ci]=mv; rz[ci]=Math.pow(2*Math.sqrt(acPow)/dc,PSY_RP);
+  }
+  const cc=(a,b)=>{ if(!a||!b)return 0; let s=0,na=0,nb=0; for(let d=dMin;d<=dMax;d++){s+=a[d]*b[d];na+=a[d]*a[d];nb+=b[d]*b[d];} return (na>0&&nb>0)?s/Math.sqrt(na*nb):0; };
+  let R=0;
+  for(let ci=0;ci<nc;ci++){ if(!rz[ci])continue;
+    const coh=0.5+0.5*Math.max(cc(modv[ci],modv[ci-1]||null),cc(modv[ci],modv[ci+1]||null));
+    R+=rz[ci]*coh; }
+  return R*0.5;   // densité 0,5 Bark
+}
 function psyRoughness(){
-  if(!S.analyser||!S.tap)return PSY.R||0;
-  try{ S.analyser.getFloatTimeDomainData(S.tap); }catch(_){ return PSY.R||0; }
-  const fs=(S.ctx&&S.ctx.sampleRate)||48000, T=S.tap.length;
-  const D=Math.max(1,Math.round(fs/2000)), M=Math.floor(T/D); if(M<32)return 0;   // enveloppe décimée ~2 kHz
-  if(!PSY_env||PSY_env.length!==M)PSY_env=new Float64Array(M);
-  const aLP=1-Math.exp(-2*Math.PI*400/fs); let y=0,k=0;                            // redressement + passe-bas ~400 Hz
-  for(let i=0;i<T;i++){ y+=aLP*(Math.abs(S.tap[i])-y); if(i%D===0&&k<M)PSY_env[k++]=y; }
-  return Math.max(0, PSY_CAL_R*psyModBandP(PSY_env,fs/D,20,300,PSY_WR));
+  const an=S.psyAn||S.analyser, tap=S.psyAn?S.psyTap:S.tap;
+  if(!an||!tap)return PSY.R||0;
+  try{ an.getFloatTimeDomainData(tap); }catch(_){ return PSY.R||0; }
+  const fs=(S.ctx&&S.ctx.sampleRate)||48000;
+  return Math.max(0, PSY_CAL_R*psyRoughMB(tap,fs));
+}
+/* ---- Fluctuation band-wise (helper pur, testable) ---- */
+function psyFluctBW(nhist,dt){
+  const frames=nhist.length; if(frames<8||!(dt>0))return 0; const fsN=1/dt;
+  const y=new Float64Array(frames); let acc=0,wsum=0;
+  for(let z=0;z<24;z++){ let mean=0; for(let f=0;f<frames;f++){ y[f]=nhist[f][z]; mean+=y[f]; } mean/=frames; if(mean<1e-4)continue;
+    acc+=psyModBandP(y,fsN,0.2,8,PSY_WF)*mean; wsum+=mean; }
+  return wsum>0?acc/wsum:0;   // moyenne de profondeur pondérée sonie -> indépendante du niveau
 }
 function psyFluct(arr){
   const n=arr.length; if(n<8)return 0;
-  const dt=(arr[n-1].t-arr[0].t)/(n-1); if(!(dt>0))return 0;                        // besoin de ~2 s pour ~4 Hz
-  if((arr[n-1].t-arr[0].t)<1.2)return 0;                                            // pas assez de données -> pas fiable
-  const N=new Float64Array(n); for(let i=0;i<n;i++)N[i]=arr[i].N;
-  return Math.max(0, PSY_CAL_F*psyModBandP(N,1/dt,0.2,8,PSY_WF));
+  const dt=(arr[n-1].t-arr[0].t)/(n-1); if(!(dt>0))return 0;
+  if((arr[n-1].t-arr[0].t)<1.2)return 0;                                            // besoin de ~2 s pour ~4 Hz
+  const nhist=new Array(n); for(let i=0;i<n;i++) nhist[i]=arr[i].Ns||PSY_ZERO24;
+  return Math.max(0, PSY_CAL_F*psyFluctBW(nhist,dt));
+}
+/* ---- Tonalité d'Aures (helper pur, testable) ---- */
+const PSY_ZERO24=new Float64Array(24);
+function psyTonalAures(binPow,df){
+  const n=binPow.length; if(n<8||!(df>0))return 0;
+  const win=Math.max(3,Math.round(50/df));                                          // plancher local ~50 Hz
+  const w1=f=>1/(1+0.2*Math.pow(f/700+700/f,2));                                     // pondération fréquence (pic ~700 Hz)
+  let s=0;
+  for(let k=2;k<n-2;k++){ const p=binPow[k]; if(!(p>0))continue;
+    if(p<binPow[k-1]||p<binPow[k+1])continue;                                        // maximum local
+    const lo=Math.max(1,k-win), hi=Math.min(n-1,k+win); const vals=[];
+    for(let j=lo;j<=hi;j++){ if(Math.abs(j-k)>2)vals.push(binPow[j]); }
+    if(!vals.length)continue; vals.sort((a,b)=>a-b); const floor=vals[vals.length>>1]||1e-15;
+    const dL=10*Math.log10(p/Math.max(floor,1e-15)); if(dL<6)continue;               // émergence > 6 dB
+    const wi=w1(k*df)*(1-Math.exp(-dL/15)); s+=wi*wi;                                 // excès de niveau saturant
+  }
+  return PSY_CAL_T*Math.sqrt(s);
 }
 function psyPctile(arr,q){ if(!arr||!arr.length)return 0; const a=arr.slice().sort((x,y)=>x-y); return a[Math.min(a.length-1,Math.max(0,Math.round(q*(a.length-1))))]; }
 function psyUpdate(){
@@ -3930,8 +3995,8 @@ function psyUpdate(){
     const L=psyLoudness(); if(L){ PSY._last=now;
       const Sh=psySharpness(L.Nspec);
       if(!PSY._rT || now-PSY._rT>0.12){ PSY._Rcur=psyRoughness(); PSY._rT=now; }   // rugosité par bloc ~200 ms (~8 Hz)
-      const T=Math.max(0,(S.psyEmg||0)/15);
-      PSY.buf.push({t:now,N:L.N,S:Sh,R:Math.max(0,PSY._Rcur||0),T});
+      if(!PSY._tT || now-PSY._tT>0.15){ const dfb=S.binHz||((S.ctx?S.ctx.sampleRate:48000)/(S.fftN||4096)); PSY._Tcur=S.binPowD?psyTonalAures(S.binPowD,dfb):0; PSY._tT=now; }  // tonalité Aures (~7 Hz)
+      PSY.buf.push({t:now,N:L.N,S:Sh,R:Math.max(0,PSY._Rcur||0),T:Math.max(0,PSY._Tcur||0),Ns:L.Nspec});
       while(PSY.buf.length && now-PSY.buf[0].t>PSY_BUFSEC) PSY.buf.shift();
       PSY.span = PSY.buf.length>1 ? (now-PSY.buf[0].t) : 0;
     }

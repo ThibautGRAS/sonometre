@@ -1,22 +1,41 @@
-function modBandP(sig,fs,fLo,fHi,wfun){   // sommation quadratique
-  const n=sig.length; if(n<8)return 0;
-  let m0=0; for(let i=0;i<n;i++)m0+=sig[i]; m0/=n; if(m0<=1e-9)return 0;
-  const df=fs/n, kLo=Math.max(1,Math.ceil(fLo/df)), kHi=Math.min(Math.floor(n/2),Math.floor(fHi/df));
-  let acc=0;
-  for(let k=kLo;k<=kHi;k++){ const f=k*df, w=2*Math.PI*k/n; let re=0,im=0;
-    for(let i=0;i<n;i++){ re+=sig[i]*Math.cos(w*i); im-=sig[i]*Math.sin(w*i); }
-    const a=2*Math.sqrt(re*re+im*im)/n*wfun(f); acc+=a*a; }
-  return Math.sqrt(acc)/m0;
+const fs0=require("fs");
+const src=fs0.readFileSync("index.html","utf8").match(/<script>([\s\S]*?)<\/script>/g).map(s=>s.replace(/<\/?script>/g,"")).sort((a,b)=>a.length-b.length).pop();
+function grab(re){const m=src.match(re);if(!m)throw new Error("grab fail "+re);return m[0];}
+let S={bands:null,curBnd:null,offset:40,fftN:16384,binHz:48000/16384,ctx:{sampleRate:48000}};
+const code=
+  grab(/const PSY_BARK_HI=[\s\S]*?const PSY_CN=[^;]*;/)
+ +grab(/function psyBarkOf[\s\S]*?\n\}/)
+ +grab(/function psyLoudness[\s\S]*?\n\}/)
+ +grab(/function psySharpness[\s\S]*?\n\}/)
+ +grab(/function fft\(re,im\)[\s\S]*?\n\}/)
+ +grab(/const PSY_WR=[\s\S]*?const PSY_CAL_R=[^;]*, PSY_CAL_F=[^;]*, PSY_CAL_T=[^;]*;/)
+ +grab(/function psyModBandP[\s\S]*?\n\}/)
+ +grab(/let PSY_rRe[\s\S]*?function psyRoughMB[\s\S]*?\n\}/)
+ +grab(/function psyFluctBW[\s\S]*?\n\}/)
+ +grab(/const PSY_ZERO24[\s\S]*?function psyTonalAures[\s\S]*?\n\}/);
+eval(code.replace(/\bconst /g,"var ").replace(/\blet /g,"var "));
+
+const NOMS=[20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000];
+const i1k=NOMS.indexOf(1000);
+
+// --- Rugosité ---
+function amPCM(fc,fm,depth,fs,dur,dB){depth=depth==null?1:depth;const N=Math.round(dur*fs);const x=new Float64Array(N);const amp=Math.pow(10,((dB||60)-94)/20)*Math.SQRT2;for(let i=0;i<N;i++){const t=i/fs;x[i]=amp*(1+depth*Math.cos(2*Math.PI*fm*t))*Math.sin(2*Math.PI*fc*t);}return x;}
+const rawR=psyRoughMB(amPCM(1000,70,1,48000,0.34,60),48000);
+console.log("PSY_CAL_R  =",(1/rawR).toFixed(4),"  (rugosité: raw ref =",rawR.toFixed(4),")");
+
+// --- Fluctuation via VRAIE sonie ---
+function fluctReal(mf,depth,dB){ const dt=0.05,frames=100; const nhist=[];
+  for(let f=0;f<frames;f++){const t=f*dt; const g=1+depth*Math.cos(2*Math.PI*mf*t);
+    S.bands=NOMS; S.curBnd=new Array(NOMS.length).fill(0); S.curBnd[i1k]=g*g; S.offset=dB;
+    const L=psyLoudness(); nhist.push(L?L.Nspec:new Float64Array(24)); }
+  return psyFluctBW(nhist,dt);
 }
-const wR=f=>(f/70)*Math.exp(1-f/70), wF=f=>2/((f/4)+(4/f));
-const fs=48000, T=Math.round(0.34*fs), D=Math.round(fs/2000), M=Math.floor(T/D), fsE=fs/D;
-const aLP=1-Math.exp(-2*Math.PI*400/fs);
-function envAM(fm,depth){ depth=depth==null?1:depth; const x=new Float32Array(T);
-  for(let i=0;i<T;i++){const t=i/fs;x[i]=(1+depth*Math.cos(2*Math.PI*fm*t))*Math.sin(2*Math.PI*1000*t);}
-  let y=0; const e=new Float64Array(M); for(let i=0,k=0;i<T;i++){ y+=aLP*(Math.abs(x[i])-y); if(i%D===0&&k<M)e[k++]=y; } return e; }
-const CAL_R=1/modBandP(envAM(70),fsE,20,300,wR);
-console.log("CAL_R =",CAL_R.toFixed(4));
-console.log("rugosité (asper):"); for(const m of [20,30,50,70,100,150,200,300]) console.log("  @"+m+"Hz",(CAL_R*modBandP(envAM(m),fsE,20,300,wR)).toFixed(3));
-console.log("profondeur @70Hz: 100%",(CAL_R*modBandP(envAM(70,1),fsE,20,300,wR)).toFixed(3),"| 50%",(CAL_R*modBandP(envAM(70,0.5),fsE,20,300,wR)).toFixed(3),"| 25%",(CAL_R*modBandP(envAM(70,0.25),fsE,20,300,wR)).toFixed(3));
-const fsN=20,n=fsN*4,Nt=new Float64Array(n); for(let i=0;i<n;i++)Nt[i]=1+Math.cos(2*Math.PI*4*(i/fsN));
-console.log("CAL_F =",(1/modBandP(Nt,fsN,0.2,8,wF)).toFixed(4));
+const rawF=fluctReal(4,1,60);
+console.log("PSY_CAL_F  =",(1/rawF).toFixed(4),"  (fluct: raw ref =",rawF.toFixed(4),")");
+console.log("  verif profil (cal courant 2.30):",[1,4,8].map(mf=>"mf"+mf+":"+(2.30*fluctReal(mf,1,60)).toFixed(2)).join(" "),
+            " depth50%@4:",(2.30*fluctReal(4,0.5,60)).toFixed(2)," niveau80:",(2.30*fluctReal(4,1,80)).toFixed(2));
+
+// --- Tonalité ---
+function specTone(fc,dB,nfft,fs,noiseDb){const n=nfft>>1,bp=new Float64Array(n),df=fs/nfft;const nf=Math.pow(10,(noiseDb-94)/10);for(let k=1;k<n;k++)bp[k]=nf*(0.5+0.3*Math.sin(k));const kc=Math.round(fc/df);bp[kc]+=Math.pow(10,(dB-94)/10);return{bp,df};}
+let sp=specTone(1000,60,16384,48000,10);
+console.log("Tonalité 1kHz (cal 1.98):",psyTonalAures(sp.bp,sp.df).toFixed(3));
