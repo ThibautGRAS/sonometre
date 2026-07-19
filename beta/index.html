@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.1.0-beta</div>
+  <div class="splashver" id="splashVer">2.1.1-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -691,6 +691,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mLsnGain" data-cat="affichage"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="auto">Auto ♪</option><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
           <div class="mrow" id="mTheme" data-cat="affichage"><span>Thème de façade</span><b>Marine</b></div>
           <div class="mrow" id="mBacklight" data-cat="affichage"><span>Rétroéclairage</span><b>Off</b></div>
+          <div class="mrow" id="mPsyWin" data-cat="affichage"><span>Fenêtre psycho (toile)</span><b>4 s</b></div>
           <div class="mrow act red" id="mResetPrefs" data-cat="sys"><span>Réinitialiser les paramètres</span><b>↺</b></div>
           <div class="mnote" data-cat="sys">Remet tous les réglages aux valeurs par défaut. Astuce : réinitialiser max/min/peak-hold se fait en tapant directement l'afficheur max/min.</div>
           <div class="mcredit" data-cat="sys">Sonomètre CETIM · Thibaut Gras · 2026<br>thibaut.gras@cetim.fr</div>
@@ -4465,6 +4466,7 @@ function ui(){
   $('mLP').querySelector('b').textContent=S.lpFc>0?((S.lpFc/1000)+' kHz'):'Off';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
   $('mBacklight').querySelector('b').textContent=S.backlight?'On':'Off';
+  $('mPsyWin').querySelector('b').textContent=(S.psyWin||4)+' s';
   $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
   { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=S.lsnAuto?'auto':String(S.lsnGain||0); }
 
@@ -4682,6 +4684,8 @@ $('mTheme').onclick=()=>{
   applyTheme(); ui();
 };
 $('mBacklight').onclick=()=>{ S.backlight=!S.backlight; document.body.classList.toggle('backlit',!!S.backlight); savePrefs(); ui(); };
+/* fenêtre glissante de la toile psycho : 2 s (mini, fluctuation instable en deçà) → 4 → 8 s */
+$('mPsyWin').onclick=()=>{ const O=[2,4,8]; S.psyWin=O[(O.indexOf(S.psyWin||4)+1)%O.length]; if(typeof psyReset==='function')psyReset(); savePrefs(); ui(); if(S.screen==='psy')drawActive(); };
 $('mSg3dSmooth').onclick=()=>{ S.sg3dSmooth=((S.sg3dSmooth|0)+1)%3; SG._3dKey=''; if(window.V3)window.V3.sig=''; savePrefs(); ui(); if(S.sg3d)drawSgram(); };
 /* moyennage temporel du spectre : 1 (live) → 2 → 4 → 8 trames */
 $('mSpecFrames').onclick=()=>{ const seq=[1,2,4,8]; let i=seq.indexOf(S.specFrames|0); S.specFrames=seq[(i+1)%seq.length]; savePrefs(); ui(); if(REPL.on)renderReplayFrame(REPL.i); else drawActive(); };
@@ -5884,6 +5888,7 @@ const TR={
  'Thème de façade':{en:'Faceplate theme',es:'Tema de fachada'},
  "Fréquence d'échantillonnage":{en:'Sample rate',es:'Frecuencia de muestreo'},
  'Rétroéclairage':{en:'Backlight',es:'Retroiluminación'},
+ 'Fenêtre psycho (toile)':{en:'Psycho window (radar)',es:'Ventana psico (radar)'},
  'Calibration / réf. pleine échelle (0 dBFS)':{en:'Calibration / full-scale ref. (0 dBFS)',es:'Calibración / ref. fondo de escala (0 dBFS)'},
  'Mode générique auto':{en:'Generic auto mode',es:'Modo genérico auto'},
  'Profil chargé':{en:'Loaded profile',es:'Perfil cargado'},
