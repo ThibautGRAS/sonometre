@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.1.7-beta</div>
+  <div class="splashver" id="splashVer">2.1.8-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4630,7 +4630,7 @@ function applyPreset(key){
 $('mPreset').onclick=()=>{ $('presetPop').classList.add('on'); };
 $('ppClose').onclick=()=>$('presetPop').classList.remove('on');
 $('presetPop').addEventListener('click',e=>{ if(e.target.id==='presetPop')$('presetPop').classList.remove('on'); });
-document.querySelectorAll('.ppopt').forEach(btn=>{
+$('presetPop').querySelectorAll('.ppopt').forEach(btn=>{
   btn.onclick=()=>{ applyPreset(btn.getAttribute('data-preset')); $('presetPop').classList.remove('on'); };
 });
 $('sg3dBtn').onclick=()=>{
