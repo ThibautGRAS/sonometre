@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.8-beta</div>
+  <div class="splashver" id="splashVer">2.2.9-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1022,7 +1022,7 @@ if('serviceWorker' in navigator){
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <h3>Psychoacoustique (toile)</h3>
-      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (t.u., présence de raies tonales — modèle d'Aures). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. Chaque indicateur est recalculé ~7×/s sur sa propre fenêtre (sonie et acuité 250 ms, rugosité 1 s, tonalité 2 s, fluctuation 5 s) à partir d'un tampon de 5 s. Le polygone <b>plein</b> = valeur actuelle ; <b>MOY</b> = moyenne depuis le début ; le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs s'affichent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). La <b>sonie</b> applique la méthode <b>tabulée ISO 532-1</b> (DIN 45631, identique à la librairie de référence MOSQITO) et l'<b>acuité</b> la DIN 45692. La <b>rugosité</b> applique le <b>modèle Daniel &amp; Weber complet</b> (47 canaux ½-Bark, excitation par FFT, pondérations Hi(f_mod), corrélation croisée entre canaux, dépendance au niveau — port fidèle validé identique à la librairie MOSQITO), recalculé environ une fois par seconde sur une fenêtre de 170 ms ; la <b>fluctuation</b> suit <b>Fastl band-wise</b> — modulation de la sonie spécifique <b>par bande de Bark</b>, indépendante du niveau (fenêtre 5 s) ; la <b>tonalité</b> applique le modèle d'<b>Aures</b> (raies tonales pondérées par la fréquence, pic ~700 Hz, et l'excès de niveau). En complément, un clic sur l'axe <b>Tonalité</b> affiche le <b>TNR</b> et le <b>PR</b> normatifs (<b>ECMA-74</b> : tone-to-noise et prominence ratio, en dB, validés identiques à la librairie MOSQITO) et la raie dominante. Rugosité et fluctuation sont calées sur les tons AM de référence (1 asper @70 Hz, 1 vacil @4 Hz), la tonalité sur un son pur 1 kHz. Indicateurs de confort validés sur banc synthétique (confrontation MOSQITO prévue) — non certifiés.</p>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore, calculés en continu sur une <b>fenêtre glissante</b> de quelques secondes : <b>Sonie</b> N (sone, volume perçu — méthode de Zwicker à partir des tiers d'octave), <b>Acuité</b> S (acum, balance grave/aigu — DIN 45692), <b>Rugosité</b> R (asper, modulations rapides ~70 Hz), <b>Fluctuation</b> F (vacil, modulations lentes ~4 Hz) et <b>Tonalité</b> T (t.u., présence de raies tonales — modèle d'Aures). Chaque axe est <b>normalisé</b> par des bornes réglables (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.), modifiables dans <b>ÉCHELLES</b>. Chaque indicateur est recalculé ~7×/s sur sa propre fenêtre (sonie et acuité 250 ms, rugosité 1 s, tonalité 2 s, fluctuation 5 s) à partir d'un tampon de 5 s. Le polygone <b>plein</b> = valeur actuelle ; <b>MOY</b> = moyenne depuis le début ; le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs s'affichent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée. Au centre, la <b>gêne psychoacoustique PA</b> (modèle de Zwicker combinant N5, acuité, rugosité, fluctuation ; vert &lt; 15, orange, rouge &gt; 40). La <b>sonie</b> applique la méthode <b>tabulée ISO 532-1</b> (DIN 45631, identique à la librairie de référence MOSQITO) et l'<b>acuité</b> la DIN 45692. La <b>rugosité</b> applique le <b>modèle Daniel &amp; Weber complet</b> (47 canaux ½-Bark, excitation par FFT, pondérations Hi(f_mod), corrélation croisée entre canaux, dépendance au niveau — port fidèle validé identique à la librairie MOSQITO), recalculé environ une fois par seconde sur une fenêtre de 170 ms ; la <b>fluctuation</b> suit <b>Fastl band-wise</b> — modulation de la sonie spécifique <b>par bande de Bark</b>, indépendante du niveau (fenêtre 5 s) ; la <b>tonalité</b> applique le modèle d'<b>Aures</b> (raies tonales pondérées par la fréquence, pic ~700 Hz, et l'excès de niveau). En complément, un clic sur l'axe <b>Tonalité</b> affiche le <b>TNR</b> et le <b>PR</b> normatifs (<b>ECMA-74</b> : tone-to-noise et prominence ratio, en dB, validés identiques à la librairie MOSQITO) et la raie dominante. Rugosité et fluctuation sont calées sur les tons AM de référence (1 asper @70 Hz, 1 vacil @4 Hz), la tonalité sur un son pur 1 kHz. Les indicateurs psychoacoustiques sont toujours calculés à partir du spectre <b>non pondéré (Z)</b>, quelle que soit la pondération A/C choisie pour l'affichage des niveaux (la sonie exige le SPL linéaire). Indicateurs validés de bout en bout sur signaux de référence (définitions normatives + confrontation MOSQITO ~2 %) — indicatifs, non certifiés.</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -1791,6 +1791,7 @@ function configureAnalyser(){
     S.bandPowV=new Float32Array(nb);
     S.bandPowD=new Float32Array(nb);
     S.curBnd=new Float32Array(nb);
+    S.curBndZ=new Float32Array(nb);
     S.bandEnergy=new Float64Array(nb);
     S.bandPeak=new Float32Array(nb).fill(-99);
     S.welch=null;
@@ -2489,7 +2490,7 @@ function loop(ts){
   // remplir fftDb (dB) pour compatibilité avec l'affichage aval
   for(let i=0;i<n;i++){S.fftDb[i]=mag[i]>0?10*Math.log10(mag[i]):-180;}
   let pA=0,pC=0,pZ=0;
-  const nb=S.bands.length, bp=new Float32Array(nb);
+  const nb=S.bands.length, bp=new Float32Array(nb), bpZ=new Float32Array(nb);   // bpZ = bandes NON pondérées (psychoacoustique : sonie/acuité/fluctuation exigent le SPL Z)
   const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
 
   for(let i=1;i<n;i++){
@@ -2500,16 +2501,17 @@ function loop(ts){
     pZ+=p; pA+=p*S.wA[i]; pC+=p*S.wC[i];
   }
   for(let b=0;b<nb;b++){
-    const [i0,i1]=S.bandBins[b]; let s=0;
+    const [i0,i1]=S.bandBins[b]; let s=0,sZ=0;
     for(let i=i0;i<=i1;i++){
       let p=mag[i];
       if(!isFinite(p))p=0;
       if(S.corr!=='off')p*=S.compGain[i];
       if(S.blGain)p*=S.blGain[i];
+      sZ+=p;                       // non pondéré (psycho)
       if(wSel)p*=wSel[i];
       s+=p;
     }
-    bp[b]=s;
+    bp[b]=s; bpZ[b]=sZ;
   }
 
   /* Correction de Parseval : recale la puissance spectrale sur le RMS temporel exact
@@ -2519,13 +2521,14 @@ function loop(ts){
   if(pZ>0&&Pt>0&&isFinite(Pt)){const k=Pt/pZ; S.K=S.K?0.9*S.K+0.1*k:k;}
   const K=S.K||1;
   pA*=K; pC*=K; pZ*=K;
-  for(let b=0;b<nb;b++)bp[b]*=K;
+  for(let b=0;b<nb;b++){ bp[b]*=K; bpZ[b]*=K; }
   /* ---- source TIERS D'OCTAVE : banc de filtres IEC à la place de la synthèse FFT ---- */
   if(S.toctSrc==='iir'&&S.iirBank&&S.iirBank.n>0){
     const bk=S.iirBank, wfc=S.weight==='A'?bk.wAfc:S.weight==='C'?bk.wCfc:null;
     for(let b=0;b<nb;b++){
       let p=bk.acc[b]/bk.n;                              // puissance moyenne de bande (temporel)
       if(S.corr!=='off')p*=bk.compFc[b];
+      bpZ[b]=p;                                          // non pondéré (psycho)
       if(wfc)p*=wfc[b];
       bp[b]=p;
     }
@@ -2547,7 +2550,7 @@ function loop(ts){
      puis on l'agrège (moyenne des N derniers périodogrammes) à PAS FIXE = fenêtre·(1−overlap).
      Ici on ne fait que capturer la trame courante ; l'agrégation se fait dans welchUpdate(). */
   for(let b=0;b<nb;b++){
-    S.curBnd[b]=bp[b];
+    S.curBnd[b]=bp[b]; if(S.curBndZ)S.curBndZ[b]=bpZ[b];
     if(!idle) S.bandEnergy[b]+=bp[b]*dt;
   }
   /* corrélation vibro-acoustique : instantané à ~20 Hz quand VIB est actif.
@@ -3911,7 +3914,8 @@ function psyLoudness(){
     S._isoMapN=S.bands.length;
   }
   const spec=new Array(28);
-  for(let m=0;m<28;m++){ const bi=ISO_MAP[m], p=bi>=0?S.curBnd[bi]:0; spec[m]= p>0 ? 10*Math.log10(p)+S.offset : -60; }
+  const srcBnd=S.curBndZ||S.curBnd;   // psycho : toujours le SPL NON pondéré (Z), indépendant de la pondération d'affichage
+  for(let m=0;m<28;m++){ const bi=ISO_MAP[m], p=bi>=0?srcBnd[bi]:0; spec[m]= p>0 ? 10*Math.log10(p)+S.offset : -60; }
   const nm=isoMainLoudness(spec,"free");
   const {N,Ns}=isoCalcSlopes(nm);
   const Nspec=new Float64Array(24);                            // rebin 0,1 Bark -> sonie par Bark (pour acuité/fluctuation)
