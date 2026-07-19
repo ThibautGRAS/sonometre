@@ -2,7 +2,7 @@
 const fs=require("fs");
 const src=fs.readFileSync("index.html","utf8").match(/<script>([\s\S]*?)<\/script>/g).map(s=>s.replace(/<\/?script>/g,"")).sort((a,b)=>a.length-b.length).pop();
 function grab(re){const m=src.match(re);return m?m[0]:"";}
-const consts = src.match(/const PSY_BARK_HI=[\s\S]*?const PSY_BOUNDS=[^;]*;/)[0]
+const consts = src.match(/const PSY_BARK_HI=[\s\S]*?const PSY_CN=[^;]*;/)[0]
   + src.match(/const PSY_WR=[\s\S]*?const PSY_CAL_R=[^;]*;/)[0];
 let S={bands:[1000],curBnd:[1],offset:40};
 eval(consts.replace(/\bconst /g,"var ")
@@ -18,7 +18,11 @@ const L=psyLoudness(); chk("Sonie 1kHz/40dB (sone)",L.N,0.85,1.20);
 // 2) Acuité : ton 1 kHz -> ~1 acum
 chk("Acuité 1kHz (acum)",psySharpness(L.Nspec),0.7,1.2);
 // 3) Sonie croît avec le niveau
-S.offset=60; chk("Sonie 1kHz/60dB (sone)",psyLoudness().N,2.5,4.5); S.offset=40;
+S.offset=60; chk("Sonie 1kHz/60dB (sone)",psyLoudness().N,3.4,5.0);
+S.offset=50; chk("Sonie 1kHz/50dB (sone)",psyLoudness().N,1.7,2.6);
+S.offset=70; chk("Sonie 1kHz/70dB (sone)",psyLoudness().N,7.0,10.0);
+S.offset=80; chk("Sonie 1kHz/80dB (sone)",psyLoudness().N,13.5,19.0);
+S.offset=40;
 
 // 4) Rugosité : reproduit le pipeline enveloppe + modBandP avec les constantes du fichier
 function roughAM(fm,depth){ depth=depth==null?1:depth;

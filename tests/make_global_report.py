@@ -130,7 +130,10 @@ if psy_ok and pathlib.Path("psycho_data.json").exists():
     def _v(x,lo,hi): return "conforme" if lo<=x<=hi else "à revoir"
     prows="".join([
       f"| Sonie N — 1 kHz / 40 dB | 1,00 sone | {N40:.2f} sone | {_v(N40,0.85,1.20)} |\n",
-      f"| Sonie N — 1 kHz / 60 dB | ≈ 4 sone | {N60:.2f} sone | {_v(N60,2.5,4.5)} |\n",
+      f"| Sonie N — 1 kHz / 50 dB | ≈ 2 sone | {_at(P['loud']['L'],P['loud']['N'],50):.2f} sone | {_v(_at(P['loud']['L'],P['loud']['N'],50),1.7,2.6)} |\n",
+      f"| Sonie N — 1 kHz / 60 dB | ≈ 4 sone | {N60:.2f} sone | {_v(N60,3.4,5.0)} |\n",
+      f"| Sonie N — 1 kHz / 70 dB | ≈ 8 sone | {_at(P['loud']['L'],P['loud']['N'],70):.2f} sone | {_v(_at(P['loud']['L'],P['loud']['N'],70),7,10)} |\n",
+      f"| Sonie N — 1 kHz / 80 dB | ≈ 16 sone | {_at(P['loud']['L'],P['loud']['N'],80):.2f} sone | {_v(_at(P['loud']['L'],P['loud']['N'],80),13.5,19)} |\n",
       f"| Acuité S — ton 1 kHz | ≈ 1 acum | {S1k:.2f} acum | {_v(S1k,0.7,1.3)} |\n",
       f"| Rugosité R — 100 % AM @70 Hz | 1,00 asper | {R70:.2f} asper | {_v(R70,0.9,1.1)} |\n",
       f"| Rugosité R — 50 % AM @70 Hz | 0,50 asper | {R50:.2f} asper | {_v(R50,0.4,0.6)} |\n",
@@ -143,10 +146,10 @@ if psy_ok and pathlib.Path("psycho_data.json").exists():
 
 # Partie III — Indicateurs psychoacoustiques (SONO-VAL-PSY-001)
 
-L'écran « Toile psychoacoustique » affiche cinq indicateurs de qualité sonore normalisés sur une fenêtre glissante (réglable 2/4/8 s) : sonie N, acuité S, rugosité R, fluctuation F, tonalité T ; au centre, la gêne psychoacoustique PA (modèle de Zwicker). Constantes de calibration extraites du code : CAL_R = {P['cal']['CAL_R']:.4f}, CAL_F = {P['cal']['CAL_F']:.4f}.
+L'écran « Toile psychoacoustique » affiche cinq indicateurs de qualité sonore normalisés sur une fenêtre glissante (réglable 2/4/8 s) : sonie N, acuité S, rugosité R, fluctuation F, tonalité T ; au centre, la gêne psychoacoustique PA (modèle de Zwicker). Constantes de calibration extraites du code : CAL_R = {P['cal']['CAL_R']:.4f}, CAL_F = {P['cal']['CAL_F']:.4f}, C_N = {P['cal'].get('CN',0):.4f}.
 
 ## III.1 Méthodes
-**Sonie** : méthode de Zwicker à partir des niveaux 1/3 d'octave (sonie spécifique par bande de Bark, seuil en champ), calée à 1 sone pour 1 kHz / 40 dB. **Acuité** : pondération DIN 45692 sur la sonie spécifique. **Rugosité** : modèle de Daniel & Weber — enveloppe temporelle (redressement + passe-bas 400 Hz, décimation ~2 kHz), spectre de modulation pondéré (pic 70 Hz), sommation quadratique, calée à 1 asper (1 kHz / 100 % AM @70 Hz). **Fluctuation** : modèle de Fastl/Osses — modulation de la sonie N(t) sur la fenêtre, pondération pic 4 Hz, calée à 1 vacil. **Tonalité** : dérivée de l'émergence tonale. **PA** : combinaison de Zwicker (N5, S, R, F).
+**Sonie** : méthode de Zwicker (ISO 532-1) — motif d'excitation par bande de Bark avec **étalement de masquage** (pente supérieure dépendante du niveau, pente inférieure 27 dB/Bark), sonie spécifique intégrée ; calée à 1 sone pour 1 kHz / 40 dB. La loi sonie/niveau reproduit le doublement par 10 dB (cf. §III.3). **Acuité** : pondération DIN 45692 sur la sonie spécifique. **Rugosité** : modèle de Daniel & Weber — enveloppe temporelle (redressement + passe-bas 400 Hz, décimation ~2 kHz), spectre de modulation pondéré (pic 70 Hz), sommation quadratique, calée à 1 asper (1 kHz / 100 % AM @70 Hz). **Fluctuation** : modèle de Fastl/Osses — modulation de la sonie N(t) sur la fenêtre, pondération pic 4 Hz, calée à 1 vacil. **Tonalité** : dérivée de l'émergence tonale. **PA** : combinaison de Zwicker (N5, S, R, F).
 
 ## III.2 Durées d'analyse (d'après les modèles)
 Rugosité : phénomène rapide (20–300 Hz), blocs **~200 ms** suffisants. Fluctuation : pic à **4 Hz**, exige **≥ ~2 s** (plusieurs périodes) — contrainte dimensionnante. Sonie/acuité quasi instantanées. Fenêtre par défaut **4 s** (réglable 2/4/8 s).
@@ -168,7 +171,7 @@ Rugosité : phénomène rapide (20–300 Hz), blocs **~200 ms** suffisants. Fluc
 ![Fluctuation vs fréquence de modulation — pic à 4 Hz (Fastl/Osses).](fig_psy_fluctF.png)
 
 ## III.4 Conclusion et limites
-Les cinq indicateurs répondent conformément aux définitions de référence. Version temps réel **calibrée** sur les tons AM de référence, **sans** décomposition par bande critique ni corrélation inter-bandes (rugosité) ; la sonie sous-estime aux niveaux élevés (pas d'étalement de masquage). Indicateurs de confort **non certifiés**. Raffinement et confrontation aux jeux de référence MOSQITO prévus (Phase 3).
+Les cinq indicateurs répondent conformément aux définitions de référence. La sonie inclut désormais l'étalement de masquage (loi de niveau conforme au doublement par 10 dB). Version temps réel **calibrée** sur les signaux de référence ; la rugosité reste **sans** décomposition par bande critique ni corrélation inter-bandes. Indicateurs de confort **non certifiés**. Raffinement et confrontation aux jeux de référence MOSQITO prévus (Phase 3).
 """
 
 header = f"""**CETIM — Centre technique des industries mécaniques**

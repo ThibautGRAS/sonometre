@@ -2,7 +2,7 @@
 const fs=require("fs");
 const src=fs.readFileSync(fs.existsSync("index.html")?"index.html":"../index.html","utf8").match(/<script>([\s\S]*?)<\/script>/g).map(s=>s.replace(/<\/?script>/g,"")).sort((a,b)=>a.length-b.length).pop();
 function grab(re){const m=src.match(re);return m?m[0]:"";}
-const consts=(src.match(/const PSY_BARK_HI=[\s\S]*?const PSY_BOUNDS=[^;]*;/)[0]
+const consts=(src.match(/const PSY_BARK_HI=[\s\S]*?const PSY_CN=[^;]*;/)[0]
   + src.match(/const PSY_WR=[\s\S]*?const PSY_CAL_R=[^;]*;/)[0]).replace(/\bconst /g,"var ");
 var S={bands:[1000],curBnd:[1],offset:40};
 eval(consts+grab(/function psyBarkOf[\s\S]*?\n\}/)+grab(/function psyLoudness[\s\S]*?\n\}/)+grab(/function psySharpness[\s\S]*?\n\}/)+grab(/function psyModBandP[\s\S]*?\n\}/));
@@ -31,6 +31,6 @@ for(let d=0;d<=100;d+=10){ out.roughD.d.push(d); out.roughD.R.push(roughAM(70,d/
 // 5) Fluctuation vs fréquence de modulation
 out.fluctF={fm:[],F:[]};
 for(const mf of [0.5,1,1.5,2,3,4,6,8,10,12,16]){ out.fluctF.fm.push(mf); out.fluctF.F.push(fluctMod(mf)); }
-out.cal={CAL_R:PSY_CAL_R,CAL_F:PSY_CAL_F};
+out.cal={CAL_R:PSY_CAL_R,CAL_F:PSY_CAL_F,CN:PSY_CN};
 fs.writeFileSync("psycho_data.json",JSON.stringify(out));
 console.log("export OK — sonie@40dB=",psyLoudness().N.toFixed(3)," R@70=",roughAM(70).toFixed(3)," F@4=",fluctMod(4).toFixed(3));

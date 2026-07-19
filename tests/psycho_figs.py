@@ -9,7 +9,7 @@ def save(fig,name):
 
 # 1 Sonie vs niveau
 f=plt.figure(figsize=(5,3.1)); ax=f.add_subplot(111)
-ax.plot(d["loud"]["L"],d["loud"]["N"],color=NAVY,lw=2,marker="o",ms=3,label="modèle (Zwicker simpl.)")
+ax.plot(d["loud"]["L"],d["loud"]["N"],color=NAVY,lw=2,marker="o",ms=3,label="modèle (excitation + masquage)")
 ax.plot(d["loud"]["L"],d["loud"]["ref2"],color=RED,lw=1.4,ls="--",label="repère 2^((L−40)/10)")
 ax.axhline(1,color=GREY,lw=.8,ls=":"); ax.axvline(40,color=GREY,lw=.8,ls=":")
 ax.set_xlabel("Niveau 1 kHz (dB SPL)"); ax.set_ylabel("Sonie N (sone)"); ax.set_title("Sonie vs niveau"); ax.legend(fontsize=8); ax.grid(alpha=.25)

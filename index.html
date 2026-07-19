@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.1.1-beta</div>
+  <div class="splashver" id="splashVer">2.1.2-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -3817,22 +3817,25 @@ function updScaleLbl(){
 const PSY_BARK_HI=[100,200,300,400,510,630,770,920,1080,1270,1480,1720,2000,2320,2700,3150,3700,4400,5300,6400,7700,9500,12000,15500];
 const PSY_LTQ=[30,18,12,8,7,6,5,4,3,3,3,3,3,3,3,3,3,3,3,4,5,7,12,20];   // seuil en champ approx par Bark (dB)
 const PSY_BOUNDS={N:40,S:4,R:1.5,F:1.5,T:1};                            // bornes de normalisation (→1)
+const PSY_BARK_FC=[50,150,250,350,450,570,700,840,1000,1170,1370,1600,1850,2150,2500,2900,3400,4000,4800,5800,7000,8500,10500,13500];
+const PSY_CN=0.1253;   // calage 1 sone @ 1 kHz/40 dB (modèle avec étalement)
 function psyBarkOf(f){ for(let z=0;z<24;z++) if(f<=PSY_BARK_HI[z]) return z; return 23; }
 function psyLoudness(){
   if(!S.bands||!S.bands.length||!S.curBnd) return null;
+  /* 1) intensité par bande de Bark (depuis les tiers d'octave) */
+  const I=new Float64Array(24);
+  for(let b=0;b<S.bands.length;b++){ const p=S.curBnd[b]; if(!(p>0))continue; I[psyBarkOf(S.bands[b])]+=Math.pow(10,(10*Math.log10(p)+S.offset)/10); }
+  const Lz=new Float64Array(24);
+  for(let i=0;i<24;i++) Lz[i]= I[i]>0?10*Math.log10(I[i]):-999;
+  /* 2) motif d'excitation avec ÉTALEMENT DE MASQUAGE (ISO 532-1) :
+        pente supérieure dépendante du niveau (24+230/f−0.15·L dB/Bark), pente inférieure 27 dB/Bark */
   const E=new Float64Array(24);
-  for(let b=0;b<S.bands.length;b++){
-    const p=S.curBnd[b]; if(!(p>0))continue;
-    const spl=10*Math.log10(p)+S.offset;
-    E[psyBarkOf(S.bands[b])]+=Math.pow(10,spl/10);
-  }
+  for(let j=0;j<24;j++){ if(Lz[j]<=-990)continue; const Su=Math.max(5,24+230/PSY_BARK_FC[j]-0.15*Lz[j]);
+    for(let i=0;i<24;i++){ const dz=i-j, at=dz>=0?Su*dz:27*(-dz); E[i]+=Math.pow(10,(Lz[j]-at)/10); } }
+  /* 3) sonie spécifique de Zwicker + intégration */
   const Nspec=new Float64Array(24); let N=0;
-  for(let z=0;z<24;z++){
-    const Etq=Math.pow(10,PSY_LTQ[z]/10);
-    if(E[z]<=Etq){ Nspec[z]=0; continue; }
-    const ns=0.17*Math.pow(Etq,0.23)*(Math.pow(0.5+0.5*E[z]/Etq,0.23)-1);
-    Nspec[z]=ns>0?ns:0; N+=Nspec[z];
-  }
+  for(let i=0;i<24;i++){ const Etq=Math.pow(10,PSY_LTQ[i]/10); if(E[i]<=Etq)continue;
+    const ns=PSY_CN*Math.pow(Etq,0.23)*(Math.pow(0.5+0.5*E[i]/Etq,0.23)-1); if(ns>0){Nspec[i]=ns;N+=ns;} }
   return {N,Nspec};
 }
 function psySharpness(Nspec){
