@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.20-beta</div>
+  <div class="splashver" id="splashVer">2.2.21-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -681,7 +681,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mEmgThr" data-cat="signal"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
           <div class="mrow" id="mSpecFrames" data-cat="signal"><span>Moyennage spectre (trames)</span><b>4</b></div>
           <div class="mrow" id="mSpecSmooth" data-cat="signal"><span>Lissage fréquentiel (bande fine)</span><b>1/12 oct</b></div>
-          <div class="mrow" id="mSpecCI" data-cat="affichage"><span>Bande de confiance ±2σ (spectre moyenné)</span><b>Non</b></div>
+          <div class="mrow" id="mSpecCI" data-cat="affichage"><span>Intervalle de confiance de la moyenne (spectre)</span><b>Non</b></div>
           <div class="mrow" id="mToctSrc" data-cat="signal"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
           <div class="mrow" id="mLvlSrc" data-cat="signal"><span>Niveaux temps réel (LAF…, Leq)</span><b>Temporel IIR</b></div>
           <div class="mrow" id="mHP" data-cat="signal"><span>Passe-haut (limite grave)</span><b>10 Hz</b></div>
@@ -964,7 +964,7 @@ if('serviceWorker' in navigator){
         <li>Spectrogramme : <b>double-tap</b> (ou deux doigts, ou touche M) = suivi automatique du maximum ; en <b>relecture</b>, le viseur suit le pic au fil de la lecture. <b>Deux doigts / Maj+clic</b> font pareil.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
         <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
-        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>live</b> et <b>moyenné (Leq)</b> sur toute la durée — libellé « L<i>x</i>·Moy ». Deux débruitages du spectre <b>fin</b> (menu Expert), indépendants du bouton TEMPS : <b>Moyennage (trames)</b> = moyenne des N derniers périodogrammes (méthode de Welch, agrégés à pas fixe = fenêtre·(1−overlap), donc « N moyennes » est une vraie grandeur, identique en direct et en replay), et <b>Lissage fréquentiel</b> = moyenne 1/n octave sur les raies (nettoie sans latence, n'affecte que la courbe pas les mesures au curseur). Le rapport PDF utilise toujours le spectre moyenné. En mode <b>moyenné</b>, l'option experte <b>Bande de confiance ±2σ</b> (Affichage) trace en fond translucide l'enveloppe ± deux écarts-types de la variabilité temporelle du niveau à chaque fréquence (bande large = raie instable dans le temps, bande fine = raie stable).</li>
+        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>live</b> et <b>moyenné (Leq)</b> sur toute la durée — libellé « L<i>x</i>·Moy ». Deux débruitages du spectre <b>fin</b> (menu Expert), indépendants du bouton TEMPS : <b>Moyennage (trames)</b> = moyenne des N derniers périodogrammes (méthode de Welch, agrégés à pas fixe = fenêtre·(1−overlap), donc « N moyennes » est une vraie grandeur, identique en direct et en replay), et <b>Lissage fréquentiel</b> = moyenne 1/n octave sur les raies (nettoie sans latence, n'affecte que la courbe pas les mesures au curseur). Le rapport PDF utilise toujours le spectre moyenné. En mode <b>moyenné</b>, l'option experte <b>Intervalle de confiance de la moyenne</b> (Affichage) trace en fond translucide l'enveloppe <b>±2σ/√N</b> autour du spectre moyen : c'est l'incertitude sur la <i>valeur moyenne</i> estimée à chaque fréquence, qui <b>se resserre</b> au fil de la mesure (∝ 1/√durée, N = nombre de fenêtres indépendantes accumulées). Une bande encore large signale une fréquence dont la moyenne n'est pas encore stabilisée ; à ne pas confondre avec la dispersion instantanée ±2σ (qui, elle, ne diminue pas).</li>
       </ul>
 
       <h3>Indices</h3>
@@ -3025,10 +3025,13 @@ function drawSpectrum(avg,modeOverride){
     let dLo=Infinity,dHi=-Infinity;
     const pts=[], band=[];
     const i0=Math.max(1,Math.floor(fmin/S.binHz)), i1=Math.min(S.fftDb.length-1,Math.ceil(fmax/S.binHz));
-    /* bande de confiance ±2σ : écart-type dB par bin sur la mesure moyennée (option experte) */
+    /* intervalle de confiance de la MOYENNE ±2σ/√N : se resserre au fil de la mesure (option experte) */
     const ciOn = S.specCI && useAvg && !REPL.on && S.eqT>0.5 && S.binSumDb && S.binSumDb2;
-    let stdArr=null;
+    let stdArr=null, semK=2;
     if(ciOn){
+      const fsR=S.ctx?S.ctx.sampleRate:48000;
+      const Neff=Math.max(1, S.eqT/((S.fftN||4096)/fsR));   // nb de fenêtres indépendantes (Welch) accumulées
+      semK=2/Math.sqrt(Neff);                                // demi-largeur = 2·σ/√Neff (IC ~95 % de la moyenne)
       const invT=1/S.eqT, raw=new Float32Array(i1+1);
       for(let i=i0;i<=i1;i++){ const m=S.binSumDb[i]*invT; let v=S.binSumDb2[i]*invT-m*m; raw[i]=v>0?Math.sqrt(v):0; }
       stdArr=new Float32Array(i1+1); const kk=3;                    // léger lissage de σ (±3 bins) pour une enveloppe propre
@@ -3041,7 +3044,7 @@ function drawSpectrum(avg,modeOverride){
       if(wSel)p*=wSel[i];                // pondération A/C appliquée à l'affichage
       const L=lvl(p), X=x2(f); pts.push([X,L]);
       if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
-      if(ciOn && L>-90){ const sd=2*stdArr[i], up=L+sd, lo=L-sd; band.push([X,up,lo]);
+      if(ciOn && L>-90){ const sd=semK*stdArr[i], up=L+sd, lo=L-sd; band.push([X,up,lo]);
         if(up>dHi)dHi=up; if(lo<dLo)dLo=lo; }
     }
     autoRange(sc,dLo,dHi);
