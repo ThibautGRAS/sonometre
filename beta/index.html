@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.24-beta</div>
+  <div class="splashver" id="splashVer">2.2.25-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1843,7 +1843,7 @@ function configureAnalyser(){
     S.binEnergy=new Float64Array(n);
     S.binSumDb=new Float64Array(n); S.binSumDb2=new Float64Array(n);   // stats dB par bin -> bande de confiance
     S.binEma=new Float32Array(n);   // moyenne glissante exponentielle (option)
-    S.binEmaDb=new Float32Array(n); S.binEmaDb2=new Float32Array(n);   // stats dB glissantes -> IC en mode glissant
+    S.binEmaDb2=new Float32Array(n);   // moment d'ordre 2 (dB) glissant -> variance de l'IC en mode glissant
     S.welch=null;
   }
   S.iirBank=null;                      // le banc IIR dépend de fs/binHz/compGain : reconstruit
@@ -2456,7 +2456,7 @@ function resetMeasure(){
   if(S.binPowD)S.binPowD.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
   if(S.binSumDb)S.binSumDb.fill(0); if(S.binSumDb2)S.binSumDb2.fill(0);
-  if(S.binEma)S.binEma.fill(0); if(S.binEmaDb)S.binEmaDb.fill(0); if(S.binEmaDb2)S.binEmaDb2.fill(0); S._emaSeed=false;
+  if(S.binEma)S.binEma.fill(0); if(S.binEmaDb2)S.binEmaDb2.fill(0); S._emaSeed=false;
   if(S.bandPeak)S.bandPeak.fill(-99);
   /* spectrogramme : vider le tampon de données et les curseurs/zoom associés */
   if(SG.cols)SG.cols.fill(null);
@@ -2597,7 +2597,7 @@ function loop(ts){
   for(let b=0;b<nb;b++){
     S.curBnd[b]=bp[b]; if(S.curBndZ)S.curBndZ[b]=bpZ[b];
     if(!idle) S.bandEnergy[b]+=bp[b]*dt;
-    if(!idle&&emaA>0&&S.bandEma) S.bandEma[b]=S._emaSeed?S.bandEma[b]+(bp[b]-S.bandEma[b])*emaA:bp[b];
+    if(!idle&&emaA>0&&S.bandEma){ const Lb=10*Math.log10(bp[b]>1e-12?bp[b]:1e-12); S.bandEma[b]=S._emaSeed?S.bandEma[b]+(Lb-S.bandEma[b])*emaA:Lb; }   // EMA en dB
   }
   /* corrélation vibro-acoustique : instantané à ~20 Hz quand VIB est actif.
      Séries selon l'affichage : bandes 1/3 oct (tiers/octave) ou 128 groupes log (bande fine). */
@@ -2632,8 +2632,7 @@ function loop(ts){
     if(!idle&&S.binEnergy)S.binEnergy[i]+=p*dt;   // énergie cumulée par bin → spectre Leq moyenné (rapport)
     if(!idle){ const Ld=10*Math.log10(p>1e-12?p:1e-12);
       if(S.binSumDb){ S.binSumDb[i]+=Ld*dt; S.binSumDb2[i]+=Ld*Ld*dt; }             // stats dB cumulées (IC en mode Leq)
-      if(emaA>0&&S.binEma){ S.binEma[i]=S._emaSeed?S.binEma[i]+(p-S.binEma[i])*emaA:p;
-        S.binEmaDb[i]=S._emaSeed?S.binEmaDb[i]+(Ld-S.binEmaDb[i])*emaA:Ld;              // stats dB glissantes (IC en mode glissant)
+      if(emaA>0&&S.binEma){ S.binEma[i]=S._emaSeed?S.binEma[i]+(Ld-S.binEma[i])*emaA:Ld;   // EMA en dB (niveau) → descend en ~τ, pas en énergie (qui traîne)
         S.binEmaDb2[i]=S._emaSeed?S.binEmaDb2[i]+(Ld*Ld-S.binEmaDb2[i])*emaA:Ld*Ld; } }
   }
   if(!idle&&emaA>0)S._emaSeed=true;
@@ -2929,7 +2928,7 @@ function drawSpectrum(avg,modeOverride){
   if(mode==='toct'||mode==='oct'){
     /* octave : agrège les tiers par groupes centrés sur les fréquences normalisées (…31.5,63,125,250,500,1k…) */
     let names, pw, peak;
-    const pwT=useAvg?(S.avgTau>0&&S.bandEma?S.bandEma:Array.from(S.bandEnergy,e=>e/S.eqT)):S.bandPowD;
+    const pwT=useAvg?(S.avgTau>0&&S.bandEma?Array.from(S.bandEma,db=>Math.pow(10,db/10)):Array.from(S.bandEnergy,e=>e/S.eqT)):S.bandPowD;
     if(mode==='oct'){
       const OCT=[16,31.5,63,125,250,500,1000,2000,4000,8000,16000];
       names=[]; pw=[]; peak=[];
@@ -3015,7 +3014,8 @@ function drawSpectrum(avg,modeOverride){
        les curseurs (tap + max) et l'émergence lisent tous la MÊME donnée */
     let binPowEff=binPow;
     if(useAvg&&S.binEnergy){
-      if(S.avgTau>0&&S.binEma){ binPowEff=S.binEma; }
+      if(S.avgTau>0&&S.binEma){ const nE=S.binEma.length; if(!S._avgBinPow||S._avgBinPow.length!==nE)S._avgBinPow=new Float32Array(nE);
+        for(let i=0;i<nE;i++)S._avgBinPow[i]=Math.pow(10,S.binEma[i]/10); binPowEff=S._avgBinPow; }
       else{ const nE=S.binEnergy.length;
         if(!S._avgBinPow||S._avgBinPow.length!==nE)S._avgBinPow=new Float32Array(nE);
         const inv=1/S.eqT; for(let i=0;i<nE;i++)S._avgBinPow[i]=S.binEnergy[i]*inv;
@@ -3047,8 +3047,8 @@ function drawSpectrum(avg,modeOverride){
       const Neff=Math.max(1, avgSpan/((S.fftN||4096)/fsR));   // fenêtres indépendantes sur la fenêtre de moyenne effective
       semK=2/Math.sqrt(Neff);                                // demi-largeur = 2·σ/√Neff (IC ~95 % de la moyenne)
       const raw=new Float32Array(i1+1);
-      if(S.avgTau>0&&S.binEmaDb){                              // mode glissant : variance glissante (oublie en ~τ)
-        for(let i=i0;i<=i1;i++){ const m=S.binEmaDb[i]; let v=S.binEmaDb2[i]-m*m; raw[i]=v>0?Math.sqrt(v):0; }
+      if(S.avgTau>0&&S.binEma){                                // mode glissant : variance glissante (oublie en ~τ)
+        for(let i=i0;i<=i1;i++){ const m=S.binEma[i]; let v=S.binEmaDb2[i]-m*m; raw[i]=v>0?Math.sqrt(v):0; }
       } else {                                                 // mode cumulé (Leq) : variance sur toute la mesure
         const invT=1/S.eqT; for(let i=i0;i<=i1;i++){ const m=S.binSumDb[i]*invT; let v=S.binSumDb2[i]*invT-m*m; raw[i]=v>0?Math.sqrt(v):0; }
       }
@@ -3614,7 +3614,7 @@ function beginRun(){
   if(S.bandEma)S.bandEma.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
   if(S.binSumDb)S.binSumDb.fill(0); if(S.binSumDb2)S.binSumDb2.fill(0);
-  if(S.binEma)S.binEma.fill(0); if(S.binEmaDb)S.binEmaDb.fill(0); if(S.binEmaDb2)S.binEmaDb2.fill(0); S._emaSeed=false;
+  if(S.binEma)S.binEma.fill(0); if(S.binEmaDb2)S.binEmaDb2.fill(0); S._emaSeed=false;
   if(S.recAudio&&!REPL.on)arecReset();          // V2 : nouvel enregistrement audio par mesure (jamais en replay)
   /* en REPLAY, un saut de timeline relance les intégrateurs mais PRÉSERVE le
      spectrogramme (flux continu de ce qu'on explore) ; le nettoyage complet
