@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.23-beta</div>
+  <div class="splashver" id="splashVer">2.2.24-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1843,6 +1843,7 @@ function configureAnalyser(){
     S.binEnergy=new Float64Array(n);
     S.binSumDb=new Float64Array(n); S.binSumDb2=new Float64Array(n);   // stats dB par bin -> bande de confiance
     S.binEma=new Float32Array(n);   // moyenne glissante exponentielle (option)
+    S.binEmaDb=new Float32Array(n); S.binEmaDb2=new Float32Array(n);   // stats dB glissantes -> IC en mode glissant
     S.welch=null;
   }
   S.iirBank=null;                      // le banc IIR dépend de fs/binHz/compGain : reconstruit
@@ -2455,7 +2456,7 @@ function resetMeasure(){
   if(S.binPowD)S.binPowD.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
   if(S.binSumDb)S.binSumDb.fill(0); if(S.binSumDb2)S.binSumDb2.fill(0);
-  if(S.binEma)S.binEma.fill(0); S._emaSeed=false;
+  if(S.binEma)S.binEma.fill(0); if(S.binEmaDb)S.binEmaDb.fill(0); if(S.binEmaDb2)S.binEmaDb2.fill(0); S._emaSeed=false;
   if(S.bandPeak)S.bandPeak.fill(-99);
   /* spectrogramme : vider le tampon de données et les curseurs/zoom associés */
   if(SG.cols)SG.cols.fill(null);
@@ -2629,8 +2630,11 @@ function loop(ts){
     p*=K;
     S.curFin[i]=p;
     if(!idle&&S.binEnergy)S.binEnergy[i]+=p*dt;   // énergie cumulée par bin → spectre Leq moyenné (rapport)
-    if(!idle&&S.binSumDb){ const Ld=10*Math.log10(p>1e-12?p:1e-12); S.binSumDb[i]+=Ld*dt; S.binSumDb2[i]+=Ld*Ld*dt; }   // stats dB -> écart-type par bin
-    if(!idle&&emaA>0&&S.binEma) S.binEma[i]=S._emaSeed?S.binEma[i]+(p-S.binEma[i])*emaA:p;
+    if(!idle){ const Ld=10*Math.log10(p>1e-12?p:1e-12);
+      if(S.binSumDb){ S.binSumDb[i]+=Ld*dt; S.binSumDb2[i]+=Ld*Ld*dt; }             // stats dB cumulées (IC en mode Leq)
+      if(emaA>0&&S.binEma){ S.binEma[i]=S._emaSeed?S.binEma[i]+(p-S.binEma[i])*emaA:p;
+        S.binEmaDb[i]=S._emaSeed?S.binEmaDb[i]+(Ld-S.binEmaDb[i])*emaA:Ld;              // stats dB glissantes (IC en mode glissant)
+        S.binEmaDb2[i]=S._emaSeed?S.binEmaDb2[i]+(Ld*Ld-S.binEmaDb2[i])*emaA:Ld*Ld; } }
   }
   if(!idle&&emaA>0)S._emaSeed=true;
   welchUpdate(ts);                                 // agrège les N derniers périodogrammes (pas fixe + overlap) → binPowD/bandPowD
@@ -3042,8 +3046,12 @@ function drawSpectrum(avg,modeOverride){
       const avgSpan=S.avgTau>0?S.avgTau:S.eqT;
       const Neff=Math.max(1, avgSpan/((S.fftN||4096)/fsR));   // fenêtres indépendantes sur la fenêtre de moyenne effective
       semK=2/Math.sqrt(Neff);                                // demi-largeur = 2·σ/√Neff (IC ~95 % de la moyenne)
-      const invT=1/S.eqT, raw=new Float32Array(i1+1);
-      for(let i=i0;i<=i1;i++){ const m=S.binSumDb[i]*invT; let v=S.binSumDb2[i]*invT-m*m; raw[i]=v>0?Math.sqrt(v):0; }
+      const raw=new Float32Array(i1+1);
+      if(S.avgTau>0&&S.binEmaDb){                              // mode glissant : variance glissante (oublie en ~τ)
+        for(let i=i0;i<=i1;i++){ const m=S.binEmaDb[i]; let v=S.binEmaDb2[i]-m*m; raw[i]=v>0?Math.sqrt(v):0; }
+      } else {                                                 // mode cumulé (Leq) : variance sur toute la mesure
+        const invT=1/S.eqT; for(let i=i0;i<=i1;i++){ const m=S.binSumDb[i]*invT; let v=S.binSumDb2[i]*invT-m*m; raw[i]=v>0?Math.sqrt(v):0; }
+      }
       stdArr=new Float32Array(i1+1); const kk=3;                    // léger lissage de σ (±3 bins) pour une enveloppe propre
       for(let i=i0;i<=i1;i++){ let s=0,c=0; for(let j=Math.max(i0,i-kk);j<=Math.min(i1,i+kk);j++){s+=raw[j];c++;} stdArr[i]=c?s/c:0; }
     }
@@ -3606,7 +3614,7 @@ function beginRun(){
   if(S.bandEma)S.bandEma.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
   if(S.binSumDb)S.binSumDb.fill(0); if(S.binSumDb2)S.binSumDb2.fill(0);
-  if(S.binEma)S.binEma.fill(0); S._emaSeed=false;
+  if(S.binEma)S.binEma.fill(0); if(S.binEmaDb)S.binEmaDb.fill(0); if(S.binEmaDb2)S.binEmaDb2.fill(0); S._emaSeed=false;
   if(S.recAudio&&!REPL.on)arecReset();          // V2 : nouvel enregistrement audio par mesure (jamais en replay)
   /* en REPLAY, un saut de timeline relance les intégrateurs mais PRÉSERVE le
      spectrogramme (flux continu de ce qu'on explore) ; le nettoyage complet
