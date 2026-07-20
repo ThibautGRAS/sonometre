@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.12-beta</div>
+  <div class="splashver" id="splashVer">2.2.13-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1031,7 +1031,7 @@ if('serviceWorker' in navigator){
         <li><b>Fluctuation F</b> (vacil) — <b>Fastl</b> band-wise (modulation de la sonie spécifique par bande de Bark, indépendante du niveau), fenêtre 5 s.</li>
         <li><b>Tonalité T</b> (t.u.) — modèle d'<b>Aures</b> (pic ~700 Hz). Un clic sur l'axe Tonalité affiche en plus le <b>TNR</b> et le <b>PR</b> normatifs (<b>ECMA-74</b>) et la raie dominante.</li>
       </ul>
-      <p>Chaque axe est <b>normalisé</b> par une borne réglable dans <b>ÉCHELLES</b> (défaut : Sonie 100 sone, Acuité 5 acum, Rugosité 5 asper, Fluctuation 3 vacil, Tonalité 2 t.u.). Les indicateurs sont <b>toujours calculés sur le spectre non pondéré (Z)</b>, quelle que soit la pondération A/C choisie pour l'affichage des niveaux (la sonie exige le SPL linéaire).</p>
+      <p>Chaque axe est <b>normalisé</b> par une borne réglable dans <b>ÉCHELLES</b> (défaut : Sonie 40 sone, Acuité 4 acum, Rugosité 2 asper, Fluctuation 2 vacil, Tonalité 1,5 t.u. — calés pour que les sons courants et les références 1 asper / 1 vacil occupent une bonne part de l'axe). Les indicateurs sont <b>toujours calculés sur le spectre non pondéré (Z)</b>, quelle que soit la pondération A/C choisie pour l'affichage des niveaux (la sonie exige le SPL linéaire).</p>
       <p><b>Validation.</b> Les modèles sont testés de bout en bout sur signaux de référence, contre leurs <b>définitions normatives</b> et la librairie de référence <b>MOSQITO</b> : sonie et acuité concordent à <b>~2 %</b> de 63 Hz à 8 kHz (à travers le banc de filtres réel) et sur 40–80 dB ; rugosité = <b>1 asper</b> pour l'AM 1 kHz/70 Hz/100 %/60 dB (et retombe à ~0 sur du bruit large bande) ; fluctuation = <b>1 vacil</b> pour l'AM 4 Hz ; TNR/PR <b>identiques</b> à MOSQITO. Réserves : micro de smartphone non métrologique, sonie encore en régime stationnaire (N5 approché) ; indicateurs <b>indicatifs, non certifiés</b>.</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
@@ -1103,7 +1103,7 @@ const S = {
   fscale:'log', fftN:4096, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, psyAvg:false, psyDesc:false, psyBnd:{N:100,S:5,R:5,F:3,T:2}, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, psyAvg:false, psyDesc:false, psyBnd:{N:40,S:4,R:2,F:2,T:1.5}, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -3866,7 +3866,7 @@ const PSY_BARK_HI=[100,200,300,400,510,630,770,920,1080,1270,1480,1720,2000,2320
 const PSY_LTQ=[30,18,12,8,7,6,5,4,3,3,3,3,3,3,3,3,3,3,3,4,5,7,12,20];   // seuil en champ approx par Bark (dB)
 /* Bornes de normalisation (valeur → 100 %). Défauts pleine échelle usuels :
    sonie 0–100 sone, acuité 0–5 acum, rugosité 0–5 asper, fluctuation 0–3 vacil, tonalité 0–2 t.u. */
-const PSY_BOUNDS={N:100,S:5,R:5,F:3,T:2};
+const PSY_BOUNDS={N:40,S:4,R:2,F:2,T:1.5};  // bornes de normalisation de la toile (calées sur des valeurs réalistes : réf. 1 asper/1 vacil ~ mi-échelle)
 const PSY_BARK_FC=[50,150,250,350,450,570,700,840,1000,1170,1370,1600,1850,2150,2500,2900,3400,4000,4800,5800,7000,8500,10500,13500];
 const PSY_CN=0.1253;   // calage 1 sone @ 1 kHz/40 dB (modèle avec étalement)
 function psyBarkOf(f){ for(let z=0;z<24;z++) if(f<=PSY_BARK_HI[z]) return z; return 23; }
@@ -4309,11 +4309,12 @@ function psyUpdate(){
   PSY.mean={N:PSY._sum.N/PSY._cnt,S:PSY._sum.S/PSY._cnt,R:PSY._sum.R/PSY._cnt,F:PSY._sum.F/PSY._cnt,T:PSY._sum.T/PSY._cnt};
   PSY.p95={N:psyPctile(PSY._hist.N,.95),S:psyPctile(PSY._hist.S,.95),R:psyPctile(PSY._hist.R,.95),F:psyPctile(PSY._hist.F,.95),T:psyPctile(PSY._hist.T,.95)};
 }
-/* Description automatique du son courant (pour l'encart de gêne) */
+/* Description automatique du son courant (pour l'encart de gêne) — niveau cohérent avec l'axe Sonie affiché */
 function psyDescribe(){
-  const c=PSY.cur||{N:0,S:0,R:0,F:0,T:0}; const pa=PSY.PA||0, N5=PSY.N5||0;
-  const phon=40+10*Math.log2(Math.max(N5,0.25));
-  const lvl = N5<1.5?'très faible' : N5<4?'faible' : N5<12?'modéré' : N5<30?'fort' : 'très fort';
+  const avg=(S.psyAvg&&PSY.mean); const c=(avg?PSY.mean:PSY.cur)||{N:0,S:0,R:0,F:0,T:0};
+  const pa=PSY.PA||0, N=c.N||0;
+  const phon=40+10*Math.log2(Math.max(N,0.25));           // sone -> phon (loi de Zwicker : ×2 sone = +10 phon)
+  const lvl = N<1.5?'très faible' : N<4?'faible' : N<12?'modéré' : N<30?'fort' : 'très fort';
   const parts=[];
   if(c.S>=2.2)parts.push('très aigu'); else if(c.S>=1.4)parts.push('aigu'); else if(c.S<0.7)parts.push('sourd');
   const tone=PSY.tones&&PSY.tones[0];
@@ -4321,7 +4322,7 @@ function psyDescribe(){
   else if(c.T>=1.0)parts.push('tonal');
   if(c.R>=0.5)parts.push('rugueux'); else if(c.R>=0.2)parts.push('légèrement rugueux');
   if(c.F>=0.6)parts.push('fluctuant'); else if(c.F>=0.3)parts.push('légèrement fluctuant');
-  const desc='Son '+lvl+' (~'+phon.toFixed(0)+' phon)'+(parts.length?', '+parts.join(', '):', neutre');
+  const desc='Son '+lvl+' ('+N.toFixed(N<10?1:0)+' sone ≈ '+phon.toFixed(0)+' phon)'+(parts.length?', '+parts.join(', '):', neutre');
   const paLabel = pa<15?'peu gênant' : pa<40?'modérément gênant' : 'très gênant';
   const paColor = pa<15?'#2FBF83' : pa<40?'#FFB454' : '#EF3346';
   return {pa,paColor,paLabel,desc};
@@ -5108,7 +5109,7 @@ function loadPrefs(){
     const t=localStorage.getItem('sono_theme'); if(t&&o.theme===undefined) S.theme=t;
     /* migration 2.1.9 : nouvelles bornes psycho + fenêtre FFT par défaut (une seule fois) */
     if(!localStorage.getItem('sono_mig219')){
-      const b=S.psyBnd; if(b&&b.N===40&&b.S===4&&b.R===1&&b.F===1&&b.T===1) S.psyBnd={N:100,S:5,R:5,F:3,T:2};
+      const b=S.psyBnd; if(b&&((b.N===40&&b.S===4&&b.R===1&&b.F===1&&b.T===1)||(b.N===100&&b.S===5&&b.R===5&&b.F===3&&b.T===2))) S.psyBnd={N:40,S:4,R:2,F:2,T:1.5};  // recale les anciens défauts vers des bornes réalistes
       if(S.fftN===16384) S.fftN=4096;
       localStorage.setItem('sono_mig219','1');
     }
@@ -5277,7 +5278,7 @@ function renderDynPop(){
   { const fb=$('dpFscale'); if(fb){ fb.textContent=S.fscale==='log'?'LOG':'LIN'; fb.classList.toggle('on',S.fscale==='log'); } }
   /* ---- bornes psychoacoustiques (normalisation de la toile) ---- */
   if(isPsy){
-    if(!S.psyBnd)S.psyBnd={N:100,S:5,R:5,F:3,T:2};
+    if(!S.psyBnd)S.psyBnd={N:40,S:4,R:2,F:2,T:1.5};
     const rows=[['N','Sonie','sone',5,10,200],['S','Acuité','acum',0.5,1,10],['R','Rugosité','asper',0.5,0.5,10],['F','Fluctuation','vacil',0.5,0.5,6],['T','Tonalité','tu',0.5,0.5,4]];
     const box=$('dpPsyRows'); box.innerHTML='';
     for(const [k,lbl,unit,step,mn,mx] of rows){
@@ -5389,7 +5390,7 @@ $('kDyn').addEventListener('pointerdown',()=>{
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kDyn').addEventListener(ev,()=>clearTimeout(dynT)));
 $('kDyn').addEventListener('click',()=>{ if(dynLong){dynLong=false;return;} openDynPop(); });
 $('dpClose').onclick=()=>$('dynPop').classList.remove('on');
-$('dpPsyReset').onclick=()=>{ S.psyBnd={N:100,S:5,R:5,F:3,T:2}; savePrefs(); if(S.screen==='psy')drawActive(); renderDynPop(); };
+$('dpPsyReset').onclick=()=>{ S.psyBnd={N:40,S:4,R:2,F:2,T:1.5}; savePrefs(); if(S.screen==='psy')drawActive(); renderDynPop(); };
 $('dynPop').addEventListener('click',e=>{if(e.target.id==='dynPop')$('dynPop').classList.remove('on');});
 function dbStep(which,d){
   if(which==='min'){S.dbMin=Math.max(-20,Math.min(S.dbMax-10,S.dbMin+d));}
