@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.10-beta</div>
+  <div class="splashver" id="splashVer">2.2.11-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1022,7 +1022,7 @@ if('serviceWorker' in navigator){
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <h3>Psychoacoustique (toile)</h3>
-      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore (sonie, acuité, rugosité, fluctuation, tonalité) recalculés en continu sur des <b>fenêtres glissantes</b>, avec au centre la <b>gêne psychoacoustique PA</b> (modèle de Zwicker ; vert &lt; 15, orange, rouge &gt; 40). Le polygone <b>plein</b> = valeur actuelle, <b>MOY</b> = moyenne depuis le début, le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs apparaissent après 2 s. <b>Touchez un axe</b> pour lire actuel / moyenne / P95 et sa valeur normalisée.</p>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore (sonie, acuité, rugosité, fluctuation, tonalité) recalculés en continu sur des <b>fenêtres glissantes</b>, avec au centre la <b>gêne psychoacoustique PA</b> (modèle de Zwicker ; vert &lt; 15, orange, rouge &gt; 40). Le polygone <b>plein</b> = valeur actuelle, <b>MOY</b> = moyenne depuis le début, le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs apparaissent après 2 s. Un <b>encart</b> en bas rappelle en permanence la <b>gêne PA</b> (avec un qualificatif) et une <b>description automatique du son</b> en cours (niveau, timbre aigu/grave, tonal, rugueux, fluctuant) — pratique quand le polygone est ramassé près du centre. <b>Touchez un axe</b> pour lire à la place son détail actuel / moyenne / P95.</p>
       <p><b>Modèles utilisés.</b></p>
       <ul>
         <li><b>Sonie N</b> (sone) — <b>ISO 532-1</b> méthode tabulée (DIN 45631), fenêtre 250 ms.</li>
@@ -4279,6 +4279,23 @@ function psyUpdate(){
   PSY.mean={N:PSY._sum.N/PSY._cnt,S:PSY._sum.S/PSY._cnt,R:PSY._sum.R/PSY._cnt,F:PSY._sum.F/PSY._cnt,T:PSY._sum.T/PSY._cnt};
   PSY.p95={N:psyPctile(PSY._hist.N,.95),S:psyPctile(PSY._hist.S,.95),R:psyPctile(PSY._hist.R,.95),F:psyPctile(PSY._hist.F,.95),T:psyPctile(PSY._hist.T,.95)};
 }
+/* Description automatique du son courant (pour l'encart de gêne) */
+function psyDescribe(){
+  const c=PSY.cur||{N:0,S:0,R:0,F:0,T:0}; const pa=PSY.PA||0, N5=PSY.N5||0;
+  const phon=40+10*Math.log2(Math.max(N5,0.25));
+  const lvl = N5<1.5?'très faible' : N5<4?'faible' : N5<12?'modéré' : N5<30?'fort' : 'très fort';
+  const parts=[];
+  if(c.S>=2.2)parts.push('très aigu'); else if(c.S>=1.4)parts.push('aigu'); else if(c.S<0.7)parts.push('sourd');
+  const tone=PSY.tones&&PSY.tones[0];
+  if(PSY.tnrT>=8 && tone)parts.push('tonal ('+(tone.f>=1000?(tone.f/1000).toFixed(1)+' kHz':Math.round(tone.f)+' Hz')+')');
+  else if(c.T>=1.0)parts.push('tonal');
+  if(c.R>=0.5)parts.push('rugueux'); else if(c.R>=0.2)parts.push('légèrement rugueux');
+  if(c.F>=0.6)parts.push('fluctuant'); else if(c.F>=0.3)parts.push('légèrement fluctuant');
+  const desc='Son '+lvl+' (~'+phon.toFixed(0)+' phon)'+(parts.length?', '+parts.join(', '):', neutre');
+  const paLabel = pa<15?'peu gênant' : pa<40?'modérément gênant' : 'très gênant';
+  const paColor = pa<15?'#2FBF83' : pa<40?'#FFB454' : '#EF3346';
+  return {pa,paColor,paLabel,desc};
+}
 function drawPsycho(){
   const cv=$('psyCv'); if(!cv)return;
   const dpr=Math.min(2,window.devicePixelRatio||1), r=cv.getBoundingClientRect();
@@ -4357,7 +4374,14 @@ function drawPsycho(){
     if(isR){ g.textAlign='left'; g.fillStyle='rgba(180,215,255,.9)'; g.font='9px sans-serif';
       g.fillText('modèle Daniel & Weber complet (MOSQITO) · fenêtre 170 ms · MAJ ~1 s', bx+10, by+45); }
   } else if(ready){
-    g.textAlign='center'; g.fillStyle='rgba(150,180,210,.6)'; g.font='8px sans-serif'; g.fillText('touchez un axe · plein = actuel (MOY = moyenne) · tic = P95', cx, h-8);
+    const d=psyDescribe();
+    const bx=8, bh=44, by=h-bh-6, bw=w-16;
+    g.fillStyle='rgba(0,20,45,.78)'; g.strokeStyle=d.paColor; g.lineWidth=1;
+    if(g.roundRect){g.beginPath();g.roundRect(bx,by,bw,bh,7);g.fill();g.stroke();}else{g.fillRect(bx,by,bw,bh);g.strokeRect(bx,by,bw,bh);}
+    g.textAlign='left'; g.textBaseline='middle';
+    g.fillStyle=d.paColor; g.font='bold 12px sans-serif'; g.fillText('Gêne PA '+d.pa.toFixed(0)+'  ·  '+d.paLabel, bx+10, by+12);
+    g.fillStyle='rgba(210,230,250,.95)'; g.font='10px sans-serif'; g.fillText(d.desc, bx+10, by+30);
+    g.textAlign='right'; g.fillStyle='rgba(150,180,210,.5)'; g.font='7.5px sans-serif'; g.fillText('touchez un axe', bx+bw-10, by+12);
   }
 }
 
