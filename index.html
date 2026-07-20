@@ -274,9 +274,9 @@ if('serviceWorker' in navigator){
   .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:40px;height:22px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:10px;letter-spacing:.04em;border-radius:7px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
   .sg3dbtn.on{background:#FFA92E;color:#2A1400;border-color:#FFD08A;box-shadow:0 0 12px rgba(255,169,46,.85), inset 0 0 6px rgba(255,220,150,.6);text-shadow:none;font-weight:800}
-  #avgBtn.on, #psyAvgBtn.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY actif = vert */
+  #avgBtn.on, #psyAvgBtn.on, #psyDescBtn.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY actif = vert */
   #vibBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
-  #avgBtn.dis, #psyAvgBtn.dis{opacity:.35}
+  #avgBtn.dis, #psyAvgBtn.dis, #psyDescBtn.dis{opacity:.35}
   #lsnBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
   /* icônes du spectrogramme : côte à côte à gauche, dégagées de l'ordonnée (padL≈26) */
   #sg3dBtn{right:auto;left:30px;top:6px}
@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.11-beta</div>
+  <div class="splashver" id="splashVer">2.2.12-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -643,7 +643,7 @@ if('serviceWorker' in navigator){
       <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="avgBtn">MOY</button><button class="sg3dbtn" id="emgBtn" style="right:54px">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="display:none">VIB</button></div>
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
-      <div class="gpane" id="panePsy"><canvas id="psyCv"></canvas><button class="sg3dbtn" id="psyAvgBtn">MOY</button></div>
+      <div class="gpane" id="panePsy"><canvas id="psyCv"></canvas><button class="sg3dbtn" id="psyAvgBtn">MOY</button><button class="sg3dbtn" id="psyDescBtn" style="right:54px">SON</button></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
           <div class="cell hero"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
@@ -1022,7 +1022,7 @@ if('serviceWorker' in navigator){
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <h3>Psychoacoustique (toile)</h3>
-      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore (sonie, acuité, rugosité, fluctuation, tonalité) recalculés en continu sur des <b>fenêtres glissantes</b>, avec au centre la <b>gêne psychoacoustique PA</b> (modèle de Zwicker ; vert &lt; 15, orange, rouge &gt; 40). Le polygone <b>plein</b> = valeur actuelle, <b>MOY</b> = moyenne depuis le début, le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs apparaissent après 2 s. Un <b>encart</b> en bas rappelle en permanence la <b>gêne PA</b> (avec un qualificatif) et une <b>description automatique du son</b> en cours (niveau, timbre aigu/grave, tonal, rugueux, fluctuant) — pratique quand le polygone est ramassé près du centre. <b>Touchez un axe</b> pour lire à la place son détail actuel / moyenne / P95.</p>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore (sonie, acuité, rugosité, fluctuation, tonalité) recalculés en continu sur des <b>fenêtres glissantes</b>, avec au centre la <b>gêne psychoacoustique PA</b> (modèle de Zwicker ; vert &lt; 15, orange, rouge &gt; 40). Le polygone <b>plein</b> = valeur actuelle, <b>MOY</b> = moyenne depuis le début, le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs apparaissent après 2 s. Le bouton <b>SON</b> (à côté de MOY) fait apparaître un encart avec la <b>gêne PA</b> (assortie d'un qualificatif) et une <b>description automatique du son</b> en cours (niveau en phon, timbre aigu/sourd, tonal, rugueux, fluctuant) — pratique quand le polygone est ramassé près du centre. <b>Touchez un axe</b> pour lire son détail actuel / moyenne / P95.</p>
       <p><b>Modèles utilisés.</b></p>
       <ul>
         <li><b>Sonie N</b> (sone) — <b>ISO 532-1</b> méthode tabulée (DIN 45631), fenêtre 250 ms.</li>
@@ -1103,7 +1103,7 @@ const S = {
   fscale:'log', fftN:4096, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
   win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, psyAvg:false, psyBnd:{N:100,S:5,R:5,F:3,T:2}, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, psyAvg:false, psyDesc:false, psyBnd:{N:100,S:5,R:5,F:3,T:2}, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -4021,7 +4021,37 @@ function psyRoughDWval(){ const an=S.psyAn||S.analyser, tap=S.psyAn?S.psyTap:S.t
   for(let i=0;i<N;i++)seg[i]=tap[off+i]*k;
   return Math.max(0, psyRoughDW(seg,fs));
 }
-function psyRoughDWnow(){ try{ PSY.rdw=psyRoughDWval(); PSY.rdwT=performance.now()/1000; PSY._Rcur=PSY.rdw; PSY._rT=PSY.rdwT; }catch(_){ } }
+function psyRoughDWnow(){ psyRoughPost(); }
+/* ---- Rugosité D&W hors thread principal (Web Worker) : évite le hitch ~80 ms ---- */
+let PSY_rw=null, PSY_rwBusy=false, PSY_rwFail=false;
+function psyRoughWorkerInit(){
+  if(PSY_rw||PSY_rwFail) return PSY_rw;
+  try{
+    const tbls='var RDW_BF='+JSON.stringify(RDW_BF)+',RDW_BZ='+JSON.stringify(RDW_BZ)+',RDW_EX='+JSON.stringify(RDW_EX)+',RDW_EY='+JSON.stringify(RDW_EY)+',RDW_GX='+JSON.stringify(RDW_GX)+',RDW_GY='+JSON.stringify(RDW_GY)+',RDW_LX='+JSON.stringify(RDW_LX)+',RDW_LY='+JSON.stringify(RDW_LY)+',RDW_HC='+JSON.stringify(RDW_HC)+';var RDW_H=null,RDW_Hn=0,RDW_gzi=null;';
+    const body=[tbls, fft.toString(), rdwInterp.toString(),
+      'var rdwBark='+rdwBark.toString(), 'var rdwUnbark='+rdwUnbark.toString(),
+      'var rdwEar='+rdwEar.toString(), 'var rdwGzi='+rdwGzi.toString(), 'var rdwLtq='+rdwLtq.toString(),
+      rdwBuildH.toString(), rdwIFFT.toString(), psyRoughDW.toString(),
+      'onmessage=function(e){var d=e.data,seg=new Float64Array(d.n);for(var i=0;i<d.n;i++)seg[i]=d.pcm[i]*d.k;var R;try{R=psyRoughDW(seg,d.fs)}catch(_){R=-1}postMessage(R)}'
+    ].join(';\n');
+    const url=URL.createObjectURL(new Blob([body],{type:'application/javascript'}));
+    PSY_rw=new Worker(url);
+    PSY_rw.onmessage=function(e){ PSY_rwBusy=false; const R=e.data; if(R>=0){ PSY._Rcur=R; PSY.rdw=R; PSY.rdwT=performance.now()/1000; } };
+    PSY_rw.onerror=function(){ PSY_rwFail=true; try{PSY_rw.terminate();}catch(_){}; PSY_rw=null; };
+  }catch(_){ PSY_rwFail=true; PSY_rw=null; }
+  return PSY_rw;
+}
+function psyRoughPost(){
+  const an=S.psyAn||S.analyser, tap=S.psyAn?S.psyTap:S.tap; if(!an||!tap)return;
+  const w=psyRoughWorkerInit();
+  if(!w){ PSY._Rcur=psyRoughDWval(); PSY.rdw=PSY._Rcur; PSY.rdwT=performance.now()/1000; return; }  // repli synchrone si Worker indispo
+  if(PSY_rwBusy) return;
+  try{ an.getFloatTimeDomainData(tap); }catch(_){ return; }
+  const fs=(S.ctx&&S.ctx.sampleRate)||48000, k=2e-5*Math.pow(10,S.offset/20);
+  const N=Math.min(8192, 1<<Math.floor(Math.log2(tap.length))), off=tap.length-N;
+  const pcm=new Float32Array(N); for(let i=0;i<N;i++)pcm[i]=tap[off+i];
+  PSY_rwBusy=true; try{ w.postMessage({pcm,n:N,k,fs}); }catch(_){ PSY_rwBusy=false; }
+}
 /* ===== Rugosité Daniel & Weber COMPLÈTE (ECMA/D&W 1997, port fidèle MOSQITO — validé identique) =====
    47 canaux ½-Bark, excitation par IFFT, pondérations Hi(f_mod), corrélation croisée i±2, dépendance au niveau.
    Coûteux (~70 ms) : calcul À LA DEMANDE (tap sur l'axe Rugosité), fenêtre 8192 (radix-2). */
@@ -4241,7 +4271,7 @@ function psyUpdate(){
   if(!PSY._last || now-PSY._last>=0.05){
     const L=psyLoudness(); if(L){ PSY._last=now;
       const Sh=psySharpness(L.Nspec);
-      if(!PSY._rT || now-PSY._rT>1.0){ PSY._Rcur=psyRoughDWval(); PSY._rT=now; PSY.rdw=PSY._Rcur; PSY.rdwT=now; }   // rugosité D&W (ECMA/MOSQITO), fenêtre 170 ms, MAJ ~1 s
+      if(!PSY._rT || now-PSY._rT>1.0){ PSY._rT=now; psyRoughPost(); }   // rugosité D&W (ECMA/MOSQITO) via Web Worker (hors thread principal), MAJ ~1 s
       if(!PSY._tT || now-PSY._tT>0.15){ const dfb=S.binHz||((S.ctx?S.ctx.sampleRate:48000)/(S.fftN||4096)); PSY._Tcur=S.binPowD?psyTonalAures(S.binPowD,dfb):0; PSY._tT=now; }  // tonalité Aures (~7 Hz)
       PSY.buf.push({t:now,N:L.N,S:Sh,R:Math.max(0,PSY._Rcur||0),T:Math.max(0,PSY._Tcur||0),Ns:L.Nspec});
       while(PSY.buf.length && now-PSY.buf[0].t>PSY_BUFSEC) PSY.buf.shift();
@@ -4256,7 +4286,7 @@ function psyUpdate(){
   const Ncur=meanOver('N',PSY_WIN.N), Scur=meanOver('S',PSY_WIN.S), Rcur=meanOver('R',PSY_WIN.R), Tcur=meanOver('T',PSY_WIN.T);
   const Fcur=Math.max(0,psyFluct(PSY.buf));                                   // fluctuation sur ~5 s (tampon complet)
   /* TNR/PR normatifs (ECMA-74) — plus lourd, recalcul ~0,5 s */
-  if(S.binPowD && (!PSY._tpT || now-PSY._tpT>0.5)){ PSY._tpT=now;
+  if(S.binPowD && (!PSY._tpT || now-PSY._tpT>1.0)){ PSY._tpT=now;
     const nb=S.binPowD.length, df=S.binHz||((S.ctx?S.ctx.sampleRate:48000)/(S.fftN||4096));
     const specDb=new Float64Array(nb), frq=new Float64Array(nb);
     for(let k=0;k<nb;k++){ const p=S.binPowD[k]; specDb[k]=p>0?10*Math.log10(p)+S.offset:-180; frq[k]=k*df; }
@@ -4373,15 +4403,16 @@ function drawPsycho(){
       g.fillText(t1+top, bx+10, by+45); }
     if(isR){ g.textAlign='left'; g.fillStyle='rgba(180,215,255,.9)'; g.font='9px sans-serif';
       g.fillText('modèle Daniel & Weber complet (MOSQITO) · fenêtre 170 ms · MAJ ~1 s', bx+10, by+45); }
-  } else if(ready){
+  } else if(ready && S.psyDesc){
     const d=psyDescribe();
     const bx=8, bh=44, by=h-bh-6, bw=w-16;
-    g.fillStyle='rgba(0,20,45,.78)'; g.strokeStyle=d.paColor; g.lineWidth=1;
+    g.fillStyle='rgba(0,20,45,.82)'; g.strokeStyle=d.paColor; g.lineWidth=1;
     if(g.roundRect){g.beginPath();g.roundRect(bx,by,bw,bh,7);g.fill();g.stroke();}else{g.fillRect(bx,by,bw,bh);g.strokeRect(bx,by,bw,bh);}
     g.textAlign='left'; g.textBaseline='middle';
-    g.fillStyle=d.paColor; g.font='bold 12px sans-serif'; g.fillText('Gêne PA '+d.pa.toFixed(0)+'  ·  '+d.paLabel, bx+10, by+12);
-    g.fillStyle='rgba(210,230,250,.95)'; g.font='10px sans-serif'; g.fillText(d.desc, bx+10, by+30);
-    g.textAlign='right'; g.fillStyle='rgba(150,180,210,.5)'; g.font='7.5px sans-serif'; g.fillText('touchez un axe', bx+bw-10, by+12);
+    g.fillStyle=d.paColor; g.font='bold 12px sans-serif'; g.fillText('Gêne PA '+d.pa.toFixed(0)+'  ·  '+d.paLabel, bx+10, by+13);
+    g.fillStyle='rgba(210,230,250,.95)'; g.font='10px sans-serif'; g.fillText(d.desc, bx+10, by+31);
+  } else if(ready){
+    g.textAlign='center'; g.fillStyle='rgba(150,180,210,.55)'; g.font='8px sans-serif'; g.fillText('touchez un axe · « SON » = gêne + description', cx, h-9);
   }
 }
 
@@ -4903,6 +4934,7 @@ function ui(){
   $('avgBtn').classList.toggle('on',S.specAvg);
   $('avgBtn').classList.toggle('dis',!(S.eqT>0));   // pas de moyenne tant qu'aucune mesure
   $('psyAvgBtn').classList.toggle('on',S.psyAvg); $('psyAvgBtn').classList.toggle('dis',!(PSY._cnt>0));
+  $('psyDescBtn').classList.toggle('on',S.psyDesc); $('psyDescBtn').classList.toggle('dis',!(PSY._cnt>0));
   $('lsnBtn').classList.toggle('on',LSN.on);
   $('lsnBtn').style.display=S.sg3d?'none':'flex';
   $('mEmgThr').querySelector('b').textContent=(S.emgThr||10)+' dB';
@@ -5051,6 +5083,7 @@ $('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();if(S.emgOn)flashBtn($('emgBtn'));
 $('vibBtn').onclick=()=>{vibToggle();};
 $('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); if(S.specAvg)flashBtn($('avgBtn')); else unflashBtn($('avgBtn')); if(S.screen==='spec')drawSpectrum(); };
 $('psyAvgBtn').onclick=()=>{ S.psyAvg=!S.psyAvg; savePrefs(); ui(); if(S.psyAvg)flashBtn($('psyAvgBtn')); else unflashBtn($('psyAvgBtn')); if(S.screen==='psy')drawActive(); };
+$('psyDescBtn').onclick=()=>{ S.psyDesc=!S.psyDesc; savePrefs(); ui(); if(S.psyDesc)flashBtn($('psyDescBtn')); else unflashBtn($('psyDescBtn')); if(S.screen==='psy')drawActive(); };
 $('lsnBtn').onclick=()=>{lsnToggle(); if($('lsnBtn').classList.contains('on'))flashBtn($('lsnBtn'));else unflashBtn($('lsnBtn'));};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
 const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['neon','Néon'],['gameboy','Game Boy'],['matrix','Matrice']];
