@@ -99,3 +99,23 @@ console.log("\n=== BRUIT DE FOND — bruit rose 50 dB : rugosité doit être ~0 
 
 console.log("\n=== FLUCTUATION 5 s + balayage f_mod (pic attendu ~4 Hz) ===");
 for(const fm of [1,2,4,8,16,32]){ const F=runFluct(paTone(1000,60,FS*5,fm,1),16384); line("AM "+fm+" Hz 100% 60 dB",F,null,0,"vacil"); }
+
+console.log("\n=== BALAYAGE FRÉQUENTIEL (banc IIR réel) — sonie & acuité vs MOSQITO, tons purs 60 dB ===");
+{ let ref={}; try{ ref=JSON.parse(fs0.readFileSync("sweep_ref.json","utf8")); }catch(_){}
+  const freqs=[63,125,250,500,1000,2000,4000,8000];
+  console.log("  freq     N(app)  N(mos)  ΔN%     S(app)  S(mos)  ΔS%");
+  let okN=0,okS=0;
+  for(const fc of freqs){ const r=runApp(paTone(fc,60,48000),16384);
+    const Nm=ref.N?ref.N[fc]:null, Sm=ref.S?ref.S[fc]:null;
+    const dN=Nm?100*(r.N-Nm)/Nm:0, dS=Sm?100*(r.S-Sm)/Sm:0;
+    const fN=Math.abs(dN)<=15, fS=Math.abs(dS)<=25; if(fN)okN++; if(fS)okS++;
+    console.log("  "+(fc+" Hz").padEnd(9)+r.N.toFixed(2).padStart(6)+(Nm?Nm.toFixed(2).padStart(8):"    -   ")+(Nm?((dN>=0?"+":"")+dN.toFixed(0)+"%").padStart(7):"")+(fN?" ✓":" ✗")+"   "+r.S.toFixed(2).padStart(6)+(Sm?Sm.toFixed(2).padStart(8):"   -  ")+(Sm?((dS>=0?"+":"")+dS.toFixed(0)+"%").padStart(7):"")+(fS?" ✓":" ✗"));
+  }
+  console.log("  → sonie "+okN+"/"+freqs.length+" (±15%)   acuité "+okS+"/"+freqs.length+" (±25%)");
+}
+console.log("\n=== SONIE vs NIVEAU à 125 / 1000 / 4000 Hz vs MOSQITO ===");
+{ let ref={}; try{ ref=JSON.parse(fs0.readFileSync("sweep_ref.json","utf8")).Nlev; }catch(_){}
+  for(const fc of [125,1000,4000]){ let row="  "+fc+" Hz : ";
+    for(const dB of [40,60,80]){ const r=runApp(paTone(fc,dB,48000),16384); const m=ref?ref[fc+"_"+dB]:null;
+      row+=dB+"dB="+r.N.toFixed(2)+(m?"("+m.toFixed(2)+")":"")+"  "; } console.log(row); }
+}
