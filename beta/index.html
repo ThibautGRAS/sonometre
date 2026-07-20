@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.14-beta</div>
+  <div class="splashver" id="splashVer">2.2.15-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1033,6 +1033,31 @@ if('serviceWorker' in navigator){
       </ul>
       <p>Chaque axe est <b>normalisé</b> par une borne réglable dans <b>ÉCHELLES</b> (défaut : Sonie 40 sone, Acuité 4 acum, Rugosité 2 asper, Fluctuation 2 vacil, Tonalité 1,5 t.u. — calés pour que les sons courants et les références 1 asper / 1 vacil occupent une bonne part de l'axe). Les indicateurs sont <b>toujours calculés sur le spectre non pondéré (Z)</b>, quelle que soit la pondération A/C choisie pour l'affichage des niveaux (la sonie exige le SPL linéaire).</p>
       <p><b>Validation.</b> Les modèles sont testés de bout en bout sur signaux de référence, contre leurs <b>définitions normatives</b> et la librairie de référence <b>MOSQITO</b> : sonie et acuité concordent à <b>~2 %</b> de 63 Hz à 8 kHz (à travers le banc de filtres réel) et sur 40–80 dB ; rugosité = <b>1 asper</b> pour l'AM 1 kHz/70 Hz/100 %/60 dB (et retombe à ~0 sur du bruit large bande) ; fluctuation = <b>1 vacil</b> pour l'AM 4 Hz ; TNR/PR <b>identiques</b> à MOSQITO. <b>Réserves.</b> Micro de smartphone non métrologique : grandeurs <b>indicatives, non certifiées</b>. La <b>correction fréquentielle du micro</b> (si un profil de calibration est actif) est appliquée à la sonie, l'acuité, la fluctuation et la tonalité (elles passent par le spectre corrigé) ; la <b>rugosité</b> est calculée sur le signal temporel (la correction fréquentielle ne s'y applique pas, mais elle y est peu sensible car fondée sur la profondeur de modulation). La <b>sonie et l'acuité</b> dépendent de la calibration absolue (offset) et de la réponse du micro ; <b>rugosité, fluctuation, tonalité</b>, fondées sur des rapports, sont plus robustes. Sonie en régime <b>stationnaire</b> (N5 approché).</p>
+
+      <h3>Glossaire — grandeurs &amp; critères</h3>
+      <p><b>Grandeurs acoustiques.</b></p>
+      <ul>
+        <li><b>dB(A) / dB(C)</b> — pondérations fréquentielles. A ≈ sensibilité de l'oreille à niveau modéré (atténue les graves) ; C ≈ quasi plate (crêtes, basses fréquences).</li>
+        <li><b>L<sub>AF</sub> / L<sub>AS</sub></b> (dB) — niveau pondéré A avec constante de temps <b>Fast</b> (125 ms) ou <b>Slow</b> (1 s).</li>
+        <li><b>L<sub>eq</sub></b> (dB) — niveau équivalent continu (énergie moyenne sur la durée) : L<sub>eq</sub> = 10·log<sub>10</sub>( (1/T)·∫ p²(t)/p<sub>0</sub>² dt ), avec p<sub>0</sub> = 20 µPa.</li>
+        <li><b>L<sub>Cpeak</sub></b> (dB) — valeur crête pondérée C, mesurée dans le domaine temporel.</li>
+        <li><b>Émergence</b> (dB) — écart de niveau entre une composante (raie ou bande) et le bruit de fond voisin.</li>
+        <li><b>Bark (z)</b> — échelle de bande critique de l'audition (0–24 Bark ≈ 20 Hz–15,5 kHz) ; base des modèles psychoacoustiques.</li>
+      </ul>
+      <p><b>Grandeurs psychoacoustiques.</b></p>
+      <ul>
+        <li><b>Sonie N</b> (sone) — force sonore perçue (ISO 532-1). Réf. : 1 sone = pur 1 kHz à 40 dB SPL. Lien au phon : N = 2<sup>(L<sub>N</sub>−40)/10</sup> ; inversement L<sub>N</sub> = 40 + 10·log<sub>2</sub>N (pour L<sub>N</sub> ≥ 40 phon). Doubler les sones = « deux fois plus fort ».</li>
+        <li><b>Niveau d'isosonie</b> (phon) — échelle de niveau : X phon = aussi fort qu'un pur 1 kHz à X dB SPL. <b>+10 phon ⇔ ×2 sone</b>.</li>
+        <li><b>N<sub>5</sub></b> (sone) — sonie dépassée 5 % du temps (valeur « des pics ») ; alimente la gêne PA.</li>
+        <li><b>Acuité S</b> (acum) — balance grave/aigu, part des hautes fréquences (DIN 45692). Réf. : 1 acum = bruit à bande étroite (1 Bark) centré à 1 kHz, 60 dB. Barycentre pondéré de la sonie spécifique : S = 0,11 · [ Σ<sub>z</sub> N′(z)·g(z)·z ] / [ Σ<sub>z</sub> N′(z) ], N′(z) = sonie spécifique, g(z) ≈ 1 jusqu'à ~16 Bark puis croissante.</li>
+        <li><b>Rugosité R</b> (asper) — sensation des modulations rapides d'amplitude (~15–300 Hz, max vers 70 Hz), modèle de Daniel &amp; Weber. Réf. : 1 asper = pur 1 kHz, 100 % AM à f<sub>mod</sub> = 70 Hz, 60 dB. R = 0,25 · Σ<sub>i</sub> g(z<sub>i</sub>)·( m<sub>i</sub> · k<sub>i−2</sub> · k<sub>i+2</sub> )², m<sub>i</sub> = profondeur de modulation de l'enveloppe du canal i, k = corrélations croisées inter-canaux.</li>
+        <li><b>Fluctuation F</b> (vacil) — sensation des modulations lentes (max à f<sub>mod</sub> = 4 Hz), modèle de Fastl. Réf. : 1 vacil = pur 1 kHz, 100 % AM à 4 Hz, 60 dB. F = 0,008 · [ Σ (ΔL/dB) ] / [ (f<sub>mod</sub>/4 Hz) + (4 Hz/f<sub>mod</sub>) ].</li>
+        <li><b>Tonalité T</b> (t.u.) — proéminence perçue des composantes tonales (modèle d'Aures) : pondère l'excès de niveau, la largeur de bande et la fréquence de chaque raie (pic de sensibilité ~700 Hz).</li>
+        <li><b>TNR</b> (dB) — <i>Tone-to-Noise Ratio</i> (ECMA-74) : TNR = L<sub>t</sub> − L<sub>n</sub>, niveau de la raie moins celui du bruit masquant dans sa bande critique. Raie <b>proéminente</b> si TNR ≥ 8 dB (au-dessus de 1 kHz ; seuil plus élevé en basses fréquences).</li>
+        <li><b>PR</b> (dB) — <i>Prominence Ratio</i> (ECMA-74) : PR = L<sub>m</sub> − 10·log<sub>10</sub>[ ½ (10<sup>L<sub>l</sub>/10</sup> + 10<sup>L<sub>u</sub>/10</sup>) ], niveau de la bande critique centrale (m) vs bandes adjacentes basse (l) et haute (u). Proéminente si PR ≥ 9 dB.</li>
+        <li><b>Gêne PA</b> — <i>Psychoacoustic Annoyance</i> (Zwicker) : PA = N<sub>5</sub> · ( 1 + √( w<sub>S</sub>² + w<sub>FR</sub>² ) ), w<sub>S</sub> = terme d'acuité, w<sub>FR</sub> = terme de rugosité + fluctuation. Sans unité (indicateur global).</li>
+      </ul>
+      <p style="font-size:10px;color:#7a8398">Les formules sont données sous forme simplifiée (l'implémentation suit fidèlement les normes/modèles cités, validée contre MOSQITO). Voir la section <b>Psychoacoustique</b> pour les réserves d'usage sur micro de smartphone.</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
