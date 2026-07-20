@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.15-beta</div>
+  <div class="splashver" id="splashVer">2.2.16-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1034,7 +1034,7 @@ if('serviceWorker' in navigator){
       <p>Chaque axe est <b>normalisé</b> par une borne réglable dans <b>ÉCHELLES</b> (défaut : Sonie 40 sone, Acuité 4 acum, Rugosité 2 asper, Fluctuation 2 vacil, Tonalité 1,5 t.u. — calés pour que les sons courants et les références 1 asper / 1 vacil occupent une bonne part de l'axe). Les indicateurs sont <b>toujours calculés sur le spectre non pondéré (Z)</b>, quelle que soit la pondération A/C choisie pour l'affichage des niveaux (la sonie exige le SPL linéaire).</p>
       <p><b>Validation.</b> Les modèles sont testés de bout en bout sur signaux de référence, contre leurs <b>définitions normatives</b> et la librairie de référence <b>MOSQITO</b> : sonie et acuité concordent à <b>~2 %</b> de 63 Hz à 8 kHz (à travers le banc de filtres réel) et sur 40–80 dB ; rugosité = <b>1 asper</b> pour l'AM 1 kHz/70 Hz/100 %/60 dB (et retombe à ~0 sur du bruit large bande) ; fluctuation = <b>1 vacil</b> pour l'AM 4 Hz ; TNR/PR <b>identiques</b> à MOSQITO. <b>Réserves.</b> Micro de smartphone non métrologique : grandeurs <b>indicatives, non certifiées</b>. La <b>correction fréquentielle du micro</b> (si un profil de calibration est actif) est appliquée à la sonie, l'acuité, la fluctuation et la tonalité (elles passent par le spectre corrigé) ; la <b>rugosité</b> est calculée sur le signal temporel (la correction fréquentielle ne s'y applique pas, mais elle y est peu sensible car fondée sur la profondeur de modulation). La <b>sonie et l'acuité</b> dépendent de la calibration absolue (offset) et de la réponse du micro ; <b>rugosité, fluctuation, tonalité</b>, fondées sur des rapports, sont plus robustes. Sonie en régime <b>stationnaire</b> (N5 approché).</p>
 
-      <h3>Glossaire — grandeurs &amp; critères</h3>
+      <h3 class="gloss">Glossaire — grandeurs &amp; critères</h3>
       <p><b>Grandeurs acoustiques.</b></p>
       <ul>
         <li><b>dB(A) / dB(C)</b> — pondérations fréquentielles. A ≈ sensibilité de l'oreille à niveau modéré (atténue les graves) ; C ≈ quasi plate (crêtes, basses fréquences).</li>
@@ -5163,9 +5163,9 @@ function applyTheme(){
    choisie → navigation simple. Le regroupement se fait par ordre des sections (h3), identique
    dans les 3 langues ; les intitulés des onglets sont traduits. */
 const HELP_GROUPS={
-  fr:['Prise en main','Mesure & indices','Analyse spectre','Réglages & export'],
-  en:['Getting started','Measure & indices','Spectrum analysis','Settings & export'],
-  es:['Inicio','Medición e índices','Análisis espectral','Ajustes y export']
+  fr:['Prise en main','Mesure & indices','Analyse spectre','Réglages & export','Glossaire'],
+  en:['Getting started','Measure & indices','Spectrum analysis','Settings & export','Glossary'],
+  es:['Inicio','Medición e índices','Análisis espectral','Ajustes y export','Glosario']
 };
 /* groupe de chaque section, dans l'ordre du document :
    0 Démarrer,1 Écrans,2 Réglages rapides,3 Gestes,4 Indices,5 Déclenchement,6 Calibration,
@@ -5176,7 +5176,7 @@ function groupHelp(){
   const hb=document.querySelector('.helpbody'); if(!hb)return;
   let idx=-1, grp=0;
   for(const el of hb.children){
-    if(el.tagName==='H3'){ idx++; grp=(HELP_GROUP_OF[idx]!=null?HELP_GROUP_OF[idx]:0); }
+    if(el.tagName==='H3'){ idx++; grp=(el.classList.contains('gloss')?4:(HELP_GROUP_OF[idx]!=null?HELP_GROUP_OF[idx]:0)); }
     el.dataset.grp=grp;
   }
 }
@@ -6659,6 +6659,30 @@ const HELP_EN=`
 <p><b>Band limiting.</b> Two adjustable filters (Expert menu) bound the analysed band: a <b>high-pass</b> (Off / 3 / 10 / 20 Hz, default 10 Hz) rejecting DC, wind and infrasound, and a <b>low-pass</b> (Off / 20 / 22 kHz, default 22 kHz). Butterworth biquads (2nd order, −3 dB at cutoff) applied upstream of weighting: levels, Leq and spectrum are bounded consistently. Mainly useful for <b>LZeq</b> (unweighted), otherwise inflated by out-of-band energy.</p>
 <p><b>Selector (diagnostic).</b> Expert menu ▸ <b>Real-time levels</b>: <i>Time-domain IIR</i> (recommended default — A/C via biquads, exact time response) or <i>FFT-derived</i> (levels smoothed from the spectrum, for bench comparison). FFT-derived reintroduces window latency and does not use the time-domain correction filter; use it only to compare. Locked during a measurement.</p>
 <p><b>Validation.</b> Processing is checked offline against analytic and normative references (IEC 61672-1, IEC 61260-1, Parseval); A/C weightings meet <b>class 1</b> from 16 Hz to 12.5 kHz. The correction filter has its own test routine (fidelity, real gain on tones, energy coherence, stability).</p>
+<h3 class="gloss">Glossary — quantities &amp; criteria</h3>
+<p><b>Acoustic quantities.</b></p>
+<ul>
+<li><b>dB(A) / dB(C)</b> — frequency weightings. A ≈ ear sensitivity at moderate levels (cuts lows); C ≈ nearly flat (peaks, low frequencies).</li>
+<li><b>L<sub>AF</sub> / L<sub>AS</sub></b> (dB) — A-weighted level with <b>Fast</b> (125 ms) or <b>Slow</b> (1 s) time constant.</li>
+<li><b>L<sub>eq</sub></b> (dB) — equivalent continuous level (energy average): L<sub>eq</sub> = 10·log<sub>10</sub>( (1/T)·∫ p²(t)/p<sub>0</sub>² dt ), p<sub>0</sub> = 20 µPa.</li>
+<li><b>L<sub>Cpeak</sub></b> (dB) — C-weighted peak, measured in the time domain.</li>
+<li><b>Emergence</b> (dB) — level difference between a component (line or band) and the surrounding background noise.</li>
+<li><b>Bark (z)</b> — critical-band rate scale (0–24 Bark ≈ 20 Hz–15.5 kHz); basis of the psychoacoustic models.</li>
+</ul>
+<p><b>Psychoacoustic quantities.</b></p>
+<ul>
+<li><b>Loudness N</b> (sone) — perceived loudness (ISO 532-1). Ref.: 1 sone = 1 kHz tone at 40 dB SPL. Link to phon: N = 2<sup>(L<sub>N</sub>−40)/10</sup>; conversely L<sub>N</sub> = 40 + 10·log<sub>2</sub>N (for L<sub>N</sub> ≥ 40 phon). Doubling the sones = "twice as loud".</li>
+<li><b>Loudness level</b> (phon) — level scale: X phon = as loud as a 1 kHz tone at X dB SPL. <b>+10 phon ⇔ ×2 sone</b>.</li>
+<li><b>N<sub>5</sub></b> (sone) — loudness exceeded 5 % of the time ("peaks"); feeds the PA annoyance.</li>
+<li><b>Sharpness S</b> (acum) — treble/bass balance, high-frequency content (DIN 45692). Ref.: 1 acum = narrowband noise (1 Bark) at 1 kHz, 60 dB. Weighted centroid of specific loudness: S = 0.11 · [ Σ<sub>z</sub> N′(z)·g(z)·z ] / [ Σ<sub>z</sub> N′(z) ], N′(z) = specific loudness, g(z) ≈ 1 up to ~16 Bark then rising.</li>
+<li><b>Roughness R</b> (asper) — sensation of fast amplitude modulations (~15–300 Hz, max near 70 Hz), Daniel &amp; Weber model. Ref.: 1 asper = 1 kHz carrier, 100 % AM at f<sub>mod</sub> = 70 Hz, 60 dB. R = 0.25 · Σ<sub>i</sub> g(z<sub>i</sub>)·( m<sub>i</sub> · k<sub>i−2</sub> · k<sub>i+2</sub> )², m<sub>i</sub> = envelope modulation depth of channel i, k = inter-channel cross-correlations.</li>
+<li><b>Fluctuation strength F</b> (vacil) — sensation of slow modulations (max at f<sub>mod</sub> = 4 Hz), Fastl model. Ref.: 1 vacil = 1 kHz, 100 % AM at 4 Hz, 60 dB. F = 0.008 · [ Σ (ΔL/dB) ] / [ (f<sub>mod</sub>/4 Hz) + (4 Hz/f<sub>mod</sub>) ].</li>
+<li><b>Tonality T</b> (t.u.) — perceived prominence of tonal components (Aures model): weights level excess, bandwidth and frequency of each line (peak sensitivity ~700 Hz).</li>
+<li><b>TNR</b> (dB) — Tone-to-Noise Ratio (ECMA-74): TNR = L<sub>t</sub> − L<sub>n</sub>, tone level minus masking-noise level in its critical band. <b>Prominent</b> if TNR ≥ 8 dB (above 1 kHz; higher threshold at low frequencies).</li>
+<li><b>PR</b> (dB) — Prominence Ratio (ECMA-74): PR = L<sub>m</sub> − 10·log<sub>10</sub>[ ½ (10<sup>L<sub>l</sub>/10</sup> + 10<sup>L<sub>u</sub>/10</sup>) ], level of the tone's critical band (m) vs adjacent lower (l) and upper (u) bands. Prominent if PR ≥ 9 dB.</li>
+<li><b>Annoyance PA</b> — Psychoacoustic Annoyance (Zwicker): PA = N<sub>5</sub> · ( 1 + √( w<sub>S</sub>² + w<sub>FR</sub>² ) ), w<sub>S</sub> = sharpness term, w<sub>FR</sub> = roughness + fluctuation term. Unitless (global indicator).</li>
+</ul>
+<p style="font-size:10px;color:#7a8398">Formulas are given in simplified form (the implementation follows the cited standards/models, validated against MOSQITO). See the <b>Psychoacoustics</b> section for usage caveats on a smartphone microphone.</p>
 <div class="helpfoot">CETIM · Sound level meter — built-in help<br>Author: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 const HELP_ES=`
 <h3>Primeros pasos</h3>
@@ -6709,6 +6733,30 @@ const HELP_ES=`
 <p><b>Limitación de banda.</b> Dos filtros ajustables (menú experto) acotan la banda analizada: un <b>paso alto</b> (Off / 3 / 10 / 20 Hz, predet. 10 Hz) que descarta continua, viento e infrasonido, y un <b>paso bajo</b> (Off / 20 / 22 kHz, predet. 22 kHz). Biquads Butterworth (2º orden, −3 dB en el corte), aplicados antes de las ponderaciones: niveles, Leq y espectro se acotan de forma coherente. Útil sobre todo para el <b>LZeq</b> (sin ponderar).</p>
 <p><b>Selector (diagnóstico).</b> Menú experto ▸ <b>Niveles en tiempo real</b>: <i>Temporal IIR</i> (predeterminado recomendado — A/C con biquads, respuesta temporal exacta) o <i>Derivado FFT</i> (niveles suavizados desde el espectro, para comparar). El modo Derivado FFT reintroduce latencia de ventana y no usa el filtro de corrección temporal; úsalo solo para comparar. Bloqueado durante una medida.</p>
 <p><b>Validación.</b> El tratamiento se verifica sin conexión contra referencias analíticas y normativas (IEC 61672-1, IEC 61260-1, Parseval); las ponderaciones A/C cumplen <b>clase 1</b> de 16 Hz a 12,5 kHz. El filtro de corrección tiene su propia rutina de test.</p>
+<h3 class="gloss">Glosario — magnitudes y criterios</h3>
+<p><b>Magnitudes acústicas.</b></p>
+<ul>
+<li><b>dB(A) / dB(C)</b> — ponderaciones frecuenciales. A ≈ sensibilidad del oído a niveles moderados (atenúa los graves); C ≈ casi plana (picos, bajas frecuencias).</li>
+<li><b>L<sub>AF</sub> / L<sub>AS</sub></b> (dB) — nivel ponderado A con constante de tiempo <b>Fast</b> (125 ms) o <b>Slow</b> (1 s).</li>
+<li><b>L<sub>eq</sub></b> (dB) — nivel continuo equivalente (media de energía): L<sub>eq</sub> = 10·log<sub>10</sub>( (1/T)·∫ p²(t)/p<sub>0</sub>² dt ), p<sub>0</sub> = 20 µPa.</li>
+<li><b>L<sub>Cpeak</sub></b> (dB) — pico ponderado C, medido en el dominio temporal.</li>
+<li><b>Emergencia</b> (dB) — diferencia de nivel entre una componente (raya o banda) y el ruido de fondo vecino.</li>
+<li><b>Bark (z)</b> — escala de bandas críticas (0–24 Bark ≈ 20 Hz–15,5 kHz); base de los modelos psicoacústicos.</li>
+</ul>
+<p><b>Magnitudes psicoacústicas.</b></p>
+<ul>
+<li><b>Sonoridad N</b> (sone) — fuerza sonora percibida (ISO 532-1). Ref.: 1 sone = tono de 1 kHz a 40 dB SPL. Relación con el fon: N = 2<sup>(L<sub>N</sub>−40)/10</sup>; a la inversa L<sub>N</sub> = 40 + 10·log<sub>2</sub>N (para L<sub>N</sub> ≥ 40 fon). Duplicar los sones = "el doble de fuerte".</li>
+<li><b>Nivel de sonoridad</b> (fon) — escala de nivel: X fon = tan fuerte como un tono de 1 kHz a X dB SPL. <b>+10 fon ⇔ ×2 sone</b>.</li>
+<li><b>N<sub>5</sub></b> (sone) — sonoridad superada el 5 % del tiempo ("picos"); alimenta la molestia PA.</li>
+<li><b>Agudeza S</b> (acum) — balance agudos/graves (DIN 45692). Ref.: 1 acum = ruido de banda estrecha (1 Bark) a 1 kHz, 60 dB. Baricentro ponderado de la sonoridad específica: S = 0,11 · [ Σ<sub>z</sub> N′(z)·g(z)·z ] / [ Σ<sub>z</sub> N′(z) ], N′(z) = sonoridad específica, g(z) ≈ 1 hasta ~16 Bark y luego creciente.</li>
+<li><b>Aspereza R</b> (asper) — sensación de las modulaciones rápidas de amplitud (~15–300 Hz, máx. cerca de 70 Hz), modelo de Daniel &amp; Weber. Ref.: 1 asper = portadora 1 kHz, 100 % AM a f<sub>mod</sub> = 70 Hz, 60 dB. R = 0,25 · Σ<sub>i</sub> g(z<sub>i</sub>)·( m<sub>i</sub> · k<sub>i−2</sub> · k<sub>i+2</sub> )², m<sub>i</sub> = profundidad de modulación de la envolvente del canal i, k = correlaciones cruzadas entre canales.</li>
+<li><b>Fluctuación F</b> (vacil) — sensación de las modulaciones lentas (máx. a f<sub>mod</sub> = 4 Hz), modelo de Fastl. Ref.: 1 vacil = 1 kHz, 100 % AM a 4 Hz, 60 dB. F = 0,008 · [ Σ (ΔL/dB) ] / [ (f<sub>mod</sub>/4 Hz) + (4 Hz/f<sub>mod</sub>) ].</li>
+<li><b>Tonalidad T</b> (t.u.) — prominencia percibida de las componentes tonales (modelo de Aures): pondera el exceso de nivel, el ancho de banda y la frecuencia de cada raya (sensibilidad máx. ~700 Hz).</li>
+<li><b>TNR</b> (dB) — Tone-to-Noise Ratio (ECMA-74): TNR = L<sub>t</sub> − L<sub>n</sub>, nivel de la raya menos el del ruido enmascarante en su banda crítica. <b>Prominente</b> si TNR ≥ 8 dB (por encima de 1 kHz; umbral mayor en bajas frecuencias).</li>
+<li><b>PR</b> (dB) — Prominence Ratio (ECMA-74): PR = L<sub>m</sub> − 10·log<sub>10</sub>[ ½ (10<sup>L<sub>l</sub>/10</sup> + 10<sup>L<sub>u</sub>/10</sup>) ], nivel de la banda crítica de la raya (m) frente a las bandas adyacentes inferior (l) y superior (u). Prominente si PR ≥ 9 dB.</li>
+<li><b>Molestia PA</b> — Psychoacoustic Annoyance (Zwicker): PA = N<sub>5</sub> · ( 1 + √( w<sub>S</sub>² + w<sub>FR</sub>² ) ), w<sub>S</sub> = término de agudeza, w<sub>FR</sub> = término de aspereza + fluctuación. Sin unidad (indicador global).</li>
+</ul>
+<p style="font-size:10px;color:#7a8398">Las fórmulas se dan en forma simplificada (la implementación sigue las normas/modelos citados, validada frente a MOSQITO). Véase la sección <b>Psicoacústica</b> para las reservas de uso con micrófono de smartphone.</p>
 <div class="helpfoot">CETIM · Sonómetro — ayuda integrada<br>Autor: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 if(I18.lang!=='fr')setLang(I18.lang); else translatePass();
 
