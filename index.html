@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.13-beta</div>
+  <div class="splashver" id="splashVer">2.2.14-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1032,7 +1032,7 @@ if('serviceWorker' in navigator){
         <li><b>Tonalité T</b> (t.u.) — modèle d'<b>Aures</b> (pic ~700 Hz). Un clic sur l'axe Tonalité affiche en plus le <b>TNR</b> et le <b>PR</b> normatifs (<b>ECMA-74</b>) et la raie dominante.</li>
       </ul>
       <p>Chaque axe est <b>normalisé</b> par une borne réglable dans <b>ÉCHELLES</b> (défaut : Sonie 40 sone, Acuité 4 acum, Rugosité 2 asper, Fluctuation 2 vacil, Tonalité 1,5 t.u. — calés pour que les sons courants et les références 1 asper / 1 vacil occupent une bonne part de l'axe). Les indicateurs sont <b>toujours calculés sur le spectre non pondéré (Z)</b>, quelle que soit la pondération A/C choisie pour l'affichage des niveaux (la sonie exige le SPL linéaire).</p>
-      <p><b>Validation.</b> Les modèles sont testés de bout en bout sur signaux de référence, contre leurs <b>définitions normatives</b> et la librairie de référence <b>MOSQITO</b> : sonie et acuité concordent à <b>~2 %</b> de 63 Hz à 8 kHz (à travers le banc de filtres réel) et sur 40–80 dB ; rugosité = <b>1 asper</b> pour l'AM 1 kHz/70 Hz/100 %/60 dB (et retombe à ~0 sur du bruit large bande) ; fluctuation = <b>1 vacil</b> pour l'AM 4 Hz ; TNR/PR <b>identiques</b> à MOSQITO. Réserves : micro de smartphone non métrologique, sonie encore en régime stationnaire (N5 approché) ; indicateurs <b>indicatifs, non certifiés</b>.</p>
+      <p><b>Validation.</b> Les modèles sont testés de bout en bout sur signaux de référence, contre leurs <b>définitions normatives</b> et la librairie de référence <b>MOSQITO</b> : sonie et acuité concordent à <b>~2 %</b> de 63 Hz à 8 kHz (à travers le banc de filtres réel) et sur 40–80 dB ; rugosité = <b>1 asper</b> pour l'AM 1 kHz/70 Hz/100 %/60 dB (et retombe à ~0 sur du bruit large bande) ; fluctuation = <b>1 vacil</b> pour l'AM 4 Hz ; TNR/PR <b>identiques</b> à MOSQITO. <b>Réserves.</b> Micro de smartphone non métrologique : grandeurs <b>indicatives, non certifiées</b>. La <b>correction fréquentielle du micro</b> (si un profil de calibration est actif) est appliquée à la sonie, l'acuité, la fluctuation et la tonalité (elles passent par le spectre corrigé) ; la <b>rugosité</b> est calculée sur le signal temporel (la correction fréquentielle ne s'y applique pas, mais elle y est peu sensible car fondée sur la profondeur de modulation). La <b>sonie et l'acuité</b> dépendent de la calibration absolue (offset) et de la réponse du micro ; <b>rugosité, fluctuation, tonalité</b>, fondées sur des rapports, sont plus robustes. Sonie en régime <b>stationnaire</b> (N5 approché).</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
@@ -5993,6 +5993,9 @@ function psyCsvBlock(){ const p=psyStats(); if(!p)return '';
   s+='\nTONALITE NORMATIVE (ECMA-74)\nT-TNR global [dB];'+p.tnrT.toFixed(1)+';T-PR global [dB];'+p.prT.toFixed(1)+'\n';
   if(p.tones.length){ s+='Raies proeminentes;f [Hz];TNR [dB]\n'; for(const t of p.tones)s+=';'+Math.round(t.f)+';'+t.tnr.toFixed(1)+'\n'; }
   else s+='Raies proeminentes;aucune\n';
+  s+='\nNOTE;Grandeurs psychoacoustiques indicatives non certifiees (micro smartphone non metrologique).\n';
+  s+='NOTE;Correction frequentielle du micro appliquee a sonie/acuite/fluctuation/tonalite (spectre) ; rugosite calculee sur le signal temporel (correction non appliquee mais peu sensible).\n';
+  s+='NOTE;Sonie/acuite dependent de la calibration absolue et de la reponse micro ; rugosite/fluctuation/tonalite (rapports) plus robustes. Sonie stationnaire (N5 approche).\n';
   return s;
 }
 function psyReportBlock(){ const p=psyStats(); if(!p)return '';
@@ -6007,7 +6010,7 @@ function psyReportBlock(){ const p=psyStats(); if(!p)return '';
       '<div><span>Tonalité T-PR (ECMA-74)</span><b>'+p.prT.toFixed(1)+' dB</b></div>'+
       '<div style="grid-column:1/3"><span>Raies proéminentes</span><b style="text-align:right;max-width:70%">'+tones+'</b></div>'+
     '</div>'+
-    '<div style="font-size:8.5px;color:#7a8398;margin-top:3px">Sonie ISO 532-1 · Acuité DIN 45692 · Rugosité Daniel &amp; Weber · Fluctuation Fastl · Tonalité Aures (t.u.) &amp; ECMA-74 (TNR/PR). Modèles validés vs MOSQITO ; indicatifs, non certifiés.</div>';
+    '<div style="font-size:8px;color:#7a8398;margin-top:3px;line-height:1.35">Sonie ISO 532-1 · Acuité DIN 45692 · Rugosité Daniel &amp; Weber · Fluctuation Fastl · Tonalité Aures (t.u.) &amp; ECMA-74 (TNR/PR), validés vs MOSQITO. <b>Grandeurs indicatives, non certifiées</b> : micro de smartphone non métrologique. La <b>correction fréquentielle du micro</b> (si un profil est actif) est appliquée à la sonie, l&#39;acuité, la fluctuation et la tonalité (calcul spectral) ; la rugosité est calculée sur le signal temporel (correction fréquentielle non appliquée, mais peu sensible car basée sur la profondeur de modulation). Sonie et acuité dépendent de la calibration absolue (offset) et de la réponse du micro ; rugosité, fluctuation et tonalité (rapports) sont plus robustes. Sonie en régime stationnaire (N5 approché).</div>';
 }
 function buildCsv(){
   let csv='SONOMETRE CETIM - export\n';
