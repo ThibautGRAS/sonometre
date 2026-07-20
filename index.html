@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.17-beta</div>
+  <div class="splashver" id="splashVer">2.2.18-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1028,7 +1028,7 @@ if('serviceWorker' in navigator){
         <li><b>Sonie N</b> (sone) — <b>ISO 532-1</b> méthode tabulée (DIN 45631), fenêtre 250 ms.</li>
         <li><b>Acuité S</b> (acum) — <b>DIN 45692</b>, fenêtre 250 ms.</li>
         <li><b>Rugosité R</b> (asper) — modèle <b>Daniel &amp; Weber</b> complet (47 canaux ½-Bark, excitation par FFT, pondérations Hi(f_mod), corrélation croisée, dépendance au niveau), recalculé ~1 fois/s sur 170 ms.</li>
-        <li><b>Fluctuation F</b> (vacil) — <b>Fastl</b> band-wise (modulation de la sonie spécifique par bande de Bark, indépendante du niveau), fenêtre 5 s.</li>
+        <li><b>Fluctuation F</b> (vacil) — <b>Fastl</b> band-wise (modulation de la sonie spécifique par bande de Bark, indépendante du niveau), <b>fenêtre glissante de 5 s</b> (apparaît dès ~2 s, valeur provisoire tant que la mesure dure moins de 5 s).</li>
         <li><b>Tonalité T</b> (t.u.) — modèle d'<b>Aures</b> (pic ~700 Hz), fenêtre 2 s. Un clic sur l'axe Tonalité affiche en plus le <b>TNR</b> et le <b>PR</b> normatifs (<b>ECMA-74</b>, recalculés ~1 s sur le spectre fin FFT) et la raie dominante.</li>
       </ul>
       <p>Chaque axe est <b>normalisé</b> par une borne réglable dans <b>ÉCHELLES</b> (défaut : Sonie 40 sone, Acuité 4 acum, Rugosité 2 asper, Fluctuation 2 vacil, Tonalité 1,5 t.u. — calés pour que les sons courants et les références 1 asper / 1 vacil occupent une bonne part de l'axe). Les indicateurs sont <b>toujours calculés sur le spectre non pondéré (Z)</b>, quelle que soit la pondération A/C choisie pour l'affichage des niveaux (la sonie exige le SPL linéaire).</p>
@@ -1057,7 +1057,7 @@ if('serviceWorker' in navigator){
         <li><b>PR</b> (dB) — <i>Prominence Ratio</i> (ECMA-74) : PR = L<sub>m</sub> − 10·log<sub>10</sub>[ ½ (10<sup>L<sub>l</sub>/10</sup> + 10<sup>L<sub>u</sub>/10</sup>) ], niveau de la bande critique centrale (m) vs bandes adjacentes basse (l) et haute (u). Proéminente si PR ≥ 9 dB.</li>
         <li><b>Gêne PA</b> — <i>Psychoacoustic Annoyance</i> (Zwicker) : PA = N<sub>5</sub> · ( 1 + √( w<sub>S</sub>² + w<sub>FR</sub>² ) ), w<sub>S</sub> = terme d'acuité, w<sub>FR</sub> = terme de rugosité + fluctuation. Sans unité (indicateur global).</li>
       </ul>
-      <p style="font-size:11px"><b>Fenêtres de calcul.</b> Sonie et acuité 250 ms · rugosité ~170 ms (recalculée ~1 fois/s) · tonalité 2 s (TNR/PR ~1 s) · fluctuation 5 s.</p>
+      <p style="font-size:11px"><b>Fenêtres de calcul.</b> Sonie et acuité 250 ms · rugosité ~170 ms (recalculée ~1 fois/s) · tonalité 2 s (TNR/PR ~1 s) · fluctuation 5 s (glissante, pleine après 5 s).</p>
       <p style="font-size:10px;color:#7a8398">Les formules sont données sous forme simplifiée (l'implémentation suit fidèlement les normes/modèles cités, validée contre MOSQITO). Voir la section <b>Psychoacoustique</b> pour les réserves d'usage sur micro de smartphone.</p>
 
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
@@ -6683,7 +6683,7 @@ const HELP_EN=`
 <li><b>PR</b> (dB) — Prominence Ratio (ECMA-74): PR = L<sub>m</sub> − 10·log<sub>10</sub>[ ½ (10<sup>L<sub>l</sub>/10</sup> + 10<sup>L<sub>u</sub>/10</sup>) ], level of the tone's critical band (m) vs adjacent lower (l) and upper (u) bands. Prominent if PR ≥ 9 dB.</li>
 <li><b>Annoyance PA</b> — Psychoacoustic Annoyance (Zwicker): PA = N<sub>5</sub> · ( 1 + √( w<sub>S</sub>² + w<sub>FR</sub>² ) ), w<sub>S</sub> = sharpness term, w<sub>FR</sub> = roughness + fluctuation term. Unitless (global indicator).</li>
 </ul>
-<p style="font-size:11px"><b>Computation windows.</b> Loudness and sharpness 250 ms · roughness ~170 ms (updated ~1×/s) · tonality 2 s (TNR/PR ~1 s) · fluctuation strength 5 s.</p>
+<p style="font-size:11px"><b>Computation windows.</b> Loudness and sharpness 250 ms · roughness ~170 ms (updated ~1×/s) · tonality 2 s (TNR/PR ~1 s) · fluctuation strength 5 s (rolling, full after 5 s).</p>
 <p style="font-size:10px;color:#7a8398">Formulas are given in simplified form (the implementation follows the cited standards/models, validated against MOSQITO). See the <b>Psychoacoustics</b> section for usage caveats on a smartphone microphone.</p>
 <div class="helpfoot">CETIM · Sound level meter — built-in help<br>Author: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 const HELP_ES=`
@@ -6758,7 +6758,7 @@ const HELP_ES=`
 <li><b>PR</b> (dB) — Prominence Ratio (ECMA-74): PR = L<sub>m</sub> − 10·log<sub>10</sub>[ ½ (10<sup>L<sub>l</sub>/10</sup> + 10<sup>L<sub>u</sub>/10</sup>) ], nivel de la banda crítica de la raya (m) frente a las bandas adyacentes inferior (l) y superior (u). Prominente si PR ≥ 9 dB.</li>
 <li><b>Molestia PA</b> — Psychoacoustic Annoyance (Zwicker): PA = N<sub>5</sub> · ( 1 + √( w<sub>S</sub>² + w<sub>FR</sub>² ) ), w<sub>S</sub> = término de agudeza, w<sub>FR</sub> = término de aspereza + fluctuación. Sin unidad (indicador global).</li>
 </ul>
-<p style="font-size:11px"><b>Ventanas de cálculo.</b> Sonoridad y agudeza 250 ms · aspereza ~170 ms (actualizada ~1×/s) · tonalidad 2 s (TNR/PR ~1 s) · fluctuación 5 s.</p>
+<p style="font-size:11px"><b>Ventanas de cálculo.</b> Sonoridad y agudeza 250 ms · aspereza ~170 ms (actualizada ~1×/s) · tonalidad 2 s (TNR/PR ~1 s) · fluctuación 5 s (deslizante, completa tras 5 s).</p>
 <p style="font-size:10px;color:#7a8398">Las fórmulas se dan en forma simplificada (la implementación sigue las normas/modelos citados, validada frente a MOSQITO). Véase la sección <b>Psicoacústica</b> para las reservas de uso con micrófono de smartphone.</p>
 <div class="helpfoot">CETIM · Sonómetro — ayuda integrada<br>Autor: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 if(I18.lang!=='fr')setLang(I18.lang); else translatePass();
