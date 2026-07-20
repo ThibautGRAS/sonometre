@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.18-beta</div>
+  <div class="splashver" id="splashVer">2.2.19-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1022,7 +1022,7 @@ if('serviceWorker' in navigator){
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
       <h3>Psychoacoustique (toile)</h3>
-      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore (sonie, acuité, rugosité, fluctuation, tonalité) recalculés en continu sur des <b>fenêtres glissantes</b>, avec au centre la <b>gêne psychoacoustique PA</b> (modèle de Zwicker ; vert &lt; 15, orange, rouge &gt; 40). Le polygone <b>plein</b> = valeur actuelle, <b>MOY</b> = moyenne depuis le début, le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs apparaissent après 2 s. Le bouton <b>SON</b> (à côté de MOY) fait apparaître un encart avec la <b>gêne PA</b> (assortie d'un qualificatif) et une <b>description automatique du son</b> en cours (niveau en phon, timbre aigu/sourd, tonal, rugueux, fluctuant) — pratique quand le polygone est ramassé près du centre. <b>Touchez un axe</b> pour lire son détail actuel / moyenne / P95.</p>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore (sonie, acuité, rugosité, fluctuation, tonalité) recalculés en continu sur des <b>fenêtres glissantes</b>, avec au centre la <b>gêne psychoacoustique PA</b> (modèle de Zwicker ; vert &lt; 15, orange, rouge &gt; 40). Le polygone <b>plein</b> = valeur actuelle, <b>MOY</b> = moyenne depuis le début, le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs apparaissent après 2 s (délai d'affichage). L'axe <b>Fluctuation</b> est signalé « en cours d'établissement » (point creux, tic P95 en pointillé, « … » près du libellé) tant que sa fenêtre glissante de 5 s n'est pas pleine. Le bouton <b>SON</b> (à côté de MOY) fait apparaître un encart avec la <b>gêne PA</b> (assortie d'un qualificatif) et une <b>description automatique du son</b> en cours (niveau en phon, timbre aigu/sourd, tonal, rugueux, fluctuant) — pratique quand le polygone est ramassé près du centre. <b>Touchez un axe</b> pour lire son détail actuel / moyenne / P95.</p>
       <p><b>Modèles utilisés.</b></p>
       <ul>
         <li><b>Sonie N</b> (sone) — <b>ISO 532-1</b> méthode tabulée (DIN 45631), fenêtre 250 ms.</li>
@@ -4370,6 +4370,7 @@ function drawPsycho(){
   const accent=(getComputedStyle(document.body).getPropertyValue('--ice')||'#4FC3FF').trim()||'#4FC3FF';
   const MIN=2, span=PSY.span||0, live=((S.running&&!S.paused)||REPL.on);
   const ready = (PSY.cur && span>=MIN) || (avg&&PSY._cnt>0);
+  const fProv = ready && !avg && (PSY.span||0) < PSY_BUFSEC;   // fluctuation : fenêtre glissante pas encore pleine (valeur provisoire)
   if(!PSY._wired){ PSY._wired=true;
     cv.addEventListener('pointerdown',e=>{
       const G=PSY._geom; if(!G)return; const rc=cv.getBoundingClientRect();
@@ -4385,19 +4386,21 @@ function drawPsycho(){
   for(let i=0;i<K;i++){ const a=ang(i); g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a)); g.strokeStyle=(PSY.sel===i)?accent:'rgba(127,176,220,.18)'; g.lineWidth=(PSY.sel===i)?1.5:1; g.stroke(); }
   g.lineWidth=1; g.textAlign='center'; g.textBaseline='middle';
   for(let i=0;i<K;i++){ const a=ang(i), lx=cx+(R+16)*Math.cos(a), ly=cy+(R+13)*Math.sin(a), sel=(PSY.sel===i);
-    g.fillStyle=sel?accent:'rgba(200,225,250,.9)'; g.font='bold 9px sans-serif'; g.fillText(axes[i][0],lx,ly-4);
+    g.fillStyle=sel?accent:'rgba(200,225,250,.9)'; g.font='bold 9px sans-serif'; g.fillText(axes[i][0]+((axes[i][1]==='F'&&fProv)?' …':''),lx,ly-4);
     if(ready){ g.fillStyle=sel?'rgba(230,245,255,.95)':'rgba(150,180,210,.75)'; g.font='8px sans-serif'; g.fillText(axes[i][2].toFixed(axes[i][3]<=2?2:1)+' '+axes[i][4],lx,ly+5); } }
   if(ready){
     const pts=axes.map((ax,i)=>{ const v=Math.max(0,Math.min(1,ax[2]/ax[3])), a=ang(i); return [cx+R*v*Math.cos(a), cy+R*v*Math.sin(a)]; });
     g.beginPath(); pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.closePath();
     g.fillStyle='rgba(79,195,255,.18)'; g.strokeStyle=accent; g.lineWidth=2; g.fill(); g.stroke();
-    g.fillStyle=accent; pts.forEach((p,i)=>{g.beginPath();g.arc(p[0],p[1],(PSY.sel===i)?4.5:2.6,0,7);g.fill();});
+    g.fillStyle=accent; pts.forEach((p,i)=>{ const rad=(PSY.sel===i)?4.5:2.6; g.beginPath(); g.arc(p[0],p[1],rad,0,7);
+      if(axes[i][1]==='F'&&fProv){ g.lineWidth=1.5; g.strokeStyle=accent; g.stroke(); g.lineWidth=2; } else { g.fill(); } });
     if(PSY.sel>=0){ const p=pts[PSY.sel]; g.strokeStyle='#fff'; g.lineWidth=1.5; g.beginPath(); g.arc(p[0],p[1],6,0,7); g.stroke(); }
     /* P95 (peak-hold) : tic ambre par axe */
     if(PSY.p95){ g.strokeStyle='#FFB454'; g.lineWidth=2;
       for(let i=0;i<K;i++){ const pv=PSY.p95[axes[i][1]]||0, v=Math.max(0,Math.min(1,pv/axes[i][3])); if(v<=0.001)continue;
         const a=ang(i), rr=R*v, px=cx+rr*Math.cos(a), py=cy+rr*Math.sin(a), tx=-Math.sin(a)*4.5, ty=Math.cos(a)*4.5;
-        g.beginPath(); g.moveTo(px-tx,py-ty); g.lineTo(px+tx,py+ty); g.stroke(); }
+        if(axes[i][1]==='F'&&fProv)g.setLineDash([2,2]);
+        g.beginPath(); g.moveTo(px-tx,py-ty); g.lineTo(px+tx,py+ty); g.stroke(); g.setLineDash([]); }
       g.lineWidth=1; }
   }
   g.textAlign='center'; g.textBaseline='middle';
@@ -4415,7 +4418,7 @@ function drawPsycho(){
     const winTxt={N:'250 ms',S:'250 ms',R:'1 s',F:'5 s',T:'2 s'};
     const cval=(PSY.cur&&PSY.cur[k])||0, mval=(PSY.mean&&PSY.mean[k])||0, pval=(PSY.p95&&PSY.p95[k])||0;
     const nrm=Math.max(0,Math.min(1,cval/bnd));
-    const isT=(k==='T'), isR=(k==='R'), bh=(isT||isR)?58:40;
+    const isT=(k==='T'), isR=(k==='R'), isF=(k==='F'), bh=(isT||isR||(isF&&fProv))?58:40;
     const bx=8, by=h-bh-6, bw=w-16;
     g.fillStyle='rgba(0,20,45,.75)'; g.strokeStyle=accent; g.lineWidth=1;
     if(g.roundRect){g.beginPath();g.roundRect(bx,by,bw,bh,7);g.fill();g.stroke();}else{g.fillRect(bx,by,bw,bh);g.strokeRect(bx,by,bw,bh);}
@@ -4430,6 +4433,8 @@ function drawPsycho(){
       g.fillText(t1+top, bx+10, by+45); }
     if(isR){ g.textAlign='left'; g.fillStyle='rgba(180,215,255,.9)'; g.font='9px sans-serif';
       g.fillText('modèle Daniel & Weber complet (MOSQITO) · fenêtre 170 ms · MAJ ~1 s', bx+10, by+45); }
+    if(isF && fProv){ g.textAlign='left'; g.fillStyle='rgba(255,180,84,.92)'; g.font='9px sans-serif';
+      g.fillText('fenêtre glissante en cours : '+(PSY.span||0).toFixed(1)+' / 5 s — valeur provisoire', bx+10, by+45); }
   } else if(ready && S.psyDesc){
     const d=psyDescribe();
     const bx=8, bh=44, by=h-bh-6, bw=w-16;
