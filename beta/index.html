@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.26-beta</div>
+  <div class="splashver" id="splashVer">2.2.27-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -2589,7 +2589,7 @@ function loop(ts){
   const tdLeq = (S.corr!=='off') && !REPL.on && S.lvlSrc!=='fft';
   for(const k of ['A','C','Z']){ const p=k==='A'?pA:k==='C'?pC:pZ; if(!idle && !tdLeq) S.eq[k]+=p*dt; }
   if(!idle && !tdLeq) S.eqT+=dt;
-  const emaA = S.avgTau>0 ? Math.min(1, dt/Math.max(0.05,S.avgTau)) : 0;   // moyenne glissante exponentielle du spectre (option MOY)
+  const emaA = S.avgTau>0 ? 1-Math.exp(-dt/Math.max(0.05,S.avgTau)) : 0;   // moyenne glissante exponentielle du spectre (option MOY), coeff exact 1−e^(−dt/τ)
   const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
   /* Spectre : moyennage temporel de type WELCH — on empile la trame FFT courante dans un tampon
      puis on l'agrège (moyenne des N derniers périodogrammes) à PAS FIXE = fenêtre·(1−overlap).
