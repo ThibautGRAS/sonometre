@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.30-beta</div>
+  <div class="splashver" id="splashVer">2.2.31-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -772,12 +772,12 @@ if('serviceWorker' in navigator){
     <div class="krow">
       <button class="key cfg" id="kDur"><span class="kf">DURÉE</span><span class="kv" id="kDurV">∞</span></button>
       <button class="key cfg" id="kCal"><span class="kf">CALIB.</span><span class="kv" id="kCalV">Auto</span></button>
-      <button class="key" id="kMenu"><span class="kf">MENU</span><span class="kv" id="kMenuV">Expert</span></button>
-      <button class="key" id="kCsv"><span class="kf">EXPORT</span><span class="kv">Partager</span></button>
+      <button class="key" id="kMenu"><span class="kf">RÉGLAGES</span><span class="kv" id="kMenuV">Avancés</span></button>
+      <button class="key" id="kDyn"><span class="kf">ÉCHELLES</span><span class="kv" id="kDynV">Auto</span></button>
     </div>
     <div class="krow">
       <button class="key" id="kReset"><span class="kf">MESURE</span><span class="kv">Réinit</span></button>
-      <button class="key" id="kDyn"><span class="kf">ÉCHELLES</span><span class="kv" id="kDynV">Auto</span></button>
+      <button class="key" id="kCsv"><span class="kf">EXPORT</span><span class="kv">Chargement</span></button>
       <button class="key key-pause" id="kPause" disabled aria-label="Pause"><span class="kv"><svg class="tico" viewBox="0 0 24 24"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg></span></button>
       <button class="key key-start" id="kStart" aria-label="Démarrer"><span class="kv"><svg class="tico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/></svg></span></button>
     </div>
@@ -1067,7 +1067,7 @@ if('serviceWorker' in navigator){
   </div></div>
 
   <div id="expPop" class="calpop"><div class="calpop-in">
-    <div class="cp-head">EXPORTER / RAPPORT <button id="epClose">✕</button></div>
+    <div class="cp-head">EXPORT / CHARGEMENT <button id="epClose">✕</button></div>
     <div style="display:flex;flex-direction:column;gap:6px;max-height:72vh;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain">
       <div class="msub" style="padding-top:0">INFOS DU RAPPORT · FACULTATIF</div>
       <input class="ep-in" id="repSite" placeholder="Site / lieu de mesure">
@@ -5049,9 +5049,9 @@ function ui(){
     : S.screen==='sgram' ? 'SPECTROGRAMME · '+S.weight
     : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq'
     : S.screen==='psy' ? 'PSYCHOACOUSTIQUE · TOILE (fenêtre '+(S.psyWin||4)+' s)'
-    : S.screen==='menu' ? 'MODE EXPERT · TRAITEMENT DU SIGNAL'
+    : S.screen==='menu' ? 'RÉGLAGES AVANCÉS · TRAITEMENT DU SIGNAL'
     : S.screen==='cal' ? 'CALIBRATION · RÉFÉRENCE 0 dBFS' : 'VALEURS DE LA MESURE';
-  $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='psy'?'Psycho':S.screen==='menu'?'Expert':'Valeurs';
+  $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='psy'?'Psycho':S.screen==='menu'?'Avancés':'Valeurs';
   $('kMode').classList.toggle('locked',S.screen!=='spec');   // ANALYSE n'a de sens que sur le spectre
   /* lignes du mode expert */
   $('mSg3dSmooth').querySelector('b').textContent=['Standard','Lisse','Très lisse'][Math.max(0,Math.min(2,S.sg3dSmooth|0))];
@@ -5090,7 +5090,7 @@ function ui(){
   { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=S.lsnAuto?'auto':String(S.lsnGain||0); }
 
   updScaleLbl();
-  $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Expert';
+  $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Avancés';
   $('kWV').textContent=S.weight;
   $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':S.mode==='oct'?'1/1 oct':'FFT';
@@ -6574,6 +6574,7 @@ const TR={
  'MENU':{en:'MENU',es:'MENÚ'},'EXPORT':{en:'EXPORT',es:'EXPORTAR'},'MESURE':{en:'MEASURE',es:'MEDIDA'},'ÉCHELLES':{en:'SCALES',es:'ESCALAS'},
  'Spectre':{en:'Spectrum',es:'Espectro'},'Spectrog.':{en:'Spectrog.',es:'Espectrog.'},'Évolution':{en:'History',es:'Evolución'},'Valeurs':{en:'Values',es:'Valores'},
  'Réinit':{en:'Reset',es:'Reinic.'},'Partager':{en:'Share',es:'Compartir'},'Expert':{en:'Expert',es:'Experto'},'Fermer':{en:'Close',es:'Cerrar'},
+ 'RÉGLAGES':{en:'SETTINGS',es:'AJUSTES'},'Avancés':{en:'Advanced',es:'Avanzados'},'Chargement':{en:'Load',es:'Carga'},
  'Auto':{en:'Auto',es:'Auto'},'Manuel':{en:'Manual',es:'Manual'},
  'Lissage / perf. 3D':{en:'3D smoothing / perf.',es:'Suavizado / rend. 3D'},
  'Fluide':{en:'Fluid',es:'Fluido'},'Standard':{en:'Standard',es:'Estándar'},'Lisse':{en:'Smooth',es:'Suave'},'Très lisse':{en:'Very smooth',es:'Muy suave'},
@@ -6608,7 +6609,7 @@ const TR={
  'Clair labo':{en:'Light lab',es:'Lab claro'},'OLED noir':{en:'OLED black',es:'OLED negro'},'Matrice':{en:'Matrix',es:'Matriz'},
  /* popovers */
  'AIDE & GUIDE':{en:'HELP & GUIDE',es:'AYUDA Y GUÍA'},
- 'EXPORTER / PARTAGER':{en:'EXPORT / SHARE',es:'EXPORTAR / COMPARTIR'},
+ 'EXPORT / CHARGEMENT':{en:'EXPORT / LOAD',es:'EXPORTAR / CARGAR'},
  'Partager le CSV':{en:'Share CSV',es:'Compartir CSV'},
  'Télécharger le CSV':{en:'Download CSV',es:'Descargar CSV'},
  "Partager l'image du graphe":{en:'Share graph image',es:'Compartir imagen del gráfico'},
@@ -6622,7 +6623,7 @@ const TR={
  'ÉVOLUTION':{en:'HISTORY',es:'EVOLUCIÓN'},'VALEURS':{en:'VALUES',es:'VALORES'},
  "TIERS D'OCTAVE":{en:'1/3 OCTAVE',es:'TERCIO DE OCTAVA'},'BANDES FINES':{en:'NARROWBAND',es:'BANDA FINA'},
  'OCTAVE':{en:'OCTAVE',es:'OCTAVA'},'POND. ':{en:'WEIGHT ',es:'POND. '},
- 'MODE EXPERT · TRAITEMENT DU SIGNAL':{en:'EXPERT MODE · SIGNAL PROCESSING',es:'MODO EXPERTO · PROCESADO DE SEÑAL'},
+ 'RÉGLAGES AVANCÉS · TRAITEMENT DU SIGNAL':{en:'ADVANCED SETTINGS · SIGNAL PROCESSING',es:'AJUSTES AVANZADOS · PROCESADO DE SEÑAL'},
  'CALIBRATION':{en:'CALIBRATION',es:'CALIBRACIÓN'},
  'Synthèse FFT':{en:'FFT synthesis',es:'Síntesis FFT'},
  'Temporel IIR':{en:'Time-domain IIR',es:'Temporal IIR'},
