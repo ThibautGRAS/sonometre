@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.27-beta</div>
+  <div class="splashver" id="splashVer">2.2.28-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -681,7 +681,7 @@ if('serviceWorker' in navigator){
           <div class="mrow" id="mEmgThr" data-cat="signal"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
           <div class="mrow" id="mSpecFrames" data-cat="signal"><span>Moyenne temporelle — live (trames, Welch)</span><b>4</b></div>
           <div class="mrow" id="mSpecSmooth" data-cat="signal"><span>Lissage fréquentiel — bande fine (1/n oct)</span><b>1/12 oct</b></div>
-          <div class="mrow" id="mAvgTau" data-cat="signal"><span>Moyenne temporelle — MOY (Leq / exponentielle F·S)</span><b>Cumulée (Leq)</b></div>
+          <div class="mrow" id="mAvgTau" data-cat="signal"><span>Moyenne temporelle — MOY (Leq / expo F·S / max)</span><b>Cumulée (Leq)</b></div>
           <div class="mrow" id="mSpecCI" data-cat="signal"><span>Intervalle de confiance de la MOY (±2σ/√N)</span><b>Non</b></div>
           <div class="mrow" id="mToctSrc" data-cat="signal"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
           <div class="mrow" id="mLvlSrc" data-cat="signal"><span>Niveaux temps réel (LAF…, Leq)</span><b>Temporel IIR</b></div>
@@ -965,7 +965,7 @@ if('serviceWorker' in navigator){
         <li>Spectrogramme : <b>double-tap</b> (ou deux doigts, ou touche M) = suivi automatique du maximum ; en <b>relecture</b>, le viseur suit le pic au fil de la lecture. <b>Deux doigts / Maj+clic</b> font pareil.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
         <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
-        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>live</b> et <b>moyenné (Leq)</b> sur toute la durée — libellé « L<i>x</i>·Moy ». Réglages de spectre dans <b>Expert ▸ Signal</b>, indépendants du bouton TEMPS : <b>Moyenne temporelle — live (trames, Welch)</b> = moyenne des N derniers périodogrammes à pas fixe = fenêtre·(1−overlap) (nettoie le spectre INST à court terme, ~sous-seconde, identique en direct et en replay), et <b>Lissage fréquentiel — bande fine (1/n oct)</b> = moyenne 1/n octave sur les raies (agit en <i>fréquence</i>, pas dans le temps ; n'affecte que la courbe, pas les mesures au curseur). Le rapport PDF utilise toujours le spectre moyenné (Leq). <b>Moyenne temporelle — MOY (Expert ▸ Signal).</b> Par défaut la MOY est une <b>moyenne d'énergie cumulée depuis le début</b> (vrai Leq par raie/bande, à poids égal) : idéale pour un son stationnaire, mais de plus en plus <b>inerte</b> (à t = 60 s, 1 s ne pèse plus que 1/60). L'option <b>Moyenne temporelle — MOY</b> permet une <b>moyenne exponentielle en énergie</b>, c'est-à-dire la <b>pondération temporelle d'un vrai sonomètre</b> (IEC 61672) : <b>Fast</b> (τ = 125 ms) ou <b>Slow</b> (τ = 1 s), plus une position 5 s pour un spectre bien lissé. Comme sur un appareil, la moyenne est faite sur l'énergie (pas sur les dB) : après un événement, le niveau redescend de <b>−4,34 dB par τ</b> (rapide en Fast, posé en Slow). Le Leq cumulé reste utilisé pour le rapport. En mode <b>moyenné</b>, l'option experte <b>Intervalle de confiance de la MOY (±2σ/√N)</b> (Signal) trace en fond translucide l'enveloppe <b>±2σ/√N</b> autour du spectre moyen : c'est l'incertitude sur la <i>valeur moyenne</i> estimée à chaque fréquence, qui <b>se resserre</b> au fil de la mesure (∝ 1/√durée, N = nombre de fenêtres indépendantes accumulées). Une bande encore large signale une fréquence dont la moyenne n'est pas encore stabilisée ; à ne pas confondre avec la dispersion instantanée ±2σ (qui, elle, ne diminue pas).</li>
+        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>live</b> et <b>moyenné (Leq)</b> sur toute la durée — libellé « L<i>x</i>·Moy ». Réglages de spectre dans <b>Expert ▸ Signal</b>, indépendants du bouton TEMPS : <b>Moyenne temporelle — live (trames, Welch)</b> = moyenne des N derniers périodogrammes à pas fixe = fenêtre·(1−overlap) (nettoie le spectre INST à court terme, ~sous-seconde, identique en direct et en replay), et <b>Lissage fréquentiel — bande fine (1/n oct)</b> = moyenne 1/n octave sur les raies (agit en <i>fréquence</i>, pas dans le temps ; n'affecte que la courbe, pas les mesures au curseur). Le rapport PDF utilise toujours le spectre moyenné (Leq). <b>Moyenne temporelle — MOY (Expert ▸ Signal).</b> Par défaut la MOY est une <b>moyenne d'énergie cumulée depuis le début</b> (vrai Leq par raie/bande, à poids égal) : idéale pour un son stationnaire, mais de plus en plus <b>inerte</b> (à t = 60 s, 1 s ne pèse plus que 1/60). L'option <b>Moyenne temporelle — MOY</b> permet une <b>moyenne exponentielle en énergie</b>, c'est-à-dire la <b>pondération temporelle d'un vrai sonomètre</b> (IEC 61672) : <b>Fast</b> (τ = 125 ms) ou <b>Slow</b> (τ = 1 s), plus une position 5 s pour un spectre bien lissé. Comme sur un appareil, la moyenne est faite sur l'énergie (pas sur les dB) : après un événement, le niveau redescend de <b>−4,34 dB par τ</b> (rapide en Fast, posé en Slow). La position <b>Peak hold (max)</b> complète le cycle : ce n'est plus une moyenne mais le <b>maximum retenu</b> par raie/bande depuis le début de la mesure (spectre-enveloppe, comme le « peak hold » d'un analyseur de laboratoire) — utile pour capturer un événement bref ou une montée en régime ; il se réinitialise avec la mesure, et l'intervalle de confiance ne s'applique pas à ce mode. Le Leq cumulé reste utilisé pour le rapport. En mode <b>moyenné</b>, l'option experte <b>Intervalle de confiance de la MOY (±2σ/√N)</b> (Signal) trace en fond translucide l'enveloppe <b>±2σ/√N</b> autour du spectre moyen : c'est l'incertitude sur la <i>valeur moyenne</i> estimée à chaque fréquence, qui <b>se resserre</b> au fil de la mesure (∝ 1/√durée, N = nombre de fenêtres indépendantes accumulées). Une bande encore large signale une fréquence dont la moyenne n'est pas encore stabilisée ; à ne pas confondre avec la dispersion instantanée ±2σ (qui, elle, ne diminue pas).</li>
       </ul>
 
       <h3>Indices</h3>
@@ -1119,8 +1119,8 @@ const S = {
   fftDb:null, td:null, K:0, freqs:null, binHz:0,
   wA:null, wC:null, compGain:null,
   bands:[], bandBins:[],
-  bandPowF:null, bandPowS:null, bandPowV:null, bandPowD:null, bandPeak:null, bandEnergy:null,
-  binPowF:null, binPowS:null, binPowV:null, binPowD:null, binEnergy:null,
+  bandPowF:null, bandPowS:null, bandPowV:null, bandPowD:null, bandPeak:null, bandEnergy:null, bandMax:null,
+  binPowF:null, binPowS:null, binPowV:null, binPowD:null, binEnergy:null, binMax:null,
   specFrames:4,                   // moyennage temporel du spectre : nombre de trames (Welch ; 1 = live)
   specSmooth:0,                   // lissage fréquentiel du spectre fin : 1/n octave (0 = off par défaut)
   pF:{A:0,C:0,Z:0}, pS:{A:0,C:0,Z:0}, pV:{A:0,C:0,Z:0},
@@ -1830,7 +1830,7 @@ function configureAnalyser(){
     S.bandPowD=new Float32Array(nb);
     S.curBnd=new Float32Array(nb);
     S.curBndZ=new Float32Array(nb);
-    S.bandEnergy=new Float64Array(nb); S.bandEma=new Float32Array(nb);
+    S.bandEnergy=new Float64Array(nb); S.bandEma=new Float32Array(nb); S.bandMax=new Float32Array(nb);
     S.bandPeak=new Float32Array(nb).fill(-99);
     S.welch=null;
   }
@@ -1843,6 +1843,7 @@ function configureAnalyser(){
     S.binEnergy=new Float64Array(n);
     S.binSumDb=new Float64Array(n); S.binSumDb2=new Float64Array(n);   // stats dB par bin -> bande de confiance
     S.binEma=new Float32Array(n);   // moyenne glissante exponentielle (option)
+    S.binMax=new Float32Array(n);   // peak hold : maximum retenu par raie (option MOY)
     S.binEmaDb=new Float32Array(n); S.binEmaDb2=new Float32Array(n);   // moyenne et moment d'ordre 2 en dB (glissants) -> IC
     S.welch=null;
   }
@@ -2197,6 +2198,20 @@ function renderReplayFrame(i){
     S.binPowD[k]=c?s/c:0;                                        // spectre fin : moyenne des N dernières trames
     if(S.binEnergy) S.binEnergy[k]=F.cumFine[base+r]*invT*T;     // MOY fine : moyenne début→curseur
   }
+  /* peak hold en relecture : max début→curseur, cache incrémental (recalcul complet si retour arrière) */
+  if(S.avgTau===-1&&S.binMax&&S.bandMax){
+    let pk=REPL._pk;
+    if(!pk||pk.F!==F){ pk=REPL._pk={F,i:-1,fine:new Float32Array(RES),band:new Float32Array(F.nb)}; }
+    if(i<pk.i){ pk.i=-1; pk.fine.fill(0); pk.band.fill(0); }
+    for(let j=pk.i+1;j<=i;j++){
+      const bj=F.band[j], off=j*RES;
+      for(let b=0;b<F.nb;b++)if(bj[b]>pk.band[b])pk.band[b]=bj[b];
+      for(let r=0;r<RES;r++){ const v=F.rawFine[off+r]; if(v>pk.fine[r])pk.fine[r]=v; }
+    }
+    pk.i=i;
+    for(let b=0;b<F.nb;b++)S.bandMax[b]=pk.band[b]*(wfc?wfc[b]:1);
+    for(let k=0;k<nn;k++)S.binMax[k]=pk.fine[F.finMap[k]||0];
+  }
   /* valeur principale = piste temporelle sélectionnée, pondération courante */
   const tr=S.time==='S'?S.pS:S.time==='V'?S.pV:S.pF;
   const pw=S.weight==='C'?tr.C:S.weight==='Z'?tr.Z:tr.A;
@@ -2446,6 +2461,7 @@ function resetMeasure(){
   S.elapsed=0; S.hist=[]; S.histLast=0; S.peakHold=0;
   if(S.bandEnergy)S.bandEnergy.fill(0);
   if(S.bandEma)S.bandEma.fill(0);
+  if(S.bandMax)S.bandMax.fill(0);
   if(S.bandPowF)S.bandPowF.fill(0);
   if(S.bandPowS)S.bandPowS.fill(0);
   if(S.bandPowV)S.bandPowV.fill(0);
@@ -2457,6 +2473,7 @@ function resetMeasure(){
   if(S.binEnergy)S.binEnergy.fill(0);
   if(S.binSumDb)S.binSumDb.fill(0); if(S.binSumDb2)S.binSumDb2.fill(0);
   if(S.binEma)S.binEma.fill(0); if(S.binEmaDb)S.binEmaDb.fill(0); if(S.binEmaDb2)S.binEmaDb2.fill(0); S._emaSeed=false;
+  if(S.binMax)S.binMax.fill(0); REPL._pk=null;
   if(S.bandPeak)S.bandPeak.fill(-99);
   /* spectrogramme : vider le tampon de données et les curseurs/zoom associés */
   if(SG.cols)SG.cols.fill(null);
@@ -2598,6 +2615,7 @@ function loop(ts){
     S.curBnd[b]=bp[b]; if(S.curBndZ)S.curBndZ[b]=bpZ[b];
     if(!idle) S.bandEnergy[b]+=bp[b]*dt;
     if(!idle&&emaA>0&&S.bandEma) S.bandEma[b]=S._emaSeed?S.bandEma[b]+(bp[b]-S.bandEma[b])*emaA:bp[b];   // EMA en énergie (F/S)
+    if(!idle&&S.bandMax&&bp[b]>S.bandMax[b]) S.bandMax[b]=bp[b];                                          // peak hold (max retenu depuis le début)
   }
   /* corrélation vibro-acoustique : instantané à ~20 Hz quand VIB est actif.
      Séries selon l'affichage : bandes 1/3 oct (tiers/octave) ou 128 groupes log (bande fine). */
@@ -2632,6 +2650,7 @@ function loop(ts){
     if(!idle&&S.binEnergy)S.binEnergy[i]+=p*dt;   // énergie cumulée par bin → spectre Leq moyenné (rapport)
     if(!idle){ const Ld=10*Math.log10(p>1e-12?p:1e-12);
       if(S.binSumDb){ S.binSumDb[i]+=Ld*dt; S.binSumDb2[i]+=Ld*Ld*dt; }             // stats dB cumulées (IC en mode Leq)
+      if(S.binMax&&p>S.binMax[i])S.binMax[i]=p;                                     // peak hold (max retenu depuis le début)
       if(emaA>0&&S.binEma){ S.binEma[i]=S._emaSeed?S.binEma[i]+(p-S.binEma[i])*emaA:p;              // EMA en ÉNERGIE (pondération temporelle F/S d'un sonomètre, IEC 61672)
         S.binEmaDb[i]=S._emaSeed?S.binEmaDb[i]+(Ld-S.binEmaDb[i])*emaA:Ld;
         S.binEmaDb2[i]=S._emaSeed?S.binEmaDb2[i]+(Ld*Ld-S.binEmaDb2[i])*emaA:Ld*Ld; } }
@@ -2929,7 +2948,7 @@ function drawSpectrum(avg,modeOverride){
   if(mode==='toct'||mode==='oct'){
     /* octave : agrège les tiers par groupes centrés sur les fréquences normalisées (…31.5,63,125,250,500,1k…) */
     let names, pw, peak;
-    const pwT=useAvg?(S.avgTau>0&&S.bandEma?S.bandEma:Array.from(S.bandEnergy,e=>e/S.eqT)):S.bandPowD;
+    const pwT=useAvg?(S.avgTau===-1&&S.bandMax?S.bandMax:S.avgTau>0&&S.bandEma?S.bandEma:Array.from(S.bandEnergy,e=>e/S.eqT)):S.bandPowD;
     if(mode==='oct'){
       const OCT=[16,31.5,63,125,250,500,1000,2000,4000,8000,16000];
       names=[]; pw=[]; peak=[];
@@ -3015,7 +3034,8 @@ function drawSpectrum(avg,modeOverride){
        les curseurs (tap + max) et l'émergence lisent tous la MÊME donnée */
     let binPowEff=binPow;
     if(useAvg&&S.binEnergy){
-      if(S.avgTau>0&&S.binEma){ binPowEff=S.binEma; }
+      if(S.avgTau===-1&&S.binMax){ binPowEff=S.binMax; }
+      else if(S.avgTau>0&&S.binEma){ binPowEff=S.binEma; }
       else{ const nE=S.binEnergy.length;
         if(!S._avgBinPow||S._avgBinPow.length!==nE)S._avgBinPow=new Float32Array(nE);
         const inv=1/S.eqT; for(let i=0;i<nE;i++)S._avgBinPow[i]=S.binEnergy[i]*inv;
@@ -3039,7 +3059,7 @@ function drawSpectrum(avg,modeOverride){
     const pts=[], band=[];
     const i0=Math.max(1,Math.floor(fmin/S.binHz)), i1=Math.min(S.fftDb.length-1,Math.ceil(fmax/S.binHz));
     /* intervalle de confiance de la MOYENNE ±2σ/√N : se resserre au fil de la mesure (option experte) */
-    const ciOn = S.specCI && useAvg && !REPL.on && S.eqT>0.5 && S.binSumDb && S.binSumDb2;
+    const ciOn = S.specCI && useAvg && S.avgTau!==-1 && !REPL.on && S.eqT>0.5 && S.binSumDb && S.binSumDb2;   // pas d'IC sur un max retenu (peak hold)
     let stdArr=null, semK=2;
     if(ciOn){
       const fsR=S.ctx?S.ctx.sampleRate:48000;
@@ -3612,9 +3632,11 @@ function beginRun(){
   if(S.bandPeak)S.bandPeak.fill(-99);
   if(S.bandEnergy)S.bandEnergy.fill(0);
   if(S.bandEma)S.bandEma.fill(0);
+  if(S.bandMax)S.bandMax.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
   if(S.binSumDb)S.binSumDb.fill(0); if(S.binSumDb2)S.binSumDb2.fill(0);
   if(S.binEma)S.binEma.fill(0); if(S.binEmaDb)S.binEmaDb.fill(0); if(S.binEmaDb2)S.binEmaDb2.fill(0); S._emaSeed=false;
+  if(S.binMax)S.binMax.fill(0); REPL._pk=null;
   if(S.recAudio&&!REPL.on)arecReset();          // V2 : nouvel enregistrement audio par mesure (jamais en replay)
   /* en REPLAY, un saut de timeline relance les intégrateurs mais PRÉSERVE le
      spectrogramme (flux continu de ce qu'on explore) ; le nettoyage complet
@@ -5009,7 +5031,7 @@ function ui(){
   $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
   $('mPeakInterp').querySelector('b').textContent=S.peakInterp?'Oui':'Non';
   $('mSpecCI').querySelector('b').textContent=S.specCI?'Oui':'Non';
-  $('mAvgTau').querySelector('b').textContent=(S.avgTau===0?'Leq (linéaire)':S.avgTau===0.125?'Fast 125 ms':S.avgTau===1?'Slow 1 s':('τ '+S.avgTau+' s'));
+  $('mAvgTau').querySelector('b').textContent=(S.avgTau===0?'Leq (linéaire)':S.avgTau===-1?'Peak hold (max)':S.avgTau===0.125?'Fast 125 ms':S.avgTau===1?'Slow 1 s':('τ '+S.avgTau+' s'));
   $('emgBtn').classList.toggle('on',S.emgOn);
   $('emgBtn').style.display=S.mode==='fft'?'block':'none';
   $('vibBtn').style.display='none';   // module VIB retiré de l'interface (code conservé, réactivable)
@@ -5163,7 +5185,7 @@ $('mSgSpeed').onclick=()=>{
 };
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
 $('mSpecCI').onclick=()=>{S.specCI=!S.specCI;ui();drawActive();};
-$('mAvgTau').onclick=()=>{ const seq=[0,0.125,1,5]; let k=seq.indexOf(S.avgTau); if(k<0)k=0; S.avgTau=seq[(k+1)%seq.length]; S._emaSeed=false; savePrefs(); ui(); drawActive(); };
+$('mAvgTau').onclick=()=>{ const seq=[0,0.125,1,5,-1]; let k=seq.indexOf(S.avgTau); if(k<0)k=0; S.avgTau=seq[(k+1)%seq.length]; S._emaSeed=false; savePrefs(); ui(); drawActive(); };
 $('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();if(S.emgOn)flashBtn($('emgBtn'));else unflashBtn($('emgBtn'));drawActive();};
 $('vibBtn').onclick=()=>{vibToggle();};
 $('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); if(S.specAvg)flashBtn($('avgBtn')); else unflashBtn($('avgBtn')); if(S.screen==='spec')drawSpectrum(); };
