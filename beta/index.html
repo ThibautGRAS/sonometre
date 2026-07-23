@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.2.29-beta</div>
+  <div class="splashver" id="splashVer">2.2.30-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -989,7 +989,7 @@ if('serviceWorker' in navigator){
       <p>Deux méthodes commutables dans le menu expert. <b>Synthèse FFT</b> : rapide, somme d'énergie des raies. <b>Filtres IEC 61260</b> : banc de filtres Butterworth par bande, plus fidèle au gabarit normalisé (surtout en basses fréquences), coût de calcul un peu plus élevé.</p>
 
       <h3>Export</h3>
-      <p>Touche <b>Partager</b> : ouvre le menu Export. <b>Rapport (PDF)</b> génère un document A4 complet (conditions d'acquisition, indices, spectre par tiers d'octave, graphe et commentaire) via l'impression iOS — choisir « Enregistrer en PDF » dans la feuille d'impression. Les champs <i>site, opérateur, référence, commentaire</i> sont facultatifs et mémorisés. Sinon, export en <b>CSV</b> (métadonnées + micro + indices + spectre + historique) ou en <b>image PNG</b> titrée du graphe affiché. <b>Charger un fichier audio (WAV…)</b> : décode un fichier externe (WAV, M4A, MP3, AIFF ; stéréo mixée en mono) et l'analyse en <b>relecture</b> complète (spectres, spectrogramme, indices, curseurs). La <b>calibration micro ne s'applique pas</b> à un fichier étranger : les niveaux sont exprimés en <b>dBFS</b> (0 dB = pleine échelle numérique, valeurs négatives) et la correction fréquentielle du micro devrait être réglée sur Off ; la calibration de l'appareil est restaurée en quittant la relecture. Les écarts (émergences, Δ entre bandes) restent, eux, exacts.</p>
+      <p>Touche <b>Partager</b> : ouvre le menu Export. <b>Rapport (PDF)</b> génère un document A4 complet (conditions d'acquisition, indices, spectre par tiers d'octave, graphe et commentaire) via l'impression iOS — choisir « Enregistrer en PDF » dans la feuille d'impression. Les champs <i>site, opérateur, référence, commentaire</i> sont facultatifs et mémorisés. Sinon, export en <b>CSV</b> (métadonnées + micro + indices + spectre + historique) ou en <b>image PNG</b> titrée du graphe affiché. <b>Charger un fichier audio (WAV…)</b> : décode un fichier externe (WAV, M4A, MP3, AIFF ; stéréo mixée en mono) et l'analyse en <b>relecture</b> complète (spectres, spectrogramme, indices, curseurs). La <b>calibration micro ne s'applique pas</b> à un fichier étranger : les niveaux sont <b>relatifs</b>, avec la convention <b>0 dBFS = 120 dB</b> (retrancher 120 pour obtenir les dBFS ; si la référence pleine échelle de la chaîne d'origine est connue, la régler dans Calibration pendant la relecture pour retrouver les niveaux absolus). La correction fréquentielle du micro devrait être réglée sur Off ; la calibration de l'appareil est restaurée en quittant la relecture. Les écarts (émergences, Δ entre bandes) restent, eux, exacts.</p>
 
       <h3>Émergence tonale</h3>
       <p>Dans l'écran <b>Valeurs</b> (page 2), la cellule « Émergence tonale » indique la raie tonale dominante : <b>+X dB @ Y Hz</b>, ou « aucune » s'il n'y a pas de vraie composante tonale. Calcul par la méthode <b>ISO 1996-2</b> (bande critique de Bark), avec confirmation sur plusieurs mesures pour ne retenir que les raies stables dans le temps (une raie tonale persiste, un pic de bruit saute). L'émergence est <b>toujours évaluée</b> dans le tableau de valeurs. Le <b>Seuil d'alerte</b> (menu expert, 6 à 15 dB) fixe le niveau à partir duquel une raie est retenue pour le tableau et pour la détection auto (icône <b>ÉMG</b>, encadré orange sur la bande fine). Au <b>curseur unique</b> sur la FFT, l'émergence de la raie visée est affichée en permanence. Indicateur de diagnostic, non certifié.</p>
@@ -1098,7 +1098,7 @@ if('serviceWorker' in navigator){
       <div class="msub">ENREGISTREMENTS LOCAUX</div>
       <div id="recList"></div>
       <div class="msub">FICHIER EXTERNE</div>
-      <button class="exp-item" id="epLoadWav"><b>Charger un fichier audio (WAV…)</b><span>analyse en relecture · niveaux en dBFS — calibration micro non applicable</span></button>
+      <button class="exp-item" id="epLoadWav"><b>Charger un fichier audio (WAV…)</b><span>analyse en relecture · niveaux relatifs (0 dBFS = 120 dB) — non calibrés</span></button>
       <div class="msub">RAPPORT COMPLET</div>
       <button class="exp-item" id="epReport"><b>Générer le rapport (PDF)</b><span>document A4 · impression iOS → « Enregistrer en PDF »</span></button>
       <div class="msub">DONNÉES &amp; IMAGE</div>
@@ -2343,9 +2343,12 @@ function replUnload(){
   const b=$('modeBadge'); if(b){b.textContent='PRÊT';b.className='badge';}
 }
 /* ===== fichier audio externe (WAV, M4A…) : décodage → relecture analysée =====
-   La calibration micro ne s'applique pas à un fichier étranger : réf. pleine échelle
-   forcée à 0 pendant la relecture (meta.offset=0) → tous les niveaux sont en dBFS
-   (0 dB = pleine échelle). L'offset de l'appareil est restauré à la sortie du replay. */
+   La calibration micro ne s'applique pas à un fichier étranger. Convention d'affichage :
+   réf. pleine échelle 0 dBFS = 120 dB (constante FILE_FS_DB) → niveaux RELATIFS
+   (dBFS + 120 ; retrancher 120 pour revenir en dBFS). Un offset à 0 (vrais dBFS
+   négatifs) placerait toute la courbe sous le plancher de l'axe dB (autoRange ≥ −10).
+   L'offset de l'appareil est restauré à la sortie du replay (REPL.savedOff). */
+const FILE_FS_DB=120;
 async function replayLoadFile(file){
   if(S.running&&!REPL.on){ toast('Arrête la mesure en cours avant de charger un fichier'); return; }
   let dec;
@@ -2362,9 +2365,9 @@ async function replayLoadFile(file){
     for(let c=0;c<nc;c++){ const s=dec.getChannelData(c); for(let i=0;i<dec.length;i++)o[i]+=s[i]/nc; }
   }
   REPL.buf=buf; REPL.frames=null;
-  REPL.meta={ id:'file:'+file.name+':'+(file.size||buf.length), name:file.name.replace(/\.[^.]+$/,''), fs:buf.sampleRate, len:buf.length, offset:0, isFile:true };
+  REPL.meta={ id:'file:'+file.name+':'+(file.size||buf.length), name:file.name.replace(/\.[^.]+$/,''), fs:buf.sampleRate, len:buf.length, offset:FILE_FS_DB, isFile:true };
   await replayStart(REPL.meta.id,0,true);
-  toast('« '+REPL.meta.name+' » chargé — niveaux en dBFS (0 dB = pleine échelle), calibration micro non applicable');
+  toast('« '+REPL.meta.name+' » chargé — niveaux relatifs (0 dBFS = '+FILE_FS_DB+' dB), calibration micro non applicable');
 }
 function psyTapWire(src){ try{ if(S.ctx&&!S.psyAn)S.psyAn=S.ctx.createAnalyser(); if(S.psyAn){ S.psyAn.fftSize=16384; S.psyAn.smoothingTimeConstant=0; if(!S.psyTap||S.psyTap.length!==16384)S.psyTap=new Float32Array(16384); if(src)src.connect(S.psyAn); } }catch(_){} }
 function replayTeardown(){
