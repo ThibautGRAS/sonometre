@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.3.3-beta</div>
+  <div class="splashver" id="splashVer">2.3.4-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -644,6 +644,7 @@ if('serviceWorker' in navigator){
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="panePsy"><canvas id="psyCv"></canvas><button class="sg3dbtn" id="psyAvgBtn">MOY</button><button class="sg3dbtn" id="psyDescBtn" style="right:54px">SON</button></div>
+      <div class="gpane" id="paneMach"><canvas id="machCv"></canvas><button class="sg3dbtn" id="machType" style="left:10px;right:auto">Auto</button><button class="sg3dbtn" id="machHalf" style="right:52px">÷2</button><button class="sg3dbtn" id="machDbl">×2</button></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
           <div class="cell hero"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
@@ -907,6 +908,7 @@ if('serviceWorker' in navigator){
       <button class="ppopt" data-scr="hist"><b>Évolution</b><span>Niveau L et Leq au cours du temps.</span></button>
       <button class="ppopt" data-scr="val"><b>Valeurs</b><span>Indices numériques (L, Leq, LCpeak, émergence…).</span></button>
       <button class="ppopt" data-scr="psy"><b>Psycho (toile)</b><span>Sonie, acuité, rugosité, fluctuation, tonalité + gêne PA.</span></button>
+      <button class="ppopt" data-scr="mach"><b>Machine / Régime</b><span>Estime le régime (tr/min) et les ordres d'une machine tournante (moteur, ventilateur…).</span></button>
     </div>
   </div></div>
   <div id="presetPop" class="calpop"><div class="calpop-in">
@@ -1131,7 +1133,7 @@ const S = {
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
   fscale:'log', fftN:4096, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
-  win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, specCI:false, avgTau:0, expBand:'toct', recAudio:false,
+  win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, specCI:false, avgTau:0, machType:'auto', expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
   toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, psyAvg:false, psyDesc:false, psyBnd:{N:40,S:4,R:2,F:2,T:1.5}, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
@@ -2784,7 +2786,7 @@ function blankInit(){
   const num=$('mainVal'); if(num)num.textContent=dash;
   ['vL10','vL50','vL90','vLCpk','vLCpeak','vLAE','vDLF','sLAeq','sLCeq','vLAeq','vLCeq','vLZeq','vMax','vMin','vLAF','vLeq']
     .forEach(id=>{const e=$(id); if(e)e.textContent=dash;});
-  const id=S.screen==='spec'?'specCv':S.screen==='sgram'?'sgramCv':S.screen==='hist'?'histCv':S.screen==='psy'?'psyCv':null;
+  const id=S.screen==='spec'?'specCv':S.screen==='sgram'?'sgramCv':S.screen==='hist'?'histCv':S.screen==='psy'?'psyCv':S.screen==='mach'?'machCv':null;
   if(id){ const cv=$(id); if(cv){ const r=cv.getBoundingClientRect(); if(r.width>4){
     const dpr=Math.min(2,window.devicePixelRatio||1); cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
     const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,r.width,r.height);
@@ -2883,7 +2885,7 @@ function sizeCanvas(id){
   CV[id]={g,w:r.width,h:r.height,dpr};
   if(id==='sgramCv')SG.init=false;                // le spectrogramme doit se réinitialiser
 }
-function sizeAll(){sizeCanvas('specCv');sizeCanvas('histCv');sizeCanvas('sgramCv');drawActive(true);}
+function sizeAll(){sizeCanvas('specCv');sizeCanvas('histCv');sizeCanvas('sgramCv');sizeCanvas('machCv');drawActive(true);}
 window.addEventListener('resize',()=>setTimeout(sizeAll,60));
 window.addEventListener('orientationchange',()=>setTimeout(sizeAll,250));
 
@@ -4558,6 +4560,106 @@ function drawPsycho(){
   }
 }
 
+/* ===================== MODE MACHINE / RÉGIME (analyse d'ordres) — démo =====================
+   Estime le régime de rotation à partir du peigne harmonique du bruit (Harmonic Sum Spectrum),
+   sans tachymètre. Le type de machine ajuste l'interprétation (explosions, BPF) et une devinette. */
+const MACH_TYPES = {
+  auto:      {label:'Auto',        kind:'auto'},
+  voiture:   {label:'Voiture',     kind:'engine', param:4, plabel:'cyl.'},
+  bus:       {label:'Bus / Camion',kind:'engine', param:6, plabel:'cyl.'},
+  train:     {label:'Train',       kind:'rot'},
+  avion:     {label:'Avion',       kind:'fan',    param:0, plabel:'pales'},
+  ventilo:   {label:'Ventilateur', kind:'fan',    param:5, plabel:'pales'},
+  elec:      {label:'Moteur élec.',kind:'rot'},
+  generique: {label:'Générique',   kind:'rot'}
+};
+const MACH = {f0raw:0, f0:0, rpm:0, rpmShow:0, conf:0, oct:0, dom:1, guess:'', firing:0, _t:0};
+
+function machGuess(f0, rpm, ratio){
+  if(ratio<3)   return 'signal peu harmonique — régime peu marqué';
+  if(f0>=7 && f0<=60 && rpm>=380 && rpm<=4500) return 'moteur à combustion (voiture / bus / diesel)';
+  if(f0>=15 && f0<=140) return 'ventilateur ou moteur électrique';
+  return 'machine tournante';
+}
+
+function machAnalyze(){
+  const spec=S.binPowD, df=S.binHz;
+  if(!spec || !df || !(S.running||REPL.on)){ MACH.conf=0; return; }
+  const nyq=(S.ctx?S.ctx.sampleRate:48000)/2;
+  const pAt=f=>{ const x=f/df, i=Math.floor(x); if(i<1||i+1>=spec.length)return 0; const a=x-i; return spec[i]*(1-a)+spec[i+1]*a; };
+  const now=performance.now();
+  if(now-(MACH._t||0) >= 180 || !MACH.f0raw){          // HSS throttlé ~5/s
+    MACH._t=now;
+    const f0min=6, f0max=200, step=0.25, K=14;
+    let best={f0:0,score:0}; const scores=[];
+    for(let f0=f0min; f0<=f0max; f0+=step){
+      let s=0, ok=0;
+      for(let k=1;k<=K;k++){ const f=k*f0; if(f>=nyq)break; s+=pAt(f)/Math.sqrt(k); ok++; }
+      if(ok>=3){ scores.push(s); if(s>best.score)best={f0,score:s}; }
+    }
+    scores.sort((a,b)=>a-b);
+    const med=scores[Math.floor(scores.length/2)]||1e-12;
+    const ratio=best.score/(med+1e-12);
+    MACH.conf=Math.max(0, Math.min(1, Math.log10(1+ratio)/2.2));
+    MACH.f0raw=best.f0; MACH._ratio=ratio;
+  }
+  const f0=(MACH.f0raw||0)*Math.pow(2, MACH.oct||0);
+  const T=MACH_TYPES[S.machType]||MACH_TYPES.auto;
+  MACH.f0=f0; MACH.rpm=f0*60;                              // f0 = ordre 1 (rotation)
+  MACH.firing=(T.kind==='engine'&&T.param)? f0*T.param/2 : (T.kind==='fan'&&T.param)? f0*T.param : 0;
+  let dm=1,dv=0; for(let k=1;k<=14;k++){ const v=pAt(k*f0); if(v>dv){dv=v;dm=k;} } MACH.dom=dm;
+  MACH.guess=machGuess(f0, MACH.rpm, MACH._ratio||0);
+  if(MACH.conf>=0.22 && f0>0) MACH.rpmShow = MACH.rpmShow ? MACH.rpmShow+(MACH.rpm-MACH.rpmShow)*0.3 : MACH.rpm;
+}
+
+function drawMach(){
+  const cv=$('machCv'); if(!cv)return;
+  const r=cv.getBoundingClientRect(); if(r.width<4)return;
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const W=Math.round(r.width*dpr), Hh=Math.round(r.height*dpr);
+  if(cv.width!==W||cv.height!==Hh){ cv.width=W; cv.height=Hh; }
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  const w=r.width, h=r.height; g.clearRect(0,0,w,h);
+  const acc='#4FC3FF', T=MACH_TYPES[S.machType]||MACH_TYPES.auto;
+  if(!(S.running||REPL.on)){ g.fillStyle='rgba(150,180,210,.6)'; g.textAlign='center'; g.textBaseline='middle'; g.font='12px sans-serif'; g.fillText('Lance une mesure pour analyser le régime', w/2, h/2); return; }
+  const ok = MACH.conf>=0.22 && MACH.f0>0;
+  g.textAlign='center'; g.textBaseline='alphabetic';
+  if(ok){
+    const rpm=Math.round((MACH.rpmShow||MACH.rpm)/5)*5;
+    g.fillStyle='#fff'; g.font='bold 46px sans-serif'; g.fillText(rpm.toLocaleString('fr-FR'), w/2, 46);
+    g.fillStyle=acc; g.font='13px sans-serif'; g.fillText('tr/min', w/2, 68);
+    let sub='f₀ '+MACH.f0.toFixed(1)+' Hz  ·  ordre dominant '+MACH.dom;
+    if(MACH.firing>0) sub += (T.kind==='engine'? '  ·  explosions '+MACH.firing.toFixed(1)+' Hz' : '  ·  BPF '+MACH.firing.toFixed(0)+' Hz');
+    g.fillStyle='rgba(210,230,250,.92)'; g.font='11px sans-serif'; g.fillText(sub, w/2, 88);
+    const cc = MACH.conf>0.5?'#2FBF83':MACH.conf>0.32?'#FFB454':'#EF3346';
+    g.fillStyle=cc; g.font='10px sans-serif'; g.fillText('confiance '+Math.round(MACH.conf*100)+' %', w/2, 104);
+  } else {
+    g.fillStyle='rgba(255,180,84,.95)'; g.font='bold 17px sans-serif'; g.fillText('Régime indéterminé', w/2, 46);
+    g.fillStyle='rgba(180,200,220,.75)'; g.font='11px sans-serif'; g.fillText('approche une source tournante (moteur, ventilateur…)', w/2, 70);
+  }
+  if(S.machType==='auto' && ok && MACH.guess){ g.fillStyle='rgba(150,205,150,.9)'; g.font='10px sans-serif'; g.fillText('≈ '+MACH.guess, w/2, 120); }
+  // --- mini-spectre + marqueurs d'ordres ---
+  const spec=S.binPowD, df=S.binHz;
+  const gx0=42, gx1=w-10, gy0=134, gy1=h-16;
+  const fmin=20, fmax=Math.min(2000, (S.ctx?S.ctx.sampleRate:48000)/2);
+  const xlog=f=>gx0+(Math.log(f)-Math.log(fmin))/(Math.log(fmax)-Math.log(fmin))*(gx1-gx0);
+  if(spec&&df&&gy1>gy0){
+    let lo=1e9,hi=-1e9; const dbf=[];
+    for(let f=fmin; f<=fmax; f*=1.025){ const i=Math.round(f/df); const p=(i<spec.length)?spec[i]:0; const L=p>0?10*Math.log10(p):-120; dbf.push([f,L]); if(L>hi)hi=L; if(L>-118&&L<lo)lo=L; }
+    if(!isFinite(lo))lo=hi-40; if(hi-lo<20)lo=hi-20;
+    const yv=L=>gy1-(Math.max(lo,Math.min(hi,L))-lo)/(hi-lo)*(gy1-gy0);
+    if(ok){ for(let k=1;k<=14;k++){ const f=k*MACH.f0; if(f<fmin||f>fmax)continue; const x=xlog(f);
+      g.strokeStyle=(k===MACH.dom)?'rgba(239,51,70,.85)':'rgba(79,195,255,.30)'; g.lineWidth=(k===MACH.dom)?1.6:1;
+      g.beginPath(); g.moveTo(x,gy0); g.lineTo(x,gy1); g.stroke();
+      if(k<=6||k===MACH.dom){ g.fillStyle=(k===MACH.dom)?'#EF3346':'rgba(120,170,210,.75)'; g.font='8px sans-serif'; g.textAlign='center'; g.fillText(k+'×',x,gy0-3); } } }
+    g.strokeStyle='#2FBF83'; g.lineWidth=1.2; g.beginPath();
+    dbf.forEach((d,i)=>{ const x=xlog(d[0]), y=yv(d[1]); i?g.lineTo(x,y):g.moveTo(x,y); }); g.stroke();
+    g.fillStyle='rgba(150,180,210,.6)'; g.font='8px sans-serif'; g.textAlign='center';
+    [50,100,200,500,1000,2000].forEach(f=>{ if(f>=fmin&&f<=fmax) g.fillText(f>=1000?(f/1000)+'k':''+f, xlog(f), gy1+10); });
+    g.textAlign='left'; g.fillText('Hz', gx1-2, gy1+10);
+  }
+}
+
 function drawActive(force){
   updScaleLbl();
   if(((S.running&&!S.paused)||REPL.on) && !(S.warmT>0)) psyUpdate();   // alimente la toile (jamais pendant l'init micro)
@@ -4565,6 +4667,7 @@ function drawActive(force){
   else if(S.screen==='sgram')drawSgram();
   else if(S.screen==='hist')drawHistory();
   else if(S.screen==='psy')drawPsycho();
+  else if(S.screen==='mach'){ machAnalyze(); drawMach(); }
 }
 
 /* ===== Gestes : pincer = zoom fréquence, glisser = déplacer, tap = curseur, double-tap = reset ===== */
@@ -5053,9 +5156,10 @@ function ui(){
     : S.screen==='sgram' ? 'SPECTROGRAMME · '+S.weight
     : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq'
     : S.screen==='psy' ? 'PSYCHOACOUSTIQUE · TOILE (fenêtre '+(S.psyWin||4)+' s)'
+    : S.screen==='mach' ? 'ANALYSE MACHINE · '+((MACH_TYPES[S.machType]||{}).label||'Auto')+' · RÉGIME & ORDRES'
     : S.screen==='menu' ? 'RÉGLAGES AVANCÉS · TRAITEMENT DU SIGNAL'
     : S.screen==='cal' ? 'CALIBRATION · RÉFÉRENCE 0 dBFS' : 'VALEURS DE LA MESURE';
-  $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='psy'?'Psycho':S.screen==='menu'?'Avancés':'Valeurs';
+  $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='psy'?'Psycho':S.screen==='mach'?'Machine':S.screen==='menu'?'Avancés':'Valeurs';
   $('kMode').classList.toggle('locked',S.screen!=='spec');   // ANALYSE n'a de sens que sur le spectre
   /* lignes du mode expert */
   $('mSg3dSmooth').querySelector('b').textContent=['Standard','Lisse','Très lisse'][Math.max(0,Math.min(2,S.sg3dSmooth|0))];
@@ -5078,6 +5182,7 @@ function ui(){
   $('avgBtn').classList.toggle('on',S.specAvg);
   $('avgBtn').classList.toggle('dis',!(S.eqT>0));   // pas de moyenne tant qu'aucune mesure
   $('psyAvgBtn').classList.toggle('on',S.psyAvg); $('psyAvgBtn').classList.toggle('dis',!(PSY._cnt>0));
+  if($('machType'))$('machType').textContent=(MACH_TYPES[S.machType]||{}).label||'Auto';
   $('psyDescBtn').classList.toggle('on',S.psyDesc); $('psyDescBtn').classList.toggle('dis',!(PSY._cnt>0));
   $('lsnBtn').classList.toggle('on',LSN.on);
   $('lsnBtn').style.display=S.sg3d?'none':'flex';
@@ -5111,8 +5216,8 @@ function ui(){
   document.body.classList.toggle('rec-on', S.running&&!S.paused&&!REPL.on&&!(S.warmT>0));
   document.body.classList.toggle('rec-paused', S.running&&S.paused&&!REPL.on);
   if(S.running&&!REPL.on){$('replBar').classList.remove('on'); REPL.buf=null; REPL.meta=null; REPL.frames=null;}   // mesure micro : barre masquée, mémoire libérée
-  ['paneSpec','paneSgram','paneHist','paneVal','panePsy','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
-  $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='psy'?'panePsy':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
+  ['paneSpec','paneSgram','paneHist','paneVal','panePsy','paneMach','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
+  $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='psy'?'panePsy':S.screen==='mach'?'paneMach':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
   $('bottomStrip').style.visibility = S.screen==='val' ? 'hidden' : 'visible';   // redondant sur Valeurs
   savePrefs();
 }
@@ -5229,6 +5334,9 @@ $('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();if(S.emgOn)flashBtn($('emgBtn'));
 $('vibBtn').onclick=()=>{vibToggle();};
 $('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); if(S.specAvg)flashBtn($('avgBtn')); else unflashBtn($('avgBtn')); if(S.screen==='spec')drawSpectrum(); };
 $('psyAvgBtn').onclick=()=>{ S.psyAvg=!S.psyAvg; savePrefs(); ui(); if(S.psyAvg)flashBtn($('psyAvgBtn')); else unflashBtn($('psyAvgBtn')); if(S.screen==='psy')drawActive(); };
+$('machType').onclick=()=>{ const ks=Object.keys(MACH_TYPES); S.machType=ks[(ks.indexOf(S.machType)+1)%ks.length]; savePrefs(); ui(); if(S.screen==='mach')drawActive(); };
+$('machHalf').onclick=()=>{ MACH.oct=(MACH.oct||0)-1; MACH.rpmShow=0; if(S.screen==='mach')drawActive(); };
+$('machDbl').onclick =()=>{ MACH.oct=(MACH.oct||0)+1; MACH.rpmShow=0; if(S.screen==='mach')drawActive(); };
 $('psyDescBtn').onclick=()=>{ S.psyDesc=!S.psyDesc; savePrefs(); ui(); if(S.psyDesc)flashBtn($('psyDescBtn')); else unflashBtn($('psyDescBtn')); if(S.screen==='psy')drawActive(); };
 $('lsnBtn').onclick=()=>{lsnToggle(); if($('lsnBtn').classList.contains('on'))flashBtn($('lsnBtn'));else unflashBtn($('lsnBtn'));};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
@@ -5236,7 +5344,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
-                   'peakInterp','specCI','avgTau','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','lsnGain','lsnAuto','backlight','psyWin','psyAvg','psyBnd','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
+                   'peakInterp','specCI','avgTau','machType','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','lsnGain','lsnAuto','backlight','psyWin','psyAvg','psyBnd','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
                    'trigDelay','trigLevel','offset','corr','corrName','emgThr','specFrames','specSmooth','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
