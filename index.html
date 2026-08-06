@@ -4582,43 +4582,54 @@ function machGuess(f0, rpm, ratio){
   return 'machine tournante';
 }
 
+function machBand(key){ return ({voiture:[600,6500],bus:[450,2600],train:[150,3000],avion:[600,5000],ventilo:[300,3600],elec:[600,3600],generique:[300,6500]})[key]||[300,6500]; }
+function machEval(W,band,m,nyq){
+  const flo=band[0]/60, fhi=band[1]/60, step=Math.max(0.1,(fhi-flo)/900);
+  let bfr=0,bsc=0; const scs=[];
+  for(let fr=flo;fr<=fhi;fr+=step){ let s=0,ok=0; const oMax=Math.min(16,Math.floor(nyq/fr));
+    for(let o=1;o<=oMax;o++){ let Wt=1/Math.sqrt(o); if(m&&o%m===0)Wt*=2.2; s+=Wt*W.wAt(o*fr); ok++; }
+    if(ok>=4){ scs.push(s); if(s>bsc){bsc=s;bfr=fr;} } }
+  scs.sort((x,y)=>x-y); const med=scs[scs.length>>1]||1e-9, ratio=bsc/(med+1e-12);
+  let hits=0; for(let o=1;o<=8;o++) if(W.isPeak(o*bfr)) hits++;
+  let fire=0,fn=0; if(m){for(const o of [m,2*m,3*m]){fn++; if(W.isPeak(o*bfr))fire++;}}
+  const fireSup=m?fire/fn:0, o1=W.isPeak(bfr)?1.3:0.65;
+  return {fr:bfr, ratio, hits, quality: ratio*(1+0.6*fireSup)*(hits>=3?1:hits/3)*o1};
+}
 function machAnalyze(){
   const spec=S.binPowD, df=S.binHz;
   if(!spec || !df || !(S.running||REPL.on)){ MACH.conf=0; return; }
   const nyq=(S.ctx?S.ctx.sampleRate:48000)/2;
-  const T=MACH_TYPES[S.machType]||MACH_TYPES.auto;
-  const pAt=f=>{ const x=f/df, i=Math.floor(x); if(i<1||i+1>=spec.length)return 0; const a=x-i; return spec[i]*(1-a)+spec[i+1]*a; };
   const now=performance.now();
   if(now-(MACH._t||0) >= 200 || !MACH.rotRaw){
     MACH._t=now;
-    /* plancher médian par blocs -> blanchiment */
+    const pAt=f=>{ const x=f/df, i=Math.floor(x); if(i<1||i+1>=spec.length)return 0; const a=x-i; return spec[i]*(1-a)+spec[i+1]*a; };
     const B=48, nb=Math.ceil(spec.length/B); if(!MACH._fl||MACH._fl.length!==nb)MACH._fl=new Float64Array(nb);
     const buf=[]; for(let bb=0;bb<nb;bb++){ buf.length=0; for(let i=bb*B;i<Math.min(spec.length,(bb+1)*B);i++)buf.push(spec[i]); buf.sort((x,y)=>x-y); MACH._fl[bb]=buf[buf.length>>1]||1e-12; }
     const fl=MACH._fl, floorAt=f=>fl[Math.max(0,Math.min(nb-1,Math.floor((f/df)/B)))]||1e-12;
-    const wAt=f=>pAt(f)/(floorAt(f)+1e-12), isPeak=f=>wAt(f)>4;
-    /* peigne à PÉNALITÉ D'HARMONIQUE MANQUANT : robuste au bruit dense, supprime le biais bas-f0 */
-    const f0min=8,f0max=220,step=0.25,Ksrch=20,fmaxS=Math.min(nyq,700),peakThr=4,miss=0.6;
-    let bf=0,bs=-1e9; const scs=[];
-    for(let f0=f0min;f0<=f0max;f0+=step){ let s=0,present=0;
-      for(let k=1;k<=Ksrch;k++){ const fk=k*f0; if(fk>fmaxS)break; const wk=wAt(fk); if(wk>peakThr){ s+=Math.min(wk,50)/Math.sqrt(k); present++; } else s-=miss; }
-      if(present>=3){ scs.push(s); if(s>bs){bs=s;bf=f0;} } }
-    scs.sort((x,y)=>x-y); const med=scs[scs.length>>1]||0; MACH._ratio=bs;
-    MACH.conf = bf? Math.max(0,Math.min(1,(bs>0?Math.min(1,bs/12):0)*0.6 + Math.min(1,(bs-med)/8)*0.4)) : 0;
-    /* rotation : moteur -> explosion/(N/2) avec garde de plausibilité ; sinon sous-harmonique soutenue */
-    let ff=bf;
-    if(T.kind==='engine'&&T.param){ const cand=bf/(T.param/2); ff=(cand>=8)?cand:bf; }
-    else { for(let div=2;div<=8;div++){ const c=bf/div; if(c<f0min)break; if(!isPeak(c))continue;
-        let hit=0,tot=0; for(let k=1;k<=div*2;k++){ const fk=k*c; if(fk>nyq)break; tot++; if(isPeak(fk))hit++; }
-        if(tot&&hit/tot>=0.5) ff=Math.min(ff,c); } }
-    MACH.f0raw=bf; MACH.rotRaw=ff;
+    const W={ pAt, wAt:f=>pAt(f)/(floorAt(f)+1e-12), isPeak:f=>pAt(f)/(floorAt(f)+1e-12)>4 };
+    MACH._W=W;
+    let key=S.machType, chosen;
+    if(key==='auto'){ let bq=-1; for(const k of ['voiture','bus','elec']){ const T=MACH_TYPES[k]; const m=(T.param?T.param/2:0);
+        const r=machEval(W,machBand(k),m,nyq); if(r.quality>bq){bq=r.quality; chosen=r; key=k;} } }
+    else { const T=MACH_TYPES[key]||{}; const m=(T.kind==='engine'&&T.param)?T.param/2:0; chosen=machEval(W,machBand(key),m,nyq); }
+    let rotf=chosen.fr;
+    const Tk=MACH_TYPES[key]||{};
+    if(Tk.kind==='fan'){ let fc=0; const i0=Math.max(2,Math.floor((machBand(key)[0]/60)/df)), i1=Math.min(spec.length-2,Math.floor(2000/df));
+      for(let i=i0;i<=i1;i++){ const wi=spec[i]/(floorAt(i*df)+1e-12); if(wi>6 && spec[i]>spec[i-1] && spec[i]>=spec[i+1]){ fc=i*df; break; } }   // rotation = plus BASSE raie tonale
+      if(fc) rotf=fc; }
+    MACH._key=key; MACH.rotRaw=rotf; MACH._ratio=chosen.ratio; MACH._hits=chosen.hits;
+    MACH.conf=Math.max(0,Math.min(1, Math.log10(1+chosen.ratio)/2.4 * (chosen.hits>=3?1:chosen.hits/3)));
   }
   const rot=(MACH.rotRaw||0)*Math.pow(2, MACH.oct||0);
-  MACH.f0=MACH.f0raw||0; MACH.rot=rot; MACH.rpm=rot*60;
-  let dm=1,dv=0; for(let k=1;k<=20;k++){ const v=pAt(k*rot); if(v>dv){dv=v;dm=k;} } MACH.dom=dm;
-  MACH.firing = (T.kind==='engine'&&T.param)? rot*(T.param/2) : (T.kind==='fan')? rot*dm : 0;
-  const E1=Math.max(1e-12,pAt(rot)); MACH.r2=pAt(2*rot)/E1; MACH.rHalf=pAt(0.5*rot)/E1;
-  MACH.guess=machGuess(rot, MACH.rpm, MACH._ratio||0);
-  if(MACH.conf>=0.25 && rot>0) MACH.rpmShow = MACH.rpmShow ? MACH.rpmShow+(MACH.rpm-MACH.rpmShow)*0.3 : MACH.rpm;
+  const key=MACH._key||S.machType, T=MACH_TYPES[key]||{};
+  MACH.key=key; MACH.rot=rot; MACH.rpm=rot*60;
+  const W=MACH._W, pA=W?W.pAt:(()=>0);
+  let dm=1,dv=0; const oMax=Math.min(20,Math.floor(nyq/Math.max(1,rot))); for(let k=1;k<=oMax;k++){ const v=pA(k*rot); if(v>dv){dv=v;dm=k;} } MACH.dom=dm;
+  MACH.firing=(T.kind==='engine'&&T.param)? rot*T.param/2 : (T.kind==='fan')? dm*rot : 0;
+  const E1=Math.max(1e-12,pA(rot)); MACH.r2=pA(2*rot)/E1; MACH.rHalf=pA(0.5*rot)/E1;
+  MACH.guess=(MACH_TYPES[key]||{}).label||'—';
+  const need=(T.kind==='fan')?2:3; MACH._ok = (MACH.conf>=0.28 && (MACH._hits||0)>=need && rot>0);
+  if(MACH._ok) MACH.rpmShow = MACH.rpmShow ? MACH.rpmShow+(MACH.rpm-MACH.rpmShow)*0.3 : MACH.rpm;
 }
 
 function drawMach(){
@@ -4631,7 +4642,7 @@ function drawMach(){
   const w=r.width, h=r.height; g.clearRect(0,0,w,h);
   const acc='#4FC3FF', T=MACH_TYPES[S.machType]||MACH_TYPES.auto;
   if(!(S.running||REPL.on)){ g.fillStyle='rgba(150,180,210,.6)'; g.textAlign='center'; g.textBaseline='middle'; g.font='12px sans-serif'; g.fillText('Lance une mesure pour analyser le régime', w/2, h/2); return; }
-  const ok = MACH.conf>=0.22 && MACH.rot>0;
+  const ok = !!MACH._ok;
   g.textAlign='center'; g.textBaseline='alphabetic';
   if(ok){
     const rpm=Math.round((MACH.rpmShow||MACH.rpm)/5)*5;
@@ -4648,7 +4659,7 @@ function drawMach(){
     g.fillStyle='rgba(255,180,84,.95)'; g.font='bold 17px sans-serif'; g.fillText('Régime indéterminé', w/2, 46);
     g.fillStyle='rgba(180,200,220,.75)'; g.font='11px sans-serif'; g.fillText('approche une source tournante (moteur, ventilateur…)', w/2, 70);
   }
-  if(S.machType==='auto' && ok && MACH.guess){ g.fillStyle='rgba(150,205,150,.9)'; g.font='10px sans-serif'; g.fillText('≈ '+MACH.guess, w/2, ((MACH.rHalf||0)>0.6?132:120)); }
+  if(S.machType==='auto' && ok && MACH.guess){ g.fillStyle='rgba(150,205,150,.9)'; g.font='10px sans-serif'; g.fillText('type détecté ≈ '+MACH.guess, w/2, ((MACH.rHalf||0)>0.6?132:120)); }
   const spec=S.binPowD, df=S.binHz;
   const gx0=42, gx1=w-10, gy0=146, gy1=h-16;
   const fmin=20, fmax=Math.min(2000,(S.ctx?S.ctx.sampleRate:48000)/2);
