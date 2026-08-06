@@ -134,6 +134,9 @@ if('serviceWorker' in navigator){
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
   .hdricons{display:flex;align-items:center;gap:12px;flex:0 0 auto}
+  #latBadge{font-family:var(--mono,monospace);font-size:10px;color:rgba(150,180,210,.55);letter-spacing:.02em;white-space:nowrap}
+  #latBadge.warn{color:#FFB454}
+  #latBadge.bad{color:#EF3346}
   .helpbtn{width:24px;height:24px;margin-left:2px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);opacity:.55;font-family:var(--font);font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
   .helpbtn:active{opacity:.95}
   .micstat .micic{width:20px;height:20px}
@@ -588,7 +591,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.3.10-beta</div>
+  <div class="splashver" id="splashVer">2.3.11-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -611,6 +614,7 @@ if('serviceWorker' in navigator){
       <span class="wordmark">Sonomètre</span>
     </div>
     <span class="hdricons">
+      <span id="latBadge" title="Latence de calcul (temps réel de traitement par cycle)">-- ms</span>
       <button class="helpbtn" id="hHelp" title="Aide" aria-label="Aide">?</button>
       <span class="micstat off" id="micStat" title="Micro">
         <svg viewBox="0 0 24 24" class="micic"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3" fill="none" stroke-width="2"/></svg>
@@ -993,6 +997,11 @@ if('serviceWorker' in navigator){
       <h3>Tiers d'octave : FFT ou filtres IEC</h3>
       <p>Deux méthodes commutables dans le menu expert. <b>Synthèse FFT</b> : rapide, somme d'énergie des raies. <b>Filtres IEC 61260</b> : banc de filtres Butterworth par bande, plus fidèle au gabarit normalisé (surtout en basses fréquences), coût de calcul un peu plus élevé.</p>
 
+      <h3>Machine / Régime (démo)</h3>
+      <p>L'écran <b>Machine</b> estime le régime de rotation (tr/min) d'une machine tournante <b>sans tachymètre</b>, à partir du peigne harmonique du bruit capté (moteur, ventilateur, machine électrique…). Bouton <b>Type</b> : Auto, Voiture, Bus/Camion, Train, Avion, Ventilateur, Moteur élec., Générique — en <b>Auto</b>, l'app teste plusieurs modèles physiques et garde le meilleur ; les autres verrouillent l'hypothèse choisie. <b>÷2 / ×2</b> corrige manuellement une confusion d'octave. Pour un moteur à combustion, plusieurs cylindrées sont testées (allumage à l'ordre 1,5 / 2 / 3 / 4) et le résultat le plus probable est affiché (« ≈ N cyl. ») ; pour un ventilateur, le nombre de pales est déduit de l'ordre dominant, avec une légère préférence pour un nombre <b>impair ≥ 3</b> en cas d'ambiguïté (un choix fréquent en aérodynamique pour limiter le couplage harmonique — un vrai ventilateur a rarement 1 ou 2 pales). Les ratios d'ordre <b>E2×/E1×</b> et <b>E0,5×/E1×</b> sont affichés ; un <b>E0,5×/E1× élevé</b> signale des ratés ou un balourd. <b>Calcul actif uniquement sur cet écran</b> : aucun coût en arrière-plan lorsqu'un autre écran est affiché. Indicatif, non certifié.</p>
+      <p><b>Détection IA</b> (bouton <b>IA</b> ; touche <b>ANALYSE</b> pour basculer Régime ⇄ Détection). Un modèle <b>YAMNet</b> (521 classes AudioSet) tourne <i>dans le navigateur</i> pour reconnaître la nature du son — véhicule, moteur, mais aussi voix, musique, oiseau… Premier appui : téléchargement (~16 Mo, une fois, puis en cache). En mode Auto, le type identifié par l'IA (Voiture / Bus / Train / Avion / Ventilateur / Moteur élec.) pilote directement le modèle physique utilisé pour le régime. Les scores sont <b>lissés (~3 s)</b> pour éviter les sautes d'un instant à l'autre. Un <b>appui long</b> sur IA affiche le détail brut (top 5 des classes détectées, pour comprendre ce que le modèle entend). Indicatif, non certifié.</p>
+      <p><b>Latence</b> (petit indicateur discret en haut, à côté de l'aide, visible sur tous les écrans) : temps réel de calcul d'un cycle complet (audio + analyse + dessin), lissé sur ~1 s. Il n'existe pas d'API fiable de « charge CPU » dans un navigateur (encore moins sur Safari iOS) ; ce chiffre est le proxy honnête et actionnable — s'il grimpe durablement (orange puis rouge), c'est le signe qu'un écran ou un réglage pèse trop pour l'appareil utilisé.</p>
+
       <h3>Export</h3>
       <p>Touche <b>Partager</b> : ouvre le menu Export. <b>Rapport (PDF)</b> génère un document A4 complet (conditions d'acquisition, indices, spectre par tiers d'octave, graphe et commentaire) via l'impression iOS — choisir « Enregistrer en PDF » dans la feuille d'impression. Les champs <i>site, opérateur, référence, commentaire</i> sont facultatifs et mémorisés. Sinon, export en <b>CSV</b> (métadonnées + micro + indices + spectre + historique) ou en <b>image PNG</b> titrée du graphe affiché. <b>Charger un fichier audio (WAV…)</b> : décode un fichier externe (WAV, M4A, MP3, AIFF ; stéréo mixée en mono) et l'analyse en <b>relecture</b> complète (spectres, spectrogramme, indices, curseurs). La <b>calibration micro ne s'applique pas</b> à un fichier étranger : les niveaux sont <b>relatifs</b>, avec la convention <b>0 dBFS = 120 dB</b> (retrancher 120 pour obtenir les dBFS ; si la référence pleine échelle de la chaîne d'origine est connue, la régler dans Calibration pendant la relecture pour retrouver les niveaux absolus). La correction fréquentielle du micro devrait être réglée sur Off ; la calibration de l'appareil est restaurée en quittant la relecture. Les écarts (émergences, Δ entre bandes) restent, eux, exacts.</p>
 
@@ -1030,6 +1039,7 @@ if('serviceWorker' in navigator){
 
       <h3>Psychoacoustique (toile)</h3>
       <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore (sonie, acuité, rugosité, fluctuation, tonalité) recalculés en continu sur des <b>fenêtres glissantes</b>, avec au centre la <b>gêne psychoacoustique PA</b> (modèle de Zwicker ; vert &lt; 15, orange, rouge &gt; 40). Le polygone <b>plein</b> = valeur actuelle, <b>MOY</b> = moyenne depuis le début, le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs apparaissent après 2 s (délai d'affichage). L'axe <b>Fluctuation</b> est signalé « en cours d'établissement » (point creux, tic P95 en pointillé, « … » près du libellé) tant que sa fenêtre glissante de 5 s n'est pas pleine. Le bouton <b>SON</b> (à côté de MOY) fait apparaître un encart avec la <b>gêne PA</b> (assortie d'un qualificatif) et une <b>description automatique du son</b> en cours (niveau en phon, timbre aigu/sourd, tonal, rugueux, fluctuant) — pratique quand le polygone est ramassé près du centre. <b>Touchez un axe</b> pour lire son détail actuel / moyenne / P95.</p>
+      <p><b>Calcul actif uniquement sur cet écran.</b> Par simplicité (et parce que la psychoacoustique n'est pas encore intégrée au rapport exporté), ces cinq indicateurs ne se calculent <b>que lorsque l'onglet Psycho est affiché</b> — aucun coût en arrière-plan sur les autres écrans. En quittant puis en revenant sur Psycho, la fenêtre glissante de la Fluctuation repart fraîche (quelques secondes « en cours d'établissement »). À l'inverse, le <b>spectrogramme</b> continue toujours d'accumuler en tâche de fond, quel que soit l'écran affiché, pour ne jamais perdre d'historique.</p>
       <p><b>Modèles utilisés.</b></p>
       <ul>
         <li><b>Sonie N</b> (sone) — <b>ISO 532-1</b> méthode tabulée (DIN 45631), fenêtre 250 ms.</li>
@@ -2562,6 +2572,7 @@ function welchUpdate(ts){
 }
 function loop(ts){
   S.raf=requestAnimationFrame(loop);
+  const _lt0=performance.now();                 // chrono latence (temps réel de calcul du cycle)
   if(!S.lastT){S.lastT=ts;return;}
   const dt=Math.min(0.2,(ts-S.lastT)/1000); S.lastT=ts;
   if(S.paused&&!S._previewRing)return;       // le scrub replay prévisualise même en pause
@@ -2779,6 +2790,21 @@ function loop(ts){
   lsnUpdate();              // l'écoute filtrée suit la fenêtre de fréquence zoomée
   updateNumbers(L);
   drawActive();
+  latTick(performance.now()-_lt0);
+}
+/* Latence : temps réel de traitement d'un cycle complet (audio + calcul + dessin), lissé (EMA ~1 s).
+   Visible sur TOUS les écrans (bandeau du haut), pas seulement Machine — pas de vraie "charge CPU"
+   exposée par le navigateur (surtout pas sur Safari iOS), donc on affiche ce proxy honnête et actionnable. */
+function latTick(ms){
+  S._lat = (S._lat==null) ? ms : S._lat + (ms - S._lat)*0.12;
+  const now=performance.now();
+  if(now-(S._latUiT||0) < 250) return;           // rafraîchit l'affichage ~4 Hz, pas à chaque frame
+  S._latUiT = now;
+  const el=$('latBadge'); if(!el) return;
+  const v=S._lat;
+  el.textContent = v.toFixed(v<10?1:0)+' ms';
+  el.classList.toggle('warn', v>=30 && v<60);
+  el.classList.toggle('bad', v>=60);
 }
 
 /* ================= Chiffres ================= */
@@ -4080,7 +4106,7 @@ const PSY={buf:[],cur:null,mean:null,p95:null,PA:0,N5:0,span:0,
   N:0,S:0,R:0,F:0,T:0};   // N/S/R/F/T miroir de cur (compat rapport/CSV)
 const PSY_WIN={N:0.25,S:0.25,R:1.0,T:2.0,F:5.0};   // fenêtres propres à chaque indicateur (s)
 const PSY_BUFSEC=5;                                 // tampon circulaire audio/indices (s)
-function psyReset(){ PSY.buf=[]; PSY.cur=PSY.mean=PSY.p95=null; PSY.PA=0; PSY.N5=0; PSY.span=0; PSY.tnrCand=null; PSY.tones=[];
+function psyReset(){ PSY.buf=[]; PSY.cur=PSY.mean=PSY.p95=null; PSY.PA=0; PSY.N5=0; PSY.span=0; PSY._startT=0; PSY.tnrCand=null; PSY.tones=[];
   PSY._sum=null; PSY._cnt=0; PSY._hist=null; PSY._recalcT=0; PSY._rT=0; PSY._Rcur=0; PSY._tT=0; PSY._Tcur=0; PSY._tpT=0; PSY.tnrT=0; PSY.prT=0; PSY.tones=[]; PSY.rdw=0; PSY.rdwT=0;
   PSY.N=PSY.S=PSY.R=PSY.F=PSY.T=0; }
 const PSY_WR=f=>(f/70)*Math.exp(1-f/70);       // pondération rugosité (pic 70 Hz)
@@ -4410,9 +4436,10 @@ function psyUpdate(){
       const Sh=psySharpness(L.Nspec);
       if(!PSY._rT || now-PSY._rT>1.0){ PSY._rT=now; psyRoughPost(); }   // rugosité D&W (ECMA/MOSQITO) via Web Worker (hors thread principal), MAJ ~1 s
       if(!PSY._tT || now-PSY._tT>0.15){ const dfb=S.binHz||((S.ctx?S.ctx.sampleRate:48000)/(S.fftN||4096)); PSY._Tcur=S.binPowD?psyTonalAures(S.binPowD,dfb):0; PSY._tT=now; }  // tonalité Aures (~7 Hz)
+      if(!PSY._startT) PSY._startT=now;                              // t0 réel de la mesure (fProv = temps écoulé, PAS la largeur de la fenêtre glissante qui plafonne à 5 s par construction)
       PSY.buf.push({t:now,N:L.N,S:Sh,R:Math.max(0,PSY._Rcur||0),T:Math.max(0,PSY._Tcur||0),Ns:L.Nspec});
       while(PSY.buf.length && now-PSY.buf[0].t>PSY_BUFSEC) PSY.buf.shift();
-      PSY.span = PSY.buf.length>1 ? (now-PSY.buf[0].t) : 0;
+      PSY.span = Math.min(PSY_BUFSEC, now-PSY._startT);               // temps écoulé, plafonné à l'affichage (pas la fenêtre elle-même)
     }
   }
   if(!PSY.buf.length) return;
@@ -4484,7 +4511,7 @@ function drawPsycho(){
   const accent=(getComputedStyle(document.body).getPropertyValue('--ice')||'#4FC3FF').trim()||'#4FC3FF';
   const MIN=2, span=PSY.span||0, live=((S.running&&!S.paused)||REPL.on);
   const ready = (PSY.cur && span>=MIN) || (avg&&PSY._cnt>0);
-  const fProv = ready && !avg && (PSY.span||0) < PSY_BUFSEC;   // fluctuation : fenêtre glissante pas encore pleine (valeur provisoire)
+  const fProv = ready && !avg && PSY._startT>0 && (performance.now()-PSY._startT) < PSY_BUFSEC*1000;   // fluctuation : moins de 5 s ÉCOULÉES depuis le début (pas la largeur de la fenêtre, qui plafonne toujours à 5 s)
   if(!PSY._wired){ PSY._wired=true;
     cv.addEventListener('pointerdown',e=>{
       const G=PSY._geom; if(!G)return; const rc=cv.getBoundingClientRect();
@@ -4718,7 +4745,11 @@ function machAnalyze(){
   const key=MACH._key||S.machType, T=MACH_TYPES[key]||{};
   MACH.key=key; MACH.rot=rot; MACH.rpm=rot*60;
   const W=MACH._W, pA=W?W.pAt:(()=>0);
-  let dm=1,dv=0; const oMax=Math.min(20,Math.floor(nyq/Math.max(1,rot))); for(let k=1;k<=oMax;k++){ const v=pA(k*rot); if(v>dv){dv=v;dm=k;} } MACH.dom=dm;
+  let dm=1,dv=0; const oMax=Math.min(20,Math.floor(nyq/Math.max(1,rot)));
+  for(let k=1;k<=oMax;k++){ let v=pA(k*rot);
+    if(T.kind==='fan'){ if(k<3)v*=0.6; else if(k%2===1)v*=1.15; }   // a priori pales : rarement 1-2, souvent impair (évite le couplage harmonique)
+    if(v>dv){dv=v;dm=k;} }
+  MACH.dom=dm;
   MACH.firing=(T.kind==='engine'&&T.param)? rot*T.param/2 : (T.kind==='fan')? dm*rot : 0;
   MACH.bladeEst=(T.kind==='fan')? dm : 0;   // pales supposées = ordre dominant (BPF/rotation)
   const E1=Math.max(1e-12,pA(rot)); MACH.r2=pA(2*rot)/E1; MACH.rHalf=pA(0.5*rot)/E1;
@@ -4816,7 +4847,7 @@ function drawMach(){
 
 function drawActive(force){
   updScaleLbl();
-  if(((S.running&&!S.paused)||REPL.on) && !(S.warmT>0)) psyUpdate();   // alimente la toile (jamais pendant l'init micro)
+  if(S.screen==='psy' && ((S.running&&!S.paused)||REPL.on) && !(S.warmT>0)) psyUpdate();   // calcul psycho SEULEMENT si l'onglet est affiché (simplification : pas encore intégré au rapport) ; jamais pendant l'init micro
   if(S.screen==='spec')drawSpectrum();
   else if(S.screen==='sgram')drawSgram();
   else if(S.screen==='hist')drawHistory();
@@ -5378,7 +5409,9 @@ function ui(){
 
 /* ================= Touches ================= */
 /* ÉCRAN : cycle des affichages. Le MODE EXPERT a désormais sa touche dédiée (MENU) */
-function goScreen(s){ S.screen=s; if(s!=='sgram')S.sgCursor=null; if(s!=='hist')S.histCursor=null; ui(); requestAnimationFrame(()=>{sizeAll();}); }
+function psyEnterReset(newScr){ if(newScr==='psy' && S.screen!=='psy'){ PSY.buf=[]; PSY.span=0; PSY._startT=0; } }   // ré-entrée sur Psycho après une pause : fenêtre 5s repart fraîche
+function goScreen(s){ psyEnterReset(s); S.screen=s; if(s!=='sgram')S.sgCursor=null; if(s!=='hist')S.histCursor=null;
+  ui(); requestAnimationFrame(()=>{sizeAll();}); }
 $('kScreen').addEventListener('click',()=>{
   if(S._longScreen){ S._longScreen=false; return; }                           // appui long déjà traité
   if(S.screen==='menu'||S.screen==='cal'){goScreen(S.prevScreen||'spec');return;}
@@ -5396,7 +5429,7 @@ $('screenPop').addEventListener('click',e=>{ if(e.target.id==='screenPop')$('scr
 $('screenPop').querySelectorAll('.ppopt').forEach(b=>{ b.onclick=()=>{ goScreen(b.getAttribute('data-scr')); $('screenPop').classList.remove('on'); }; });
 /* MENU : bascule du mode expert */
 $('kMenu').addEventListener('click',()=>{
-  if(S.screen==='menu'){S.screen=S.prevScreen||'spec';}
+  if(S.screen==='menu'){ const back=S.prevScreen||'spec'; psyEnterReset(back); S.screen=back; }
   else{if(S.screen!=='cal')S.prevScreen=S.screen;S.screen='menu';}
   ui();requestAnimationFrame(()=>{sizeAll();});
 });
@@ -5860,7 +5893,7 @@ $('dpFMax').addEventListener('change',applyFreqInput);
 $('dpInterp').onclick=()=>{S.sgInterp=!S.sgInterp;SG.vSeq=-1;SG.vViewKey='';drawActive();renderDynPop();};
 $('dpFscale').onclick=()=>{ S.fscale=S.fscale==='log'?'lin':'log'; SG.init=false; resetView(); savePrefs(); ui(); renderDynPop(); };
 /* l'onglet « Calibration » du menu ouvre directement l'écran de calibration (voir setMenuCat) */
-$('calClose').onclick=()=>{S.screen=(S.prevScreen&&S.prevScreen!=='menu'&&S.prevScreen!=='cal')?S.prevScreen:'spec';ui();};   // Terminé : retour direct à l'écran de mesure
+$('calClose').onclick=()=>{ const back=(S.prevScreen&&S.prevScreen!=='menu'&&S.prevScreen!=='cal')?S.prevScreen:'spec'; psyEnterReset(back); S.screen=back; ui(); };   // Terminé : retour direct à l'écran de mesure
 
 /* ===== Profils (localStorage) ===== */
 const LS_KEY='cetim_sono_profiles';
