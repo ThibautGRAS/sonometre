@@ -44,7 +44,7 @@ if('serviceWorker' in navigator){
     --key:#0A2A66; --key-hi:rgba(255,255,255,.14); --line:rgba(255,255,255,.12);
     --key-top:rgba(18,53,115,.88); --key-mid:rgba(10,37,88,.90); --key-bot:rgba(7,32,79,.92);
     --key-edge:#041233; --key-lbl:#A9C6EA; --key-txt:#EAF4FF;
-    --amber:#FFB454; --green:#2FBF83;
+    --amber:#FFB454; --green:#2FBF83; --glowRGB:79,195,255;
     --font:"Arial Nova", Arial, Helvetica, sans-serif;
     --mono:"SF Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   }
@@ -65,24 +65,24 @@ if('serviceWorker' in navigator){
     --cap0:#0E3070; --cap1:#04153A; --cap-dot:rgba(255,255,255,.25);   /* capsule haut-parleur */
   }
   /* Acier : robe gris-bleu, touches marine inchangées (charte) */
-  body.th-acier{--face0:#4A5568; --face1:#334052; --face2:#222C3C; --vig:rgba(0,0,0,.32);
+  body.th-acier{--glowRGB:150,190,235; --face0:#4A5568; --face1:#334052; --face2:#222C3C; --vig:rgba(0,0,0,.32);
     --lcd-bg:#0B0E14; --lcd-bg2:#141922; --lcd-solid:#0B0E14; --lcd-grid:rgba(180,200,230,.13); --lcd-gridline:rgba(180,200,230,.13); --lcd-axis:#8090A8; --lcd-dim:#8090A8; --lcd-title:#9FB6D8; --cap0:#2A3240; --cap1:#161C24; --cap-dot:rgba(200,215,235,.22);
     --key-top:rgba(90,102,120,.92); --key-mid:rgba(64,74,90,.94); --key-bot:rgba(44,52,66,.96); --key-edge:#171C24; --key-lbl:#C4CFDE; --key-txt:#F2F5FA;
     --plot-line:#7FB6E8; --plot-peak:#D6E6F8; --plot-cursor:#D6E6F8}
   /* Clair labo : robe claire, texte marine, vignettage doux */
-  body.th-clair{--face0:#F4F7FB; --face1:#DFE7F2; --face2:#C3CFE0; --ink:#0A1F42;
+  body.th-clair{--glowRGB:60,120,210; --face0:#F4F7FB; --face1:#DFE7F2; --face2:#C3CFE0; --ink:#0A1F42;
     --plate0:#B9C6D9; --plate1:rgba(140,160,190,.25); --vig:rgba(30,50,90,.14); --logo-fill:#12234B;
     --lcd-bg:#12233F; --lcd-bg2:#1B3255; --lcd-solid:#14243F; --lcd-grid:rgba(150,190,240,.16); --lcd-gridline:rgba(150,190,240,.16); --lcd-axis:#8FB0D8; --lcd-dim:#8FB0D8; --cap0:#C7D2E2; --cap1:#9DAAC0; --cap-dot:rgba(40,60,95,.30); --cap-sh:rgba(60,80,110,.25);
     --key-top:#F2F6FC; --key-mid:#E1E9F4; --key-bot:#CBD7E8; --key-edge:#9DAAC0; --key-lbl:#42536E; --key-txt:#0A1F42; --key-hi:rgba(255,255,255,.6);
     --plot-bar-lo:#2E9BFF; --plot-bar-mid:#FF9F1C; --plot-bar-hi:#FF4D5E;
     --plot-line:#7FD4FF; --plot-line-eq:#FF6B7A; --plot-peak:#FFFFFF; --plot-cursor:#FFFFFF}
   /* OLED : noir profond (économie batterie), accents inchangés */
-  body.th-oled{--face0:#0A0A0C; --face1:#000; --face2:#000;
+  body.th-oled{--glowRGB:100,190,255; --face0:#0A0A0C; --face1:#000; --face2:#000;
     --plate0:#000; --plate1:rgba(10,16,28,.6); --vig:rgba(0,0,0,.5);
     --lcd-bg:#000; --lcd-bg2:#05070C; --lcd-solid:#000; --lcd-grid:rgba(120,150,190,.16); --lcd-gridline:rgba(120,150,190,.16); --lcd-axis:#6E8CC0; --cap0:#0A0A0C; --cap1:#000; --cap-dot:rgba(160,180,210,.20);
     --key-top:rgba(26,30,38,.95); --key-mid:rgba(16,20,26,.96); --key-bot:rgba(8,10,14,.98); --key-edge:#000; --key-lbl:#8FA3C4; --key-txt:#E8EEF6}
   /* Game Boy : écran vert monochrome, façade grise, accents verts */
-  body.th-gameboy{--face0:#CBC7BF; --face1:#B9B5AD; --face2:#A29E96; --ink:#3A3A44; --vig:rgba(60,60,70,.14);
+  body.th-gameboy{--glowRGB:150,168,70; --face0:#CBC7BF; --face1:#B9B5AD; --face2:#A29E96; --ink:#3A3A44; --vig:rgba(60,60,70,.14);
     --plate0:#8E8E96; --plate1:rgba(120,120,130,.45);
     --key:#B4B0A8; --key-hi:rgba(255,255,255,.45);
     --ice:#0F380F; --red:#A83A6E;
@@ -93,7 +93,7 @@ if('serviceWorker' in navigator){
     --plot-bar-lo:#306230; --plot-bar-mid:#1E4D1E; --plot-bar-hi:#0F380F;
     --plot-line:#0F380F; --plot-line-eq:#8B2C2C; --plot-peak:#0F380F; --plot-cursor:#0F380F}
   /* MATRICE : noir profond, verts phosphorescents */
-  body.th-matrix{--face0:#0B100C; --face1:#060A07; --face2:#030503; --ink:#7CFF9E; --vig:rgba(0,0,0,.5);
+  body.th-matrix{--glowRGB:80,255,140; --face0:#0B100C; --face1:#060A07; --face2:#030503; --ink:#7CFF9E; --vig:rgba(0,0,0,.5);
     --plate0:#0A120C; --plate1:rgba(10,24,14,.6);
     --key:#0C130D; --key-hi:rgba(120,255,160,.08); --line:rgba(120,255,160,.14);
     --red:#FF5566;
@@ -274,9 +274,9 @@ if('serviceWorker' in navigator){
   .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:40px;height:22px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:10px;letter-spacing:.04em;border-radius:7px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
   .sg3dbtn.on{background:#FFA92E;color:#2A1400;border-color:#FFD08A;box-shadow:0 0 12px rgba(255,169,46,.85), inset 0 0 6px rgba(255,220,150,.6);text-shadow:none;font-weight:800}
-  #avgBtn.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY actif = vert */
+  #avgBtn.on, #psyAvgBtn.on, #psyDescBtn.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY actif = vert */
   #vibBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
-  #avgBtn.dis{opacity:.35}
+  #avgBtn.dis, #psyAvgBtn.dis, #psyDescBtn.dis{opacity:.35}
   #lsnBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
   /* icônes du spectrogramme : côte à côte à gauche, dégagées de l'ordonnée (padL≈26) */
   #sg3dBtn{right:auto;left:30px;top:6px}
@@ -325,6 +325,13 @@ if('serviceWorker' in navigator){
 
   /* écran MODE EXPERT */
   .menu{height:100%;display:flex;flex-direction:column;gap:4px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px;touch-action:pan-y}
+  .mtabs{position:sticky;top:0;z-index:5;display:flex;gap:5px;padding:2px 2px 7px;margin:-2px 0 2px;background:rgba(6,16,28,.86);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .mtab{flex:1;padding:8px 4px;border:1px solid rgba(127,216,255,.22);background:rgba(10,31,66,.5);color:#9fc4e0;border-radius:9px;font-family:var(--font);font-weight:700;font-size:11px;letter-spacing:.01em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
+  .mtab.on{background:rgba(79,195,255,.20);color:#EAF5FF;border-color:rgba(79,195,255,.7)}
+  .mtab:active{background:rgba(79,195,255,.3)}
+  .cell.resettable{cursor:pointer}
+  .cell.resettable .k::after{content:' ↺';opacity:.45;font-size:.82em}
+  .cell.resettable:active{background:rgba(127,216,255,.12);border-radius:8px}
   .menu::-webkit-scrollbar{width:3px}
   .menu::-webkit-scrollbar-thumb{background:rgba(79,195,255,.3);border-radius:2px}
   .mrow{display:flex;justify-content:space-between;align-items:center;background:rgba(79,195,255,.07);border:1px solid rgba(79,195,255,.14);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--lcd-ink);flex:0 0 auto}
@@ -470,7 +477,17 @@ if('serviceWorker' in navigator){
   .key[disabled],.key.locked{opacity:.4;pointer-events:none;filter:saturate(.4)}
   .key.locked::after{content:"🔒";position:absolute;top:5px;right:7px;font-size:9px;opacity:.7}
   .key{position:relative}
+  /* ===== MODE RÉTROÉCLAIRAGE : halo lumineux PERMANENT, teinté par le thème (var --glowRGB) ===== */
+  body.backlit .lcd{ filter:brightness(1.07) saturate(1.08) drop-shadow(0 0 13px rgba(var(--glowRGB),.34)); transition:filter .5s }
+  body.backlit .num{ text-shadow:0 0 13px rgba(var(--glowRGB),.65), 0 0 3px rgba(255,255,255,.4) }
+  body.backlit .badge{ text-shadow:0 0 9px rgba(var(--glowRGB),.7) }
+  body.backlit .key{ filter:drop-shadow(0 0 9px rgba(var(--glowRGB),.72)); transition:transform .05s, box-shadow .05s, filter .35s }
+  body.backlit .key .kf{ color:#fff; text-shadow:0 0 7px rgba(var(--glowRGB),.95), 0 1px 1px rgba(0,0,0,.35) }
+  body.backlit .key .kv{ text-shadow:0 0 9px rgba(var(--glowRGB),.95), 0 1px 1px rgba(0,0,0,.3) }
+  body.backlit .key .dot{ box-shadow:0 0 9px rgba(var(--glowRGB),.75) }
+  body.backlit .key:active{ filter:brightness(1.28) saturate(1.1) drop-shadow(0 0 13px rgba(var(--glowRGB),1)) }
   /* ===== thème Néon : liseré lumineux sur les touches, couleur qui change à l'appui ===== */
+  body.th-neon{--glowRGB:255,90,110}
   body.th-neon .key{
     border:1.5px solid rgba(79,195,255,.55);
     box-shadow:0 0 11px rgba(79,195,255,.45), 0 3px 0 var(--key-edge), inset 0 1px 0 var(--key-hi), inset 0 -6px 10px rgba(0,0,0,.22);
@@ -568,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.0.89</div>
+  <div class="splashver" id="splashVer">2.3.0</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -626,11 +643,12 @@ if('serviceWorker' in navigator){
       <div class="gpane on" id="paneSpec"><canvas id="specCv"></canvas><button class="sg3dbtn" id="avgBtn">MOY</button><button class="sg3dbtn" id="emgBtn" style="right:54px">ÉMG</button><button class="sg3dbtn" id="vibBtn" style="display:none">VIB</button></div>
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
+      <div class="gpane" id="panePsy"><canvas id="psyCv"></canvas><button class="sg3dbtn" id="psyAvgBtn">MOY</button><button class="sg3dbtn" id="psyDescBtn" style="right:54px">SON</button></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
           <div class="cell hero"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
-          <div class="cell"><div class="k">LCpeak</div><div class="v red" id="vLCpk">--.-</div></div>
-          <div class="cell"><div class="k">LAFmax</div><div class="v red" id="vMax">--.-</div></div>
+          <div class="cell resettable"><div class="k">LCpeak</div><div class="v red" id="vLCpk">--.-</div></div>
+          <div class="cell resettable"><div class="k">LAFmax</div><div class="v red" id="vMax">--.-</div></div>
           <div class="cell"><div class="k">L10</div><div class="v" id="vL10">--.-</div></div>
           <div class="cell"><div class="k">L90</div><div class="v" id="vL90">--.-</div></div>
         </div>
@@ -640,46 +658,52 @@ if('serviceWorker' in navigator){
           <div class="cell"><div class="k">LCeq</div><div class="v" id="vLCeq">--.-</div></div>
           <div class="cell"><div class="k">LZeq</div><div class="v" id="vLZeq">--.-</div></div>
           <div class="cell"><div class="k">L50</div><div class="v" id="vL50">--.-</div></div>
-          <div class="cell"><div class="k">LAFmin</div><div class="v" id="vMin">--.-</div></div>
+          <div class="cell resettable"><div class="k">LAFmin</div><div class="v" id="vMin">--.-</div></div>
           <div class="cell"><div class="k">Émergence tonale</div><div class="v small" id="vEmg">--</div></div>
         </div>
         <div class="valdots"><span class="vd on" id="vd0"></span><span class="vd" id="vd1"></span></div>
       </div>
       <div class="gpane" id="paneMenu">
         <div class="menu">
-          <div class="mrow" id="mPreset" style="border-color:rgba(79,195,255,.4);background:rgba(79,195,255,.10)"><span>Type de spectre</span><b id="mPresetV" style="color:#4FC3FF;white-space:nowrap">▸ choisir</b></div>
-          <div class="mrow" id="mWin"><span>Type de fenêtre</span><b>Blackman</b></div>
-          <div class="mrow" id="mFft"><span>Nombre de points (FFT)</span><b>16384</b></div>
-          <div class="mrow" id="mRes"><span>Résolution · bande</span><b>2.9 Hz</b></div>
-          <div class="mrow" id="mOverlap"><span>Recouvrement (overlap)</span><b>50 %</b></div>
-          <div class="mrow" id="mSgSpeed"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
-          <div class="mrow" id="mPeakInterp"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
-          <div class="mrow" id="mEmgThr"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
-          <div class="mrow" id="mSpecFrames"><span>Moyennage spectre (trames)</span><b>4</b></div>
-          <div class="mrow" id="mSpecSmooth"><span>Lissage fréquentiel (bande fine)</span><b>1/12 oct</b></div>
-          <div class="mrow" id="mToctSrc"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
-          <div class="mrow" id="mLvlSrc"><span>Niveaux temps réel (LAF…, Leq)</span><b>Temporel IIR</b></div>
-          <div class="mrow" id="mHP"><span>Passe-haut (limite grave)</span><b>10 Hz</b></div>
-          <div class="mrow" id="mLP"><span>Passe-bas (limite aigu)</span><b>22 kHz</b></div>
-          <div class="mrow" id="mSg3dSmooth"><span>Lissage / perf. 3D</span><b>Lisse</b></div>
-          <div class="mrow" id="mLsnSlope"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
-          <div class="mrow" id="mLsnGain"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
-          <div class="mrow" id="mTheme"><span>Thème de façade</span><b>Marine</b></div>
-          <div class="mrow" id="mCalib" style="border-color:rgba(47,191,131,.4);background:rgba(47,191,131,.10)"><span>Calibration / réf. pleine échelle (0 dBFS)</span><b style="color:#2FBF83">▸</b></div>
-          <div class="mrow act" id="mClrSgram"><span>Effacer le spectrogramme</span><b>⌫</b></div>
-          <div class="mrow act" id="mClrHist"><span>Effacer l'évolution temporelle</span><b>⌫</b></div>
-          <div class="mrow act" id="mClrPeak"><span>Effacer max / min / peak-hold</span><b>⌫</b></div>
-          <div class="mrow act red" id="mClrAll"><span>Tout effacer (remise à zéro)</span><b>⌫</b></div>
-          <div class="mrow act red" id="mResetPrefs"><span>Réinitialiser les paramètres</span><b>↺</b></div>
-          <div class="mcredit">Sonomètre CETIM · Thibaut Gras · 2026<br>thibaut.gras@cetim.fr</div>
-          <div class="mnote">FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s · faire défiler pour voir toutes les options</div>
+          <div class="mtabs" id="mTabs">
+            <button class="mtab on" data-cat="signal">Signal</button>
+            <button class="mtab" data-cat="affichage">Affichage</button>
+            <button class="mtab" data-cat="calib">Calibration</button>
+            <button class="mtab" data-cat="sys">Système</button>
+          </div>
+          <div class="mrow" id="mPreset" data-cat="signal" style="border-color:rgba(79,195,255,.4);background:rgba(79,195,255,.10)"><span>Type de spectre</span><b id="mPresetV" style="color:#4FC3FF;white-space:nowrap">▸ choisir</b></div>
+          <div class="mrow" id="mWin" data-cat="signal"><span>Type de fenêtre</span><b>Blackman</b></div>
+          <div class="mrow" id="mFft" data-cat="signal"><span>Nombre de points (FFT)</span><b>16384</b></div>
+          <div class="mrow" id="mSampleRate" data-cat="signal"><span>Fréquence d'échantillonnage</span><b>Auto</b></div>
+          <div class="mrow" id="mRes" data-cat="signal"><span>Résolution · bande</span><b>2.9 Hz</b></div>
+          <div class="mrow" id="mOverlap" data-cat="signal"><span>Recouvrement (overlap)</span><b>50 %</b></div>
+          <div class="mrow" id="mPeakInterp" data-cat="signal"><span>Interpolation de pic (curseurs)</span><b>Oui</b></div>
+          <div class="mrow" id="mEmgThr" data-cat="signal"><span>Seuil d'alerte émergence</span><b>10 dB</b></div>
+          <div class="mrow" id="mSpecFrames" data-cat="signal"><span>Moyenne temporelle — live (trames, Welch)</span><b>4</b></div>
+          <div class="mrow" id="mSpecSmooth" data-cat="signal"><span>Lissage fréquentiel — bande fine (1/n oct)</span><b>1/12 oct</b></div>
+          <div class="mrow" id="mAvgTau" data-cat="signal"><span>Moyenne temporelle — MOY (Leq / expo F·S / max)</span><b>Cumulée (Leq)</b></div>
+          <div class="mrow" id="mSpecCI" data-cat="signal"><span>Intervalle de confiance de la MOY (±2σ/√N)</span><b>Non</b></div>
+          <div class="mrow" id="mToctSrc" data-cat="signal"><span>Tiers d'octave</span><b>Synthèse FFT</b></div>
+          <div class="mrow" id="mLvlSrc" data-cat="signal"><span>Niveaux temps réel (LAF…, Leq)</span><b>Temporel IIR</b></div>
+          <div class="mrow" id="mHP" data-cat="signal"><span>Passe-haut (limite grave)</span><b>10 Hz</b></div>
+          <div class="mrow" id="mLP" data-cat="signal"><span>Passe-bas (limite aigu)</span><b>22 kHz</b></div>
+          <div class="mrow" id="mSgSpeed" data-cat="affichage"><span>Vitesse spectrogramme</span><b>20 col/s</b></div>
+          <div class="mrow" id="mSg3dSmooth" data-cat="affichage"><span>Lissage / perf. 3D</span><b>Lisse</b></div>
+          <div class="mrow" id="mLsnSlope" data-cat="affichage"><span>Pente filtre écoute ♪</span><b>24 dB/oct</b></div>
+          <div class="mrow" id="mLsnGain" data-cat="affichage"><span>Gain écoute ♪</span><select id="lsnGainSel" class="micsel"><option value="auto">Auto ♪</option><option value="0">0 dB</option><option value="6">+6 dB</option><option value="12">+12 dB</option><option value="18">+18 dB</option><option value="24">+24 dB</option><option value="30">+30 dB</option></select></div>
+          <div class="mrow" id="mTheme" data-cat="affichage"><span>Thème de façade</span><b>Marine</b></div>
+          <div class="mrow" id="mBacklight" data-cat="affichage"><span>Rétroéclairage</span><b>Off</b></div>
+          <div class="mrow act red" id="mResetPrefs" data-cat="sys"><span>Réinitialiser les paramètres</span><b>↺</b></div>
+          <div class="mnote" data-cat="sys">Remet tous les réglages aux valeurs par défaut. Astuce : réinitialiser max/min/peak-hold se fait en tapant directement l'afficheur max/min.</div>
+          <div class="mcredit" data-cat="sys">Sonomètre CETIM · Thibaut Gras · 2026<br>thibaut.gras@cetim.fr</div>
+          <div class="mnote" data-cat="signal">FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s.</div>
         </div>
       </div>
       <div class="gpane" id="paneCal">
         <div class="cal">
           <div class="calhead">
             <span id="calDev">Appareil : —</span>
-            <button class="calx" id="calClose">✕ fermer</button>
+            <button class="calx" id="calClose">✓ Terminé</button>
           </div>
           <div class="calbody">
             <div class="msub">MICRO ACTIF</div>
@@ -748,12 +772,12 @@ if('serviceWorker' in navigator){
     <div class="krow">
       <button class="key cfg" id="kDur"><span class="kf">DURÉE</span><span class="kv" id="kDurV">∞</span></button>
       <button class="key cfg" id="kCal"><span class="kf">CALIB.</span><span class="kv" id="kCalV">Auto</span></button>
-      <button class="key" id="kMenu"><span class="kf">MENU</span><span class="kv" id="kMenuV">Expert</span></button>
-      <button class="key" id="kCsv"><span class="kf">EXPORT</span><span class="kv">Partager</span></button>
+      <button class="key" id="kMenu"><span class="kf">RÉGLAGES</span><span class="kv" id="kMenuV">Avancés</span></button>
+      <button class="key" id="kDyn"><span class="kf">ÉCHELLES</span><span class="kv" id="kDynV">Auto</span></button>
     </div>
     <div class="krow">
       <button class="key" id="kReset"><span class="kf">MESURE</span><span class="kv">Réinit</span></button>
-      <button class="key" id="kDyn"><span class="kf">ÉCHELLES</span><span class="kv" id="kDynV">Auto</span></button>
+      <button class="key" id="kCsv"><span class="kf">EXPORT</span><span class="kv">Chargement</span></button>
       <button class="key key-pause" id="kPause" disabled aria-label="Pause"><span class="kv"><svg class="tico" viewBox="0 0 24 24"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg></span></button>
       <button class="key key-start" id="kStart" aria-label="Démarrer"><span class="kv"><svg class="tico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/></svg></span></button>
     </div>
@@ -768,8 +792,8 @@ if('serviceWorker' in navigator){
     <div class="cp-lbl">SORTIE (réécoute ♪)</div>
     <div class="cp-row"><span>Haut-parleur</span><select id="outSelPop" class="micsel" style="max-width:62%"><option value="">Automatique (système)</option></select></div>
     <div class="cp-note" id="outNote" style="font-size:11px;opacity:.7;padding:2px 0 4px"></div>
-    <div class="cp-row"><span>Correction amplitude</span><button id="cpCorr">Off</button></div>
-    <div class="cp-lbl">OFFSET dBFS → dB SPL</div>
+    <div class="cp-row"><span>Gain fréquentiel</span><button id="cpCorr">Désactivé</button></div>
+    <div class="cp-lbl">OFFSET dBFS → dB SPL <span style="opacity:.6;font-weight:400">· selon modèle (iPhone ≈ 130), à caler au calibreur</span></div>
     <div class="cp-presets" id="cpPresets"></div>
     <div class="cp-fine">
       <button id="cpMinus">−0.5</button>
@@ -834,6 +858,12 @@ if('serviceWorker' in navigator){
       </div>
     </div>
 
+    <div id="dpSecPsy">
+      <div class="cp-lbl" style="margin-top:10px">BORNES DES INDICATEURS (NORMALISATION → 100 %)</div>
+      <div id="dpPsyRows"></div>
+      <div class="cp-fine"><button id="dpPsyReset" class="cp-ok" style="width:100%">Valeurs par défaut</button></div>
+    </div>
+
     <div class="cp-row" id="dpSecInterp" style="margin-top:10px"><span>Interpolation spectrogramme</span><button id="dpInterp" class="cp-tog">Activée</button></div>
     <div class="mnote" id="dynNote" style="margin-top:8px">Affichage uniquement — réglable pendant la mesure · pincer à deux doigts reste actif</div>
   </div></div>
@@ -869,6 +899,16 @@ if('serviceWorker' in navigator){
   <!-- menu EXPORT -->
   <!-- page AIDE -->
   <!-- popover PRESET spectrogramme -->
+  <div id="screenPop" class="calpop"><div class="calpop-in">
+    <div class="cp-head">CHOISIR LA VUE <button id="scpClose">✕</button></div>
+    <div class="ppbody">
+      <button class="ppopt" data-scr="spec"><b>Spectre</b><span>Spectre FFT / tiers d'octave instantané.</span></button>
+      <button class="ppopt" data-scr="sgram"><b>Spectrogramme</b><span>Évolution temps-fréquence (cascade).</span></button>
+      <button class="ppopt" data-scr="hist"><b>Évolution</b><span>Niveau L et Leq au cours du temps.</span></button>
+      <button class="ppopt" data-scr="val"><b>Valeurs</b><span>Indices numériques (L, Leq, LCpeak, émergence…).</span></button>
+      <button class="ppopt" data-scr="psy"><b>Psycho (toile)</b><span>Sonie, acuité, rugosité, fluctuation, tonalité + gêne PA.</span></button>
+    </div>
+  </div></div>
   <div id="presetPop" class="calpop"><div class="calpop-in">
     <div class="cp-head">TYPE DE SPECTRE <button id="ppClose">✕</button></div>
     <div class="ppbody">
@@ -925,7 +965,7 @@ if('serviceWorker' in navigator){
         <li>Spectrogramme : <b>double-tap</b> (ou deux doigts, ou touche M) = suivi automatique du maximum ; en <b>relecture</b>, le viseur suit le pic au fil de la lecture. <b>Deux doigts / Maj+clic</b> font pareil.</li>
         <li>Spectre bande fine : <b>deux doigts</b> = curseur de suivi du max dans la fenêtre zoomée (re-tap pour retirer) · icône <b>ÉMG</b> = détection auto d'émergence tonale (encadré orange). L'émergence au curseur et dans le tableau de valeurs est, elle, toujours active.</li>
         <li>Spectrogramme : icône <b>♪ SON</b> = écoute filtrée en temps réel : le micro est réinjecté vers la sortie audio à travers un passe-bande serré (≈24 dB/oct) calé sur la bande de fréquence zoomée — le filtre suit le zoom en direct. <b>Écouteurs indispensables</b> (larsen sur haut-parleur). Menu expert : <b>pente</b> du filtre (24/48/96 dB/oct) et <b>gain d'écoute</b> (0 à +30 dB, utile car le filtre retire l'essentiel du spectre et baisse le niveau perçu). Idéal pour isoler à l'oreille une raie repérée sur le spectrogramme.</li>
-        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>live</b> et <b>moyenné (Leq)</b> sur toute la durée — libellé « L<i>x</i>·Moy ». Deux débruitages du spectre <b>fin</b> (menu Expert), indépendants du bouton TEMPS : <b>Moyennage (trames)</b> = moyenne des N derniers périodogrammes (méthode de Welch, agrégés à pas fixe = fenêtre·(1−overlap), donc « N moyennes » est une vraie grandeur, identique en direct et en replay), et <b>Lissage fréquentiel</b> = moyenne 1/n octave sur les raies (nettoie sans latence, n'affecte que la courbe pas les mesures au curseur). Le rapport PDF utilise toujours le spectre moyenné.</li>
+        <li>Spectre (tous modes) : icône <b>MOY</b> = bascule l'affichage entre <b>live</b> et <b>moyenné (Leq)</b> sur toute la durée — libellé « L<i>x</i>·Moy ». Réglages de spectre dans <b>Expert ▸ Signal</b>, indépendants du bouton TEMPS : <b>Moyenne temporelle — live (trames, Welch)</b> = moyenne des N derniers périodogrammes à pas fixe = fenêtre·(1−overlap) (nettoie le spectre INST à court terme, ~sous-seconde, identique en direct et en replay), et <b>Lissage fréquentiel — bande fine (1/n oct)</b> = moyenne 1/n octave sur les raies (agit en <i>fréquence</i>, pas dans le temps ; n'affecte que la courbe, pas les mesures au curseur). Le rapport PDF utilise toujours le spectre moyenné (Leq). <b>Moyenne temporelle — MOY (Expert ▸ Signal).</b> Par défaut la MOY est une <b>moyenne d'énergie cumulée depuis le début</b> (vrai Leq par raie/bande, à poids égal) : idéale pour un son stationnaire, mais de plus en plus <b>inerte</b> (à t = 60 s, 1 s ne pèse plus que 1/60). L'option <b>Moyenne temporelle — MOY</b> permet une <b>moyenne exponentielle en énergie</b>, c'est-à-dire la <b>pondération temporelle d'un vrai sonomètre</b> (IEC 61672) : <b>Fast</b> (τ = 125 ms) ou <b>Slow</b> (τ = 1 s), plus une position 5 s pour un spectre bien lissé. Comme sur un appareil, la moyenne est faite sur l'énergie (pas sur les dB) : après un événement, le niveau redescend de <b>−4,34 dB par τ</b> (rapide en Fast, posé en Slow). La position <b>Peak hold (max)</b> complète le cycle : ce n'est plus une moyenne mais le <b>maximum retenu</b> par raie/bande depuis le début de la mesure (spectre-enveloppe, comme le « peak hold » d'un analyseur de laboratoire) — utile pour capturer un événement bref ou une montée en régime ; il se réinitialise avec la mesure, et l'intervalle de confiance ne s'applique pas à ce mode. Le Leq cumulé reste utilisé pour le rapport. En mode <b>moyenné</b>, l'option experte <b>Intervalle de confiance de la MOY (±2σ/√N)</b> (Signal) trace en fond translucide l'enveloppe <b>±2σ/√N</b> autour du spectre moyen : c'est l'incertitude sur la <i>valeur moyenne</i> estimée à chaque fréquence, qui <b>se resserre</b> au fil de la mesure (∝ 1/√durée, N = nombre de fenêtres indépendantes accumulées). Une bande encore large signale une fréquence dont la moyenne n'est pas encore stabilisée ; à ne pas confondre avec la dispersion instantanée ±2σ (qui, elle, ne diminue pas).</li>
       </ul>
 
       <h3>Indices</h3>
@@ -943,13 +983,13 @@ if('serviceWorker' in navigator){
 
       <h3>Calibration</h3>
       <p>Écran Calibration (menu expert). <b>Offset</b> : place un calibreur acoustique (94 ou 114 dB) sur le micro, saisis la référence, cale. <b>Correction fréquentielle</b> : balaye les tiers d'octave face à un sonomètre étalon pour bâtir une courbe, enregistrable en profil. La calibration est propre à chaque appareil.</p>
-      <p><b>Comment la correction est appliquée.</b> L'<i>offset</i> (dB constant) s'applique partout. Par défaut, l'app suppose <b>0 dBFS ≈ 130 dB SPL</b> (ordre de grandeur pour un micro d'iPhone — c'est une hypothèse, pas une mesure). Un calibreur remplace cette hypothèse par une valeur exacte : sans calibreur, un écart de référence se traduit par un décalage <b>uniforme</b> de tous les niveaux absolus (LAF, Leq, spectre), sans toucher aux grandeurs <b>relatives</b> (émergence, forme spectrale, comparaisons). La <i>correction fréquentielle</i>, elle, agit sur deux chaînes : (1) les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme) sont corrigés raie par raie ; (2) les <b>niveaux large bande</b> — LAF/LAS/LV, LAFmax, LCpeak <i>et</i> le <b>Leq</b> — passent par un <b>filtre temporel</b> qui reproduit la courbe (cascade de biquads), appliqué au signal <i>avant</i> les pondérations A/C. La courbe est une <b>forme normalisée à 0 dB à 1 kHz</b> (le niveau global reste porté par l'offset, pas par la courbe). Ainsi tout est cohérent, sans latence. Quand la correction est sur <b>Off</b>, le comportement d'origine est conservé (Leq issu de la FFT). Courbe douce (type MEMS) : fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz.</p>
+      <p><b>Comment la correction est appliquée.</b> L'<i>offset</i> (dB constant) s'applique partout. Par défaut, l'app suppose <b>0 dBFS ≈ 130 dB SPL</b> (ordre de grandeur pour un micro d'iPhone — c'est une hypothèse, pas une mesure). Un calibreur remplace cette hypothèse par une valeur exacte : sans calibreur, un écart de référence se traduit par un décalage <b>uniforme</b> de tous les niveaux absolus (LAF, Leq, spectre), sans toucher aux grandeurs <b>relatives</b> (émergence, forme spectrale, comparaisons). La <i>correction fréquentielle</i>, elle, agit sur deux chaînes : (1) les <b>spectres</b> (bande fine, tiers d'octave, spectrogramme) sont corrigés raie par raie ; (2) les <b>niveaux large bande</b> — LAF/LAS/LV, LAFmax, LCpeak <i>et</i> le <b>Leq</b> — passent par un <b>filtre temporel</b> qui reproduit la courbe (cascade de biquads), appliqué au signal <i>avant</i> les pondérations A/C. La courbe est une <b>forme normalisée à 0 dB à 1 kHz</b> (le niveau global reste porté par l'offset, pas par la courbe). Le <b>graphe de calibration</b> affiche le <b>gain total rapporté au dBFS de base</b> de l'appareil (0 dB = base, iPhone ≈ 130 dBFS) : gain(f) = (offset − base) + forme. Ainsi l'offset apparaît comme un <b>décalage vertical</b> — à 128 dB (base 130) toute la courbe descend de 2 dB, et si le gain fréquentiel est <b>désactivé</b> le graphe est une <b>ligne plate</b> à −2 dB. Ainsi tout est cohérent, sans latence. Quand la correction est sur <b>Off</b>, le comportement d'origine est conservé (Leq issu de la FFT). Courbe douce (type MEMS) : fidélité &lt; ~0,5 dB de 50 Hz à 12,5 kHz.</p>
 
       <h3>Tiers d'octave : FFT ou filtres IEC</h3>
       <p>Deux méthodes commutables dans le menu expert. <b>Synthèse FFT</b> : rapide, somme d'énergie des raies. <b>Filtres IEC 61260</b> : banc de filtres Butterworth par bande, plus fidèle au gabarit normalisé (surtout en basses fréquences), coût de calcul un peu plus élevé.</p>
 
       <h3>Export</h3>
-      <p>Touche <b>Partager</b> : ouvre le menu Export. <b>Rapport (PDF)</b> génère un document A4 complet (conditions d'acquisition, indices, spectre par tiers d'octave, graphe et commentaire) via l'impression iOS — choisir « Enregistrer en PDF » dans la feuille d'impression. Les champs <i>site, opérateur, référence, commentaire</i> sont facultatifs et mémorisés. Sinon, export en <b>CSV</b> (métadonnées + micro + indices + spectre + historique) ou en <b>image PNG</b> titrée du graphe affiché.</p>
+      <p>Touche <b>Partager</b> : ouvre le menu Export. <b>Rapport (PDF)</b> génère un document A4 complet (conditions d'acquisition, indices, spectre par tiers d'octave, graphe et commentaire) via l'impression iOS — choisir « Enregistrer en PDF » dans la feuille d'impression. Les champs <i>site, opérateur, référence, commentaire</i> sont facultatifs et mémorisés. Sinon, export en <b>CSV</b> (métadonnées + micro + indices + spectre + historique) ou en <b>image PNG</b> titrée du graphe affiché. <b>Charger un fichier audio (WAV…)</b> : décode un fichier externe (WAV, M4A, MP3, AIFF ; stéréo mixée en mono) et l'analyse en <b>relecture</b> complète (spectres, spectrogramme, indices, curseurs). La <b>calibration micro ne s'applique pas</b> à un fichier étranger : les niveaux sont <b>relatifs</b>, avec la convention <b>0 dBFS = 120 dB</b> (retrancher 120 pour obtenir les dBFS ; si la référence pleine échelle de la chaîne d'origine est connue, la régler dans Calibration pendant la relecture pour retrouver les niveaux absolus). La correction fréquentielle du micro devrait être réglée sur Off ; la calibration de l'appareil est restaurée en quittant la relecture. Les écarts (émergences, Δ entre bandes) restent, eux, exacts.</p>
 
       <h3>Émergence tonale</h3>
       <p>Dans l'écran <b>Valeurs</b> (page 2), la cellule « Émergence tonale » indique la raie tonale dominante : <b>+X dB @ Y Hz</b>, ou « aucune » s'il n'y a pas de vraie composante tonale. Calcul par la méthode <b>ISO 1996-2</b> (bande critique de Bark), avec confirmation sur plusieurs mesures pour ne retenir que les raies stables dans le temps (une raie tonale persiste, un pic de bruit saute). L'émergence est <b>toujours évaluée</b> dans le tableau de valeurs. Le <b>Seuil d'alerte</b> (menu expert, 6 à 15 dB) fixe le niveau à partir duquel une raie est retenue pour le tableau et pour la détection auto (icône <b>ÉMG</b>, encadré orange sur la bande fine). Au <b>curseur unique</b> sur la FFT, l'émergence de la raie visée est affichée en permanence. Indicateur de diagnostic, non certifié.</p>
@@ -983,12 +1023,51 @@ if('serviceWorker' in navigator){
       <p><b>Sélecteur (diagnostic).</b> Menu Expert ▸ <b>Niveaux temps réel</b> : <i>Temporel IIR</i> (défaut recommandé — pondérations A/C par biquads, réponse temporelle exacte) ou <i>Dérivé FFT</i> (niveaux lissés à partir du spectre, pour comparer au banc). En mode Dérivé FFT, la latence de fenêtre réapparaît et, <b>lorsqu'une correction est active</b>, le recalage de Parseval annule la contribution globale de la courbe : le niveau absolu perd la correction (l'écart peut atteindre plusieurs dB en grave). C'est pourquoi, correction active, le mode <i>Temporel IIR</i> (Option 1) est le seul exact — le mode FFT est réservé à la comparaison. Verrouillé pendant une mesure.</p>
       <p><b>Validation.</b> Le traitement est vérifié hors ligne contre des références analytiques et normatives (IEC 61672-1, IEC 61260-1, Parseval) ; les pondérations A/C sont conformes <b>classe 1</b> de 16 Hz à 12,5 kHz. Le filtre de correction a sa propre routine de test (fidélité, gain réel sur tons, cohérence énergétique, stabilité).</p>
 
+      <h3>Psychoacoustique (toile)</h3>
+      <p>L'écran <b>Psycho</b> affiche une <b>toile d'araignée</b> de cinq indicateurs de qualité sonore (sonie, acuité, rugosité, fluctuation, tonalité) recalculés en continu sur des <b>fenêtres glissantes</b>, avec au centre la <b>gêne psychoacoustique PA</b> (modèle de Zwicker ; vert &lt; 15, orange, rouge &gt; 40). Le polygone <b>plein</b> = valeur actuelle, <b>MOY</b> = moyenne depuis le début, le <b>tic ambre</b> = P95 (peak-hold). Les indicateurs apparaissent après 2 s (délai d'affichage). L'axe <b>Fluctuation</b> est signalé « en cours d'établissement » (point creux, tic P95 en pointillé, « … » près du libellé) tant que sa fenêtre glissante de 5 s n'est pas pleine. Le bouton <b>SON</b> (à côté de MOY) fait apparaître un encart avec la <b>gêne PA</b> (assortie d'un qualificatif) et une <b>description automatique du son</b> en cours (niveau en phon, timbre aigu/sourd, tonal, rugueux, fluctuant) — pratique quand le polygone est ramassé près du centre. <b>Touchez un axe</b> pour lire son détail actuel / moyenne / P95.</p>
+      <p><b>Modèles utilisés.</b></p>
+      <ul>
+        <li><b>Sonie N</b> (sone) — <b>ISO 532-1</b> méthode tabulée (DIN 45631), fenêtre 250 ms.</li>
+        <li><b>Acuité S</b> (acum) — <b>DIN 45692</b>, fenêtre 250 ms.</li>
+        <li><b>Rugosité R</b> (asper) — modèle <b>Daniel &amp; Weber</b> complet (47 canaux ½-Bark, excitation par FFT, pondérations Hi(f_mod), corrélation croisée, dépendance au niveau), recalculé ~1 fois/s sur 170 ms.</li>
+        <li><b>Fluctuation F</b> (vacil) — <b>Fastl</b> band-wise (modulation de la sonie spécifique par bande de Bark, indépendante du niveau), <b>fenêtre glissante de 5 s</b> (apparaît dès ~2 s, valeur provisoire tant que la mesure dure moins de 5 s).</li>
+        <li><b>Tonalité T</b> (t.u.) — modèle d'<b>Aures</b> (pic ~700 Hz), fenêtre 2 s. Un clic sur l'axe Tonalité affiche en plus le <b>TNR</b> et le <b>PR</b> normatifs (<b>ECMA-74</b>, recalculés ~1 s sur le spectre fin FFT) et la raie dominante.</li>
+      </ul>
+      <p>Chaque axe est <b>normalisé</b> par une borne réglable dans <b>ÉCHELLES</b> (défaut : Sonie 40 sone, Acuité 4 acum, Rugosité 2 asper, Fluctuation 2 vacil, Tonalité 1,5 t.u. — calés pour que les sons courants et les références 1 asper / 1 vacil occupent une bonne part de l'axe). Les indicateurs sont <b>toujours calculés sur le spectre non pondéré (Z)</b>, quelle que soit la pondération A/C choisie pour l'affichage des niveaux (la sonie exige le SPL linéaire).</p>
+      <p><b>Validation.</b> Les modèles sont testés de bout en bout sur signaux de référence, contre leurs <b>définitions normatives</b> et la librairie de référence <b>MOSQITO</b> : sonie et acuité concordent à <b>~2 %</b> de 63 Hz à 8 kHz (à travers le banc de filtres réel) et sur 40–80 dB ; rugosité = <b>1 asper</b> pour l'AM 1 kHz/70 Hz/100 %/60 dB (et retombe à ~0 sur du bruit large bande) ; fluctuation = <b>1 vacil</b> pour l'AM 4 Hz ; TNR/PR <b>identiques</b> à MOSQITO. <b>Réserves.</b> Micro de smartphone non métrologique : grandeurs <b>indicatives, non certifiées</b>. La <b>correction fréquentielle du micro</b> (si un profil de calibration est actif) est appliquée à la sonie, l'acuité, la fluctuation et la tonalité (elles passent par le spectre corrigé) ; la <b>rugosité</b> est calculée sur le signal temporel (la correction fréquentielle ne s'y applique pas, mais elle y est peu sensible car fondée sur la profondeur de modulation). La <b>sonie et l'acuité</b> dépendent de la calibration absolue (offset) et de la réponse du micro ; <b>rugosité, fluctuation, tonalité</b>, fondées sur des rapports, sont plus robustes. Sonie en régime <b>stationnaire</b> (N5 approché).</p>
+
+      <h3 class="gloss">Glossaire — grandeurs &amp; critères</h3>
+      <p><b>Grandeurs acoustiques.</b></p>
+      <ul>
+        <li><b>dB(A) / dB(C)</b> — pondérations fréquentielles. A ≈ sensibilité de l'oreille à niveau modéré (atténue les graves) ; C ≈ quasi plate (crêtes, basses fréquences).</li>
+        <li><b>L<sub>AF</sub> / L<sub>AS</sub></b> (dB) — niveau pondéré A avec constante de temps <b>Fast</b> (125 ms) ou <b>Slow</b> (1 s).</li>
+        <li><b>L<sub>eq</sub></b> (dB) — niveau équivalent continu (énergie moyenne sur la durée) : L<sub>eq</sub> = 10·log<sub>10</sub>( (1/T)·∫ p²(t)/p<sub>0</sub>² dt ), avec p<sub>0</sub> = 20 µPa.</li>
+        <li><b>L<sub>Cpeak</sub></b> (dB) — valeur crête pondérée C, mesurée dans le domaine temporel.</li>
+        <li><b>Émergence</b> (dB) — écart de niveau entre une composante (raie ou bande) et le bruit de fond voisin.</li>
+        <li><b>Bark (z)</b> — échelle de bande critique de l'audition (0–24 Bark ≈ 20 Hz–15,5 kHz) ; base des modèles psychoacoustiques.</li>
+      </ul>
+      <p><b>Grandeurs psychoacoustiques.</b></p>
+      <ul>
+        <li><b>Sonie N</b> (sone) — force sonore perçue (ISO 532-1). Réf. : 1 sone = pur 1 kHz à 40 dB SPL. Lien au phon : N = 2<sup>(L<sub>N</sub>−40)/10</sup> ; inversement L<sub>N</sub> = 40 + 10·log<sub>2</sub>N (pour L<sub>N</sub> ≥ 40 phon). Doubler les sones = « deux fois plus fort ».</li>
+        <li><b>Niveau d'isosonie</b> (phon) — échelle de niveau : X phon = aussi fort qu'un pur 1 kHz à X dB SPL. <b>+10 phon ⇔ ×2 sone</b>.</li>
+        <li><b>N<sub>5</sub></b> (sone) — sonie dépassée 5 % du temps (valeur « des pics ») ; alimente la gêne PA.</li>
+        <li><b>Acuité S</b> (acum) — balance grave/aigu, part des hautes fréquences (DIN 45692). Réf. : 1 acum = bruit à bande étroite (1 Bark) centré à 1 kHz, 60 dB. Barycentre pondéré de la sonie spécifique : S = 0,11 · [ Σ<sub>z</sub> N′(z)·g(z)·z ] / [ Σ<sub>z</sub> N′(z) ], N′(z) = sonie spécifique, g(z) ≈ 1 jusqu'à ~16 Bark puis croissante.</li>
+        <li><b>Rugosité R</b> (asper) — sensation des modulations rapides d'amplitude (~15–300 Hz, max vers 70 Hz), modèle de Daniel &amp; Weber. Réf. : 1 asper = pur 1 kHz, 100 % AM à f<sub>mod</sub> = 70 Hz, 60 dB. R = 0,25 · Σ<sub>i</sub> g(z<sub>i</sub>)·( m<sub>i</sub> · k<sub>i−2</sub> · k<sub>i+2</sub> )², m<sub>i</sub> = profondeur de modulation de l'enveloppe du canal i, k = corrélations croisées inter-canaux.</li>
+        <li><b>Fluctuation F</b> (vacil) — sensation des modulations lentes (max à f<sub>mod</sub> = 4 Hz), modèle de Fastl. Réf. : 1 vacil = pur 1 kHz, 100 % AM à 4 Hz, 60 dB. F = 0,008 · [ Σ (ΔL/dB) ] / [ (f<sub>mod</sub>/4 Hz) + (4 Hz/f<sub>mod</sub>) ].</li>
+        <li><b>Tonalité T</b> (t.u.) — proéminence perçue des composantes tonales (modèle d'Aures) : pondère l'excès de niveau, la largeur de bande et la fréquence de chaque raie (pic de sensibilité ~700 Hz).</li>
+        <li><b>TNR</b> (dB) — <i>Tone-to-Noise Ratio</i> (ECMA-74) : TNR = L<sub>t</sub> − L<sub>n</sub>, niveau de la raie moins celui du bruit masquant dans sa bande critique. Raie <b>proéminente</b> si TNR ≥ 8 dB (au-dessus de 1 kHz ; seuil plus élevé en basses fréquences).</li>
+        <li><b>PR</b> (dB) — <i>Prominence Ratio</i> (ECMA-74) : PR = L<sub>m</sub> − 10·log<sub>10</sub>[ ½ (10<sup>L<sub>l</sub>/10</sup> + 10<sup>L<sub>u</sub>/10</sup>) ], niveau de la bande critique centrale (m) vs bandes adjacentes basse (l) et haute (u). Proéminente si PR ≥ 9 dB.</li>
+        <li><b>Gêne PA</b> — <i>Psychoacoustic Annoyance</i> (Zwicker) : PA = N<sub>5</sub> · ( 1 + √( w<sub>S</sub>² + w<sub>FR</sub>² ) ), w<sub>S</sub> = terme d'acuité, w<sub>FR</sub> = terme de rugosité + fluctuation. Sans unité (indicateur global).</li>
+      </ul>
+      <p style="font-size:11px"><b>Fenêtres de calcul.</b> Sonie et acuité 250 ms · rugosité ~170 ms (recalculée ~1 fois/s) · tonalité 2 s (TNR/PR ~1 s) · fluctuation 5 s (glissante, pleine après 5 s).</p>
+      <p style="font-size:10px;color:#7a8398">Les formules sont données sous forme simplifiée (l'implémentation suit fidèlement les normes/modèles cités, validée contre MOSQITO). Voir la section <b>Psychoacoustique</b> pour les réserves d'usage sur micro de smartphone.</p>
+
       <div class="helpfoot">CETIM · Sonomètre — aide intégrée<br>Auteur : Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>
     </div>
   </div></div>
 
   <div id="expPop" class="calpop"><div class="calpop-in">
-    <div class="cp-head">EXPORTER / RAPPORT <button id="epClose">✕</button></div>
+    <div class="cp-head">EXPORT / CHARGEMENT <button id="epClose">✕</button></div>
     <div style="display:flex;flex-direction:column;gap:6px;max-height:72vh;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain">
       <div class="msub" style="padding-top:0">INFOS DU RAPPORT · FACULTATIF</div>
       <input class="ep-in" id="repSite" placeholder="Site / lieu de mesure">
@@ -1018,6 +1097,8 @@ if('serviceWorker' in navigator){
       </div>
       <div class="msub">ENREGISTREMENTS LOCAUX</div>
       <div id="recList"></div>
+      <div class="msub">FICHIER EXTERNE</div>
+      <button class="exp-item" id="epLoadWav"><b>Charger un fichier audio (WAV…)</b><span>analyse en relecture · niveaux relatifs (0 dBFS = 120 dB) — non calibrés</span></button>
       <div class="msub">RAPPORT COMPLET</div>
       <button class="exp-item" id="epReport"><b>Générer le rapport (PDF)</b><span>document A4 · impression iOS → « Enregistrer en PDF »</span></button>
       <div class="msub">DONNÉES &amp; IMAGE</div>
@@ -1040,8 +1121,8 @@ const S = {
   fftDb:null, td:null, K:0, freqs:null, binHz:0,
   wA:null, wC:null, compGain:null,
   bands:[], bandBins:[],
-  bandPowF:null, bandPowS:null, bandPowV:null, bandPowD:null, bandPeak:null, bandEnergy:null,
-  binPowF:null, binPowS:null, binPowV:null, binPowD:null, binEnergy:null,
+  bandPowF:null, bandPowS:null, bandPowV:null, bandPowD:null, bandPeak:null, bandEnergy:null, bandMax:null,
+  binPowF:null, binPowS:null, binPowV:null, binPowD:null, binEnergy:null, binMax:null,
   specFrames:4,                   // moyennage temporel du spectre : nombre de trames (Welch ; 1 = live)
   specSmooth:0,                   // lissage fréquentiel du spectre fin : 1/n octave (0 = off par défaut)
   pF:{A:0,C:0,Z:0}, pS:{A:0,C:0,Z:0}, pV:{A:0,C:0,Z:0},
@@ -1049,10 +1130,10 @@ const S = {
   lafMax:-Infinity, lafMin:Infinity,
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
-  fscale:'log', fftN:16384, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
-  win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, expBand:'toct', recAudio:false,
+  fscale:'log', fftN:4096, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
+  win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, specCI:false, avgTau:0, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
-  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, iirBank:null, theme:'oled', sg3dSmooth:1, lsnSlope:24, lsnGain:12, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
+  toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, psyAvg:false, psyDesc:false, psyBnd:{N:40,S:4,R:2,F:2,T:1.5}, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
   statT:0, L10:-99, L50:-99, L90:-99,                 // indices statistiques
   tap:null, ring:null, winCoef:null, winSum2:1, re:null, im:null, mag:null,
@@ -1077,6 +1158,7 @@ function detectDevice(){
   if(/Android/.test(u))return 'android';
   return 'desktop';
 }
+function devLabel(){ return {iphone:'iPhone',ipad:'iPad',android:'Android',desktop:'PC'}[S.device]||'iPhone'; }
 function interpCurve(curve,f){
   const fc=curve.fc, g=curve.g||curve.gain_dB;
   if(!fc||!fc.length)return 0;
@@ -1367,6 +1449,21 @@ function unflashBtn(btn){ if(!btn)return; clearTimeout(btn._ft); btn.classList.r
 const LSN={on:false, nodes:null, lastF:'', warned:false, _raf:0};
 /* source d'entrée de l'écoute filtrée : le son EN COURS — replay si lecture, sinon micro */
 function lsnSrc(){ return (REPL.on&&REPL.src)?REPL.src:S.srcNode; }
+/* gain d'écoute en linéaire : fixe (dB) OU automatique.
+   Auto + relecture : normalise d'après le pic de l'enregistrement (vise ~ -1 dBFS).
+   Auto + live : makeup généreux, un limiteur en aval empêche la saturation. */
+function lsnGainLinear(){
+  if(!S.lsnAuto) return Math.pow(10,(S.lsnGain||0)/20);
+  if(REPL.on && REPL.buf){
+    const ch=REPL.buf.getChannelData(0); let sum=0,n=0;
+    const step=Math.max(1,Math.floor(ch.length/200000));   // sous-échantillonne les gros buffers
+    for(let i=0;i<ch.length;i+=step){ sum+=ch[i]*ch[i]; n++; }
+    const rms=Math.sqrt(sum/Math.max(1,n));
+    if(rms<1e-5) return 32;
+    return Math.max(0.2, Math.min(64, 0.18/rms));   // vise ~ -15 dBFS RMS (le limiteur tient les crêtes) → bien plus fort
+  }
+  return Math.pow(10,30/20);                          // live : +30 dB + limiteur
+}
 function lsnBuild(){
   const src=lsnSrc();
   if(!S.ctx||!src)return false;
@@ -1376,12 +1473,17 @@ function lsnBuild(){
   const hp=[],lp=[];
   for(let i=0;i<N;i++){const f=c.createBiquadFilter();f.type='highpass';f.Q.value=0.707;hp.push(f);}
   for(let i=0;i<N;i++){const f=c.createBiquadFilter();f.type='lowpass'; f.Q.value=0.707;lp.push(f);}
-  const gn=c.createGain(); gn.gain.value=Math.pow(10,(S.lsnGain||0)/20);   // gain de rattrapage (dB)
-  const chain=[...hp,...lp,gn];
+  const gn=c.createGain(); gn.gain.value=lsnGainLinear();
+  let lim=null;
+  if(S.lsnAuto){                                    // limiteur (empêche toute saturation en sortie)
+    lim=c.createDynamicsCompressor();
+    lim.threshold.value=-1.0; lim.knee.value=0; lim.ratio.value=20; lim.attack.value=0.003; lim.release.value=0.25;
+  }
+  const chain=[...hp,...lp,gn]; if(lim)chain.push(lim);
   src.connect(chain[0]);
   for(let i=0;i<chain.length-1;i++)chain[i].connect(chain[i+1]);
-  gn.connect(c.destination);
-  LSN.nodes={hp,lp,gn,first:chain[0],srcRef:src};
+  chain[chain.length-1].connect(c.destination);
+  LSN.nodes={hp,lp,gn,lim,first:chain[0],srcRef:src};
   return true;
 }
 /* rebranche l'écoute filtrée sur une nouvelle source (seek/relance du replay, retour micro) */
@@ -1406,6 +1508,7 @@ function lsnOff(){
   if(LSN.nodes){
     try{LSN.nodes.srcRef&&LSN.nodes.srcRef.disconnect(LSN.nodes.first);}catch(e){}
     try{LSN.nodes.gn.disconnect();}catch(e){}
+    try{LSN.nodes.lim&&LSN.nodes.lim.disconnect();}catch(e){}
     LSN.nodes=null;
   }
   LSN.on=false; LSN.lastF='';
@@ -1416,7 +1519,7 @@ function lsnRebuild(){                     // changement de pente pendant l'éco
   if(was && lsnBuild()){LSN.on=true;LSN.lastF='';lsnUpdate();}
 }
 function lsnSetGain(){                     // ajuste le gain sans reconstruire la chaîne
-  if(LSN.nodes&&S.ctx) LSN.nodes.gn.gain.setTargetAtTime(Math.pow(10,(S.lsnGain||0)/20),S.ctx.currentTime,0.05);
+  if(LSN.nodes&&S.ctx) LSN.nodes.gn.gain.setTargetAtTime(lsnGainLinear(),S.ctx.currentTime,0.05);
 }
 /* garde le filtre calé sur la bande zoomée même sans mesure (loop() ne tourne pas alors).
    En mesure, loop() appelle déjà lsnUpdate → ici on ne fait que reprogrammer la frame. */
@@ -1684,6 +1787,9 @@ function configureAnalyser(){
   const an=S.analyser;
   an.fftSize=Math.min(32768,N); an.smoothingTimeConstant=0;
   S.tap=new Float32Array(an.fftSize);
+  /* analyseur DÉDIÉ psycho : fenêtre temporelle fixe (~341 ms) indépendante de la FFT choisie,
+     nécessaire pour la rugosité multi-bande (résolution de modulation) */
+  if(S.psyAn){ S.psyAn.fftSize=16384; S.psyAn.smoothingTimeConstant=0; if(!S.psyTap||S.psyTap.length!==16384)S.psyTap=new Float32Array(16384); }
   /* ring buffer : accumule le signal pour fenêtrer N points même si le tap est plus court */
   S.ring=new Float32Array(N);
   /* fenêtre + normalisation cohérente (somme des carrés pour la puissance) */
@@ -1725,7 +1831,8 @@ function configureAnalyser(){
     S.bandPowV=new Float32Array(nb);
     S.bandPowD=new Float32Array(nb);
     S.curBnd=new Float32Array(nb);
-    S.bandEnergy=new Float64Array(nb);
+    S.curBndZ=new Float32Array(nb);
+    S.bandEnergy=new Float64Array(nb); S.bandEma=new Float32Array(nb); S.bandMax=new Float32Array(nb);
     S.bandPeak=new Float32Array(nb).fill(-99);
     S.welch=null;
   }
@@ -1736,16 +1843,22 @@ function configureAnalyser(){
     S.binPowD=new Float32Array(n);
     S.curFin=new Float32Array(n);
     S.binEnergy=new Float64Array(n);
+    S.binSumDb=new Float64Array(n); S.binSumDb2=new Float64Array(n);   // stats dB par bin -> bande de confiance
+    S.binEma=new Float32Array(n);   // moyenne glissante exponentielle (option)
+    S.binMax=new Float32Array(n);   // peak hold : maximum retenu par raie (option MOY)
+    S.binEmaDb=new Float32Array(n); S.binEmaDb2=new Float32Array(n);   // moyenne et moment d'ordre 2 en dB (glissants) -> IC
     S.welch=null;
   }
   S.iirBank=null;                      // le banc IIR dépend de fs/binHz/compGain : reconstruit
   SG.init=false;                       // recartographie bins→lignes (les données sgram sont préservées par sgSetup)
   if(typeof REPL!=='undefined' && REPL.on && !REPL._building){ clearTimeout(REPL._reanaT); REPL._reanaT=setTimeout(replReanalyze,60); }
 }
+function makeCtx(){ const O=window.AudioContext||window.webkitAudioContext; try{ return S.reqFs?new O({sampleRate:S.reqFs}):new O(); }catch(_){ return new O(); } }
 async function initAudio(){
-  S.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  S.ctx=makeCtx();
   try{ if(S.outId&&S.ctx.setSinkId) await S.ctx.setSinkId(S.outId); }catch(_){}   // sortie réécoute (si supportée)
   S.analyser=S.ctx.createAnalyser();
+  S.psyAn=S.ctx.createAnalyser();
   await acquireMic();
   configureAnalyser();
 }
@@ -2087,6 +2200,20 @@ function renderReplayFrame(i){
     S.binPowD[k]=c?s/c:0;                                        // spectre fin : moyenne des N dernières trames
     if(S.binEnergy) S.binEnergy[k]=F.cumFine[base+r]*invT*T;     // MOY fine : moyenne début→curseur
   }
+  /* peak hold en relecture : max début→curseur, cache incrémental (recalcul complet si retour arrière) */
+  if(S.avgTau===-1&&S.binMax&&S.bandMax){
+    let pk=REPL._pk;
+    if(!pk||pk.F!==F){ pk=REPL._pk={F,i:-1,fine:new Float32Array(RES),band:new Float32Array(F.nb)}; }
+    if(i<pk.i){ pk.i=-1; pk.fine.fill(0); pk.band.fill(0); }
+    for(let j=pk.i+1;j<=i;j++){
+      const bj=F.band[j], off=j*RES;
+      for(let b=0;b<F.nb;b++)if(bj[b]>pk.band[b])pk.band[b]=bj[b];
+      for(let r=0;r<RES;r++){ const v=F.rawFine[off+r]; if(v>pk.fine[r])pk.fine[r]=v; }
+    }
+    pk.i=i;
+    for(let b=0;b<F.nb;b++)S.bandMax[b]=pk.band[b]*(wfc?wfc[b]:1);
+    for(let k=0;k<nn;k++)S.binMax[k]=pk.fine[F.finMap[k]||0];
+  }
   /* valeur principale = piste temporelle sélectionnée, pondération courante */
   const tr=S.time==='S'?S.pS:S.time==='V'?S.pV:S.pF;
   const pw=S.weight==='C'?tr.C:S.weight==='Z'?tr.Z:tr.A;
@@ -2112,7 +2239,7 @@ function replSetIndex(i,{audio}={}){
 function replAudioTo(t){
   if(!REPL.buf||!S.ctx)return;
   if(REPL.src){ try{REPL.src.onended=null;REPL.src.stop();}catch(_){} try{REPL.src.disconnect();}catch(_){} REPL.src=null; }
-  const src=S.ctx.createBufferSource(); src.buffer=REPL.buf; src.connect(S.analyser);
+  const src=S.ctx.createBufferSource(); src.buffer=REPL.buf; src.connect(S.analyser); psyTapWire(src);
   src.onended=()=>{};   // la fin est gérée par l'index (replPlayTick), pas par l'audio
   REPL.src=src; src.start(0,Math.max(0,Math.min(REPL.dur-0.02,t))); lsnRetarget(src);
 }
@@ -2148,6 +2275,12 @@ async function replayStart(id,startAt,startPaused){
   REPL._building=true;                                   // évite l'auto-ré-analyse pendant le setup (configureAnalyser)
   let meta=null, buf=null, reuse=(REPL.buf&&REPL.meta&&REPL.meta.id===id&&REPL.frames);
   if(reuse){ meta=REPL.meta; buf=REPL.buf; }
+  else if(REPL.buf&&REPL.meta&&REPL.meta.id===id){   // buffer déjà en mémoire (fichier externe ou ré-analyse) : pas de lecture en base
+    meta=REPL.meta; buf=REPL.buf;
+    if(S.ctx&&S.ctx.state!=='running'){ try{ await S.ctx.resume(); }catch(_){} }
+    if(!S.analyser&&S.ctx){ S.analyser=S.ctx.createAnalyser(); }
+    configureAnalyser();
+  }
   else{
     let segs=[];
     try{ meta=(await recList()).find(r=>r.id===id); segs=meta?await recSegs(id):[]; }catch(_){}
@@ -2165,6 +2298,7 @@ async function replayStart(id,startAt,startPaused){
   if(S.stream){ try{ for(const t of S.stream.getTracks())t.stop(); }catch(_){} S.stream=null; }
   REPL.savedOff=(REPL.savedOff!=null?REPL.savedOff:S.offset); if(typeof meta.offset==='number')S.offset=meta.offset;
   REPL.on=true; REPL.buf=buf; REPL.meta=meta; REPL.dur=buf.duration; REPL.lastId=meta.id; REPL.playing=false;
+  if(LSN.on&&S.lsnAuto) lsnSetGain();                             // recalcule le meilleur gain d'après l'enregistrement chargé
   resetMeasure();
   S.running=true; S.paused=true; S.lastT=0; S.warmT=0; S.warmAge=0; S.delayT=0; S.trigWait=false; S.K=0;
   clearRunVisuals();
@@ -2208,6 +2342,34 @@ function replUnload(){
   setTransport(); setLocks();
   const b=$('modeBadge'); if(b){b.textContent='PRÊT';b.className='badge';}
 }
+/* ===== fichier audio externe (WAV, M4A…) : décodage → relecture analysée =====
+   La calibration micro ne s'applique pas à un fichier étranger. Convention d'affichage :
+   réf. pleine échelle 0 dBFS = 120 dB (constante FILE_FS_DB) → niveaux RELATIFS
+   (dBFS + 120 ; retrancher 120 pour revenir en dBFS). Un offset à 0 (vrais dBFS
+   négatifs) placerait toute la courbe sous le plancher de l'axe dB (autoRange ≥ −10).
+   L'offset de l'appareil est restauré à la sortie du replay (REPL.savedOff). */
+const FILE_FS_DB=120;
+async function replayLoadFile(file){
+  if(S.running&&!REPL.on){ toast('Arrête la mesure en cours avant de charger un fichier'); return; }
+  let dec;
+  try{
+    if(!S.ctx){ S.ctx=new (window.AudioContext||window.webkitAudioContext)(); }
+    if(S.ctx.state!=='running'){ try{ await S.ctx.resume(); }catch(_){} }
+    toast('Décodage de « '+file.name+' »…');
+    dec=await S.ctx.decodeAudioData(await file.arrayBuffer());
+  }catch(e){ toast('Fichier illisible — formats acceptés : WAV, M4A, MP3, AIFF'); return; }
+  let buf=dec;
+  if(dec.numberOfChannels>1){                       // mixage mono (l'analyse et la lecture utilisent 1 canal)
+    buf=S.ctx.createBuffer(1,dec.length,dec.sampleRate);
+    const o=buf.getChannelData(0), nc=dec.numberOfChannels;
+    for(let c=0;c<nc;c++){ const s=dec.getChannelData(c); for(let i=0;i<dec.length;i++)o[i]+=s[i]/nc; }
+  }
+  REPL.buf=buf; REPL.frames=null;
+  REPL.meta={ id:'file:'+file.name+':'+(file.size||buf.length), name:file.name.replace(/\.[^.]+$/,''), fs:buf.sampleRate, len:buf.length, offset:FILE_FS_DB, isFile:true };
+  await replayStart(REPL.meta.id,0,true);
+  toast('« '+REPL.meta.name+' » chargé — niveaux relatifs (0 dBFS = '+FILE_FS_DB+' dB), calibration micro non applicable');
+}
+function psyTapWire(src){ try{ if(S.ctx&&!S.psyAn)S.psyAn=S.ctx.createAnalyser(); if(S.psyAn){ S.psyAn.fftSize=16384; S.psyAn.smoothingTimeConstant=0; if(!S.psyTap||S.psyTap.length!==16384)S.psyTap=new Float32Array(16384); if(src)src.connect(S.psyAn); } }catch(_){} }
 function replayTeardown(){
   if(!REPL.on) return;
   clearTimeout(REPL._reanaT);
@@ -2215,7 +2377,7 @@ function replayTeardown(){
   REPL.on=false; S._previewRing=false;
   if(REPL.savedOff!=null){ S.offset=REPL.savedOff; REPL.savedOff=null; }
   if(S.ctx&&S.ctx.state==='suspended'){ try{S.ctx.resume();}catch(_){} }
-  if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} arecWire(); }
+  if(S.srcNode){ try{S.srcNode.connect(S.analyser);}catch(_){} psyTapWire(S.srcNode); arecWire(); }
   if(LSN.on) lsnRetarget(S.srcNode||null);
   ui();
 }
@@ -2228,6 +2390,7 @@ async function acquireMic(){
   S.stream=await navigator.mediaDevices.getUserMedia({audio:ac});
   S.srcNode=S.ctx.createMediaStreamSource(S.stream);
   S.srcNode.connect(S.analyser);
+  psyTapWire(S.srcNode);
   arecWire();                                   // V2 : rebranche le captage continu (srcNode neuf)
   S.lcLastCt=S.ctx.currentTime;                 // évite un saut de bloc dans les filtres temporels
   const tr=S.stream.getAudioTracks()[0];
@@ -2270,7 +2433,7 @@ async function reviveMic(fromGesture){
   if(fromGesture && S.ctx.state!=='running'){
     try{
       try{ await S.ctx.close(); }catch(e){}
-      S.ctx=new (window.AudioContext||window.webkitAudioContext)();
+      S.ctx=makeCtx();
       S.analyser=S.ctx.createAnalyser();
       await acquireMic();
       configureAnalyser();
@@ -2321,6 +2484,7 @@ function computeSpectrum(){
 
 function resetMeasure(){
   S.pF={A:0,C:0,Z:0}; S.pS={A:0,C:0,Z:0}; S.pV={A:0,C:0,Z:0};
+  if(typeof psyReset==='function')psyReset();          // toile psychoacoustique : repart propre
   S.lvlDet=null;                       // détecteur temporel : reconstruit + re-calé au prochain bloc
   S.welch=null;                        // moyennage spectre (Welch) : repart propre
   S._fft=null;                         // état lissage FFT (mode diagnostic) : repart propre
@@ -2331,6 +2495,8 @@ function resetMeasure(){
   S.delayT=0; S.trigWait=false;
   S.elapsed=0; S.hist=[]; S.histLast=0; S.peakHold=0;
   if(S.bandEnergy)S.bandEnergy.fill(0);
+  if(S.bandEma)S.bandEma.fill(0);
+  if(S.bandMax)S.bandMax.fill(0);
   if(S.bandPowF)S.bandPowF.fill(0);
   if(S.bandPowS)S.bandPowS.fill(0);
   if(S.bandPowV)S.bandPowV.fill(0);
@@ -2340,6 +2506,9 @@ function resetMeasure(){
   if(S.binPowV)S.binPowV.fill(0);
   if(S.binPowD)S.binPowD.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
+  if(S.binSumDb)S.binSumDb.fill(0); if(S.binSumDb2)S.binSumDb2.fill(0);
+  if(S.binEma)S.binEma.fill(0); if(S.binEmaDb)S.binEmaDb.fill(0); if(S.binEmaDb2)S.binEmaDb2.fill(0); S._emaSeed=false;
+  if(S.binMax)S.binMax.fill(0); REPL._pk=null;
   if(S.bandPeak)S.bandPeak.fill(-99);
   /* spectrogramme : vider le tampon de données et les curseurs/zoom associés */
   if(SG.cols)SG.cols.fill(null);
@@ -2354,7 +2523,7 @@ function resetSg3d(){ if(window.V3){window.V3.frames.length=0;window.V3.ema=null
 /* effacements ciblés (mode expert) */
 function clearSgram(){ if(SG.cols)SG.cols.fill(null); SG.colSeq=0; SG.vScaleKey=''; SG.vSeq=-1; resetSg3d(); S.sgCursor=null; drawActive(); }
 function clearHist(){ S.hist=[]; S.histLast=0; drawActive(); }
-function clearPeak(){ S.lafMax=-Infinity; S.lafMin=Infinity; S.peakHold=0; if(S.bandPeak)S.bandPeak.fill(-99); updateNumbers(-99); drawActive(); }
+function clearPeak(){ S.lafMax=-Infinity; S.lafMin=Infinity; S.peakHold=0; S.lcPeak=-Infinity; if(S.bandPeak)S.bandPeak.fill(-99); updateNumbers(-99); drawActive(); }
 
 /* ================= Boucle ================= */
 const lvl=p=>p>0?10*Math.log10(p)+S.offset:-99;
@@ -2417,7 +2586,7 @@ function loop(ts){
   // remplir fftDb (dB) pour compatibilité avec l'affichage aval
   for(let i=0;i<n;i++){S.fftDb[i]=mag[i]>0?10*Math.log10(mag[i]):-180;}
   let pA=0,pC=0,pZ=0;
-  const nb=S.bands.length, bp=new Float32Array(nb);
+  const nb=S.bands.length, bp=new Float32Array(nb), bpZ=new Float32Array(nb);   // bpZ = bandes NON pondérées (psychoacoustique : sonie/acuité/fluctuation exigent le SPL Z)
   const wSel=S.weight==='A'?S.wA:S.weight==='C'?S.wC:null;
 
   for(let i=1;i<n;i++){
@@ -2428,16 +2597,17 @@ function loop(ts){
     pZ+=p; pA+=p*S.wA[i]; pC+=p*S.wC[i];
   }
   for(let b=0;b<nb;b++){
-    const [i0,i1]=S.bandBins[b]; let s=0;
+    const [i0,i1]=S.bandBins[b]; let s=0,sZ=0;
     for(let i=i0;i<=i1;i++){
       let p=mag[i];
       if(!isFinite(p))p=0;
       if(S.corr!=='off')p*=S.compGain[i];
       if(S.blGain)p*=S.blGain[i];
+      sZ+=p;                       // non pondéré (psycho)
       if(wSel)p*=wSel[i];
       s+=p;
     }
-    bp[b]=s;
+    bp[b]=s; bpZ[b]=sZ;
   }
 
   /* Correction de Parseval : recale la puissance spectrale sur le RMS temporel exact
@@ -2447,13 +2617,14 @@ function loop(ts){
   if(pZ>0&&Pt>0&&isFinite(Pt)){const k=Pt/pZ; S.K=S.K?0.9*S.K+0.1*k:k;}
   const K=S.K||1;
   pA*=K; pC*=K; pZ*=K;
-  for(let b=0;b<nb;b++)bp[b]*=K;
+  for(let b=0;b<nb;b++){ bp[b]*=K; bpZ[b]*=K; }
   /* ---- source TIERS D'OCTAVE : banc de filtres IEC à la place de la synthèse FFT ---- */
   if(S.toctSrc==='iir'&&S.iirBank&&S.iirBank.n>0){
     const bk=S.iirBank, wfc=S.weight==='A'?bk.wAfc:S.weight==='C'?bk.wCfc:null;
     for(let b=0;b<nb;b++){
       let p=bk.acc[b]/bk.n;                              // puissance moyenne de bande (temporel)
       if(S.corr!=='off')p*=bk.compFc[b];
+      bpZ[b]=p;                                          // non pondéré (psycho)
       if(wfc)p*=wfc[b];
       bp[b]=p;
     }
@@ -2470,13 +2641,16 @@ function loop(ts){
   const tdLeq = (S.corr!=='off') && !REPL.on && S.lvlSrc!=='fft';
   for(const k of ['A','C','Z']){ const p=k==='A'?pA:k==='C'?pC:pZ; if(!idle && !tdLeq) S.eq[k]+=p*dt; }
   if(!idle && !tdLeq) S.eqT+=dt;
+  const emaA = S.avgTau>0 ? 1-Math.exp(-dt/Math.max(0.05,S.avgTau)) : 0;   // moyenne glissante exponentielle du spectre (option MOY), coeff exact 1−e^(−dt/τ)
   const pick=(F,S_,V)=>S.time==='F'?F:S.time==='S'?S_:V;
   /* Spectre : moyennage temporel de type WELCH — on empile la trame FFT courante dans un tampon
      puis on l'agrège (moyenne des N derniers périodogrammes) à PAS FIXE = fenêtre·(1−overlap).
      Ici on ne fait que capturer la trame courante ; l'agrégation se fait dans welchUpdate(). */
   for(let b=0;b<nb;b++){
-    S.curBnd[b]=bp[b];
+    S.curBnd[b]=bp[b]; if(S.curBndZ)S.curBndZ[b]=bpZ[b];
     if(!idle) S.bandEnergy[b]+=bp[b]*dt;
+    if(!idle&&emaA>0&&S.bandEma) S.bandEma[b]=S._emaSeed?S.bandEma[b]+(bp[b]-S.bandEma[b])*emaA:bp[b];   // EMA en énergie (F/S)
+    if(!idle&&S.bandMax&&bp[b]>S.bandMax[b]) S.bandMax[b]=bp[b];                                          // peak hold (max retenu depuis le début)
   }
   /* corrélation vibro-acoustique : instantané à ~20 Hz quand VIB est actif.
      Séries selon l'affichage : bandes 1/3 oct (tiers/octave) ou 128 groupes log (bande fine). */
@@ -2509,7 +2683,14 @@ function loop(ts){
     p*=K;
     S.curFin[i]=p;
     if(!idle&&S.binEnergy)S.binEnergy[i]+=p*dt;   // énergie cumulée par bin → spectre Leq moyenné (rapport)
+    if(!idle){ const Ld=10*Math.log10(p>1e-12?p:1e-12);
+      if(S.binSumDb){ S.binSumDb[i]+=Ld*dt; S.binSumDb2[i]+=Ld*Ld*dt; }             // stats dB cumulées (IC en mode Leq)
+      if(S.binMax&&p>S.binMax[i])S.binMax[i]=p;                                     // peak hold (max retenu depuis le début)
+      if(emaA>0&&S.binEma){ S.binEma[i]=S._emaSeed?S.binEma[i]+(p-S.binEma[i])*emaA:p;              // EMA en ÉNERGIE (pondération temporelle F/S d'un sonomètre, IEC 61672)
+        S.binEmaDb[i]=S._emaSeed?S.binEmaDb[i]+(Ld-S.binEmaDb[i])*emaA:Ld;
+        S.binEmaDb2[i]=S._emaSeed?S.binEmaDb2[i]+(Ld*Ld-S.binEmaDb2[i])*emaA:Ld*Ld; } }
   }
+  if(!idle&&emaA>0)S._emaSeed=true;
   welchUpdate(ts);                                 // agrège les N derniers périodogrammes (pas fixe + overlap) → binPowD/bandPowD
 
   /* ===== NIVEAU LARGE BANDE — pondération temporelle exacte (Option 2) =====
@@ -2546,7 +2727,7 @@ function loop(ts){
   const LAF=lvl(pick(S.pF.A,S.pS.A,S.pV.A));
   if(warm){
     /* ARMEMENT : on jette les premières 1,5 s (transitoire de gain iOS + pop d'amorçage).
-       Délai fixe = simple et fiable ; l'affichage tourne mais rien n'est intégré. */
+       Délai fixe = simple et fiable ; RIEN n'est calculé ni affiché (spectre, Leq, psycho). */
     S.warmAge=(S.warmAge||0)+dt;
     if(S.warmAge>=(S.warmMax||1.5)){
       S.warmT=0; S.warmAge=0;
@@ -2554,7 +2735,7 @@ function loop(ts){
       S.trigWait=!!S.trigLevel;           // puis attente de seuil éventuelle
       if(S.delayT<=0 && !S.trigWait) beginRun();
     }
-    updateNumbers(L); drawActive();
+    blankInit();                          // affichage vierge pendant l'init (pas de drawActive → pas de psyUpdate)
     return;
   }
   /* ---- phase DÉPART DIFFÉRÉ : décompte, rien n'est intégré NI affiché en accumulation ---- */
@@ -2597,6 +2778,20 @@ function loop(ts){
 
 /* ================= Chiffres ================= */
 function fmt(v){return (v<=-90||!isFinite(v))?'--.-':v.toFixed(1);}
+function blankInit(){
+  /* état d'init micro : aucune valeur affichée */
+  const dash='--.-';
+  const num=$('mainVal'); if(num)num.textContent=dash;
+  ['vL10','vL50','vL90','vLCpk','vLCpeak','vLAE','vDLF','sLAeq','sLCeq','vLAeq','vLCeq','vLZeq','vMax','vMin','vLAF','vLeq']
+    .forEach(id=>{const e=$(id); if(e)e.textContent=dash;});
+  const id=S.screen==='spec'?'specCv':S.screen==='sgram'?'sgramCv':S.screen==='hist'?'histCv':S.screen==='psy'?'psyCv':null;
+  if(id){ const cv=$(id); if(cv){ const r=cv.getBoundingClientRect(); if(r.width>4){
+    const dpr=Math.min(2,window.devicePixelRatio||1); cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+    const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,r.width,r.height);
+    g.fillStyle='rgba(150,180,210,.5)'; g.textAlign='center'; g.textBaseline='middle'; g.font='11px sans-serif';
+    g.fillText('INIT MICRO…', r.width/2, r.height/2);
+  }}}
+}
 function updateNumbers(L){
   $('mainVal').textContent=fmt(L).padStart(5,' ');
   /* indices statistiques (percentiles du LAF échantillonné à 10 Hz), recalcul 1×/s */
@@ -2635,7 +2830,8 @@ function updateNumbers(L){
         let pl=bp[i-1]||0,pr=bp[i+1]||0; if(wSel){pl*=wSel[i-1];pr*=wSel[i+1];}
         if(p>=pl&&p>=pr&&p>bv){bv=p;bi=i;}
       }
-      if(bi>0){ const emg=tonalEmergence(bp,bi,wSel); if(emg && emg.strong) cand={bi,emg}; }
+      if(bi>0){ const emg=tonalEmergence(bp,bi,wSel); if(emg && emg.strong) cand={bi,emg}; S.psyEmg=emg?emg.dL:0; }
+      else S.psyEmg=0;
     }
     /* suivi de persistance */
     if(cand){
@@ -2787,7 +2983,7 @@ function drawSpectrum(avg,modeOverride){
   if(mode==='toct'||mode==='oct'){
     /* octave : agrège les tiers par groupes centrés sur les fréquences normalisées (…31.5,63,125,250,500,1k…) */
     let names, pw, peak;
-    const pwT=useAvg?Array.from(S.bandEnergy,e=>e/S.eqT):S.bandPowD;
+    const pwT=useAvg?(S.avgTau===-1&&S.bandMax?S.bandMax:S.avgTau>0&&S.bandEma?S.bandEma:Array.from(S.bandEnergy,e=>e/S.eqT)):S.bandPowD;
     if(mode==='oct'){
       const OCT=[16,31.5,63,125,250,500,1000,2000,4000,8000,16000];
       names=[]; pw=[]; peak=[];
@@ -2873,10 +3069,12 @@ function drawSpectrum(avg,modeOverride){
        les curseurs (tap + max) et l'émergence lisent tous la MÊME donnée */
     let binPowEff=binPow;
     if(useAvg&&S.binEnergy){
-      const nE=S.binEnergy.length;
-      if(!S._avgBinPow||S._avgBinPow.length!==nE)S._avgBinPow=new Float32Array(nE);
-      const inv=1/S.eqT; for(let i=0;i<nE;i++)S._avgBinPow[i]=S.binEnergy[i]*inv;
-      binPowEff=S._avgBinPow;
+      if(S.avgTau===-1&&S.binMax){ binPowEff=S.binMax; }
+      else if(S.avgTau>0&&S.binEma){ binPowEff=S.binEma; }
+      else{ const nE=S.binEnergy.length;
+        if(!S._avgBinPow||S._avgBinPow.length!==nE)S._avgBinPow=new Float32Array(nE);
+        const inv=1/S.eqT; for(let i=0;i<nE;i++)S._avgBinPow[i]=S.binEnergy[i]*inv;
+        binPowEff=S._avgBinPow; }
     }
     /* lissage fréquentiel 1/n octave — AFFICHAGE de la trace uniquement (les mesures :
        curseur, émergence, suivi de max, restent sur les données brutes binPowEff).
@@ -2893,15 +3091,34 @@ function drawSpectrum(avg,modeOverride){
       binShow=sm;
     }
     let dLo=Infinity,dHi=-Infinity;
-    const pts=[];
+    const pts=[], band=[];
     const i0=Math.max(1,Math.floor(fmin/S.binHz)), i1=Math.min(S.fftDb.length-1,Math.ceil(fmax/S.binHz));
+    /* intervalle de confiance de la MOYENNE ±2σ/√N : se resserre au fil de la mesure (option experte) */
+    const ciOn = S.specCI && useAvg && S.avgTau!==-1 && !REPL.on && S.eqT>0.5 && S.binSumDb && S.binSumDb2;   // pas d'IC sur un max retenu (peak hold)
+    let stdArr=null, semK=2;
+    if(ciOn){
+      const fsR=S.ctx?S.ctx.sampleRate:48000;
+      const avgSpan=S.avgTau>0?S.avgTau:S.eqT;
+      const Neff=Math.max(1, avgSpan/((S.fftN||4096)/fsR));   // fenêtres indépendantes sur la fenêtre de moyenne effective
+      semK=2/Math.sqrt(Neff);                                // demi-largeur = 2·σ/√Neff (IC ~95 % de la moyenne)
+      const raw=new Float32Array(i1+1);
+      if(S.avgTau>0&&S.binEmaDb){                              // mode glissant : variance glissante (oublie en ~τ)
+        for(let i=i0;i<=i1;i++){ const m=S.binEmaDb[i]; let v=S.binEmaDb2[i]-m*m; raw[i]=v>0?Math.sqrt(v):0; }
+      } else {                                                 // mode cumulé (Leq) : variance sur toute la mesure
+        const invT=1/S.eqT; for(let i=i0;i<=i1;i++){ const m=S.binSumDb[i]*invT; let v=S.binSumDb2[i]*invT-m*m; raw[i]=v>0?Math.sqrt(v):0; }
+      }
+      stdArr=new Float32Array(i1+1); const kk=3;                    // léger lissage de σ (±3 bins) pour une enveloppe propre
+      for(let i=i0;i<=i1;i++){ let s=0,c=0; for(let j=Math.max(i0,i-kk);j<=Math.min(i1,i+kk);j++){s+=raw[j];c++;} stdArr[i]=c?s/c:0; }
+    }
     for(let i=i0;i<=i1;i++){
       const f=S.freqs[i];
       let p=binShow?binShow[i]:0;   // trace lissée en fréquence (ou brute si lissage off)
       if(!isFinite(p))p=0;
       if(wSel)p*=wSel[i];                // pondération A/C appliquée à l'affichage
-      const L=lvl(p); pts.push([x2(f),L]);
+      const L=lvl(p), X=x2(f); pts.push([X,L]);
       if(L>-90){if(L<dLo)dLo=L; if(L>dHi)dHi=L;}
+      if(ciOn && L>-90){ const sd=semK*stdArr[i], up=L+sd, lo=L-sd; band.push([X,up,lo]);
+        if(up>dHi)dHi=up; if(lo<dLo)dLo=lo; }
     }
     autoRange(sc,dLo,dHi);
     grid(g,w,h,sc,padL,10);
@@ -2912,6 +3129,16 @@ function drawSpectrum(avg,modeOverride){
     }
     g.save();
     g.beginPath(); g.rect(padL, 0, Math.max(0,w-padL), h); g.clip();   // borne le tracé à la zone du graphe (pas de débordement sur l'axe des ordonnées)
+    if(ciOn && band.length>1){                                          // fond semi-transparent ±2σ + liserés
+      g.beginPath();
+      band.forEach((b,i)=>{const y=y2(b[1],h,sc); i?g.lineTo(b[0],y):g.moveTo(b[0],y);});
+      for(let i=band.length-1;i>=0;i--){const y=y2(band[i][2],h,sc); g.lineTo(band[i][0],y);}
+      g.closePath(); g.fillStyle=THEME.line; g.globalAlpha=0.15; g.fill();
+      g.globalAlpha=0.4; g.lineWidth=0.8; g.strokeStyle=THEME.line;
+      g.beginPath(); band.forEach((b,i)=>{const y=y2(b[1],h,sc); i?g.lineTo(b[0],y):g.moveTo(b[0],y);}); g.stroke();
+      g.beginPath(); band.forEach((b,i)=>{const y=y2(b[2],h,sc); i?g.lineTo(b[0],y):g.moveTo(b[0],y);}); g.stroke();
+      g.globalAlpha=1;
+    }
     g.beginPath();g.strokeStyle=THEME.line;g.lineWidth=1.3;
     pts.forEach((pt,i)=>{const y=y2(pt[1],h,sc); i?g.lineTo(pt[0],y):g.moveTo(pt[0],y);});
     g.stroke();
@@ -3439,7 +3666,12 @@ function beginRun(){
   S.L10=-99;S.L50=-99;S.L90=-99;S.statT=0;
   if(S.bandPeak)S.bandPeak.fill(-99);
   if(S.bandEnergy)S.bandEnergy.fill(0);
+  if(S.bandEma)S.bandEma.fill(0);
+  if(S.bandMax)S.bandMax.fill(0);
   if(S.binEnergy)S.binEnergy.fill(0);
+  if(S.binSumDb)S.binSumDb.fill(0); if(S.binSumDb2)S.binSumDb2.fill(0);
+  if(S.binEma)S.binEma.fill(0); if(S.binEmaDb)S.binEmaDb.fill(0); if(S.binEmaDb2)S.binEmaDb2.fill(0); S._emaSeed=false;
+  if(S.binMax)S.binMax.fill(0); REPL._pk=null;
   if(S.recAudio&&!REPL.on)arecReset();          // V2 : nouvel enregistrement audio par mesure (jamais en replay)
   /* en REPLAY, un saut de timeline relance les intégrateurs mais PRÉSERVE le
      spectrogramme (flux continu de ce qu'on explore) ; le nettoyage complet
@@ -3754,11 +3986,581 @@ function updScaleLbl(){
   const txt=(S.dbAuto&&S.sgAuto&&fullF&&fullT)?'Auto':'Manuel';
   if(txt!==_scaleLbl){_scaleLbl=txt;$('kDynV').textContent=txt;}
 }
+/* ===================== PSYCHOACOUSTIQUE =====================
+   Sonie N (sone) — ISO 532-1 (méthode tabulée DIN 45631, port fidèle de MOSQITO/norme).
+   Acuité S (acum) — pondération DIN 45692 sur la sonie spécifique.
+   Rugosité R (asper) — Daniel & Weber : canaux auditifs chevauchants + cohérence inter-bandes.
+   Fluctuation F (vacil) — Fastl band-wise : modulation de la sonie spécifique par bande de Bark.
+   Tonalité T (t.u.) — Aures : raies tonales pondérées (fréquence ~700 Hz, excès de niveau).
+   PA — gêne psychoacoustique de Zwicker (combine N5, S, R, F).
+   Validation banc (test_psycho.js). Confrontation MOSQITO prévue. */
+const PSY_BARK_HI=[100,200,300,400,510,630,770,920,1080,1270,1480,1720,2000,2320,2700,3150,3700,4400,5300,6400,7700,9500,12000,15500];
+const PSY_LTQ=[30,18,12,8,7,6,5,4,3,3,3,3,3,3,3,3,3,3,3,4,5,7,12,20];   // seuil en champ approx par Bark (dB)
+/* Bornes de normalisation (valeur → 100 %). Défauts pleine échelle usuels :
+   sonie 0–100 sone, acuité 0–5 acum, rugosité 0–5 asper, fluctuation 0–3 vacil, tonalité 0–2 t.u. */
+const PSY_BOUNDS={N:40,S:4,R:2,F:2,T:1.5};  // bornes de normalisation de la toile (calées sur des valeurs réalistes : réf. 1 asper/1 vacil ~ mi-échelle)
+const PSY_BARK_FC=[50,150,250,350,450,570,700,840,1000,1170,1370,1600,1850,2150,2500,2900,3400,4000,4800,5800,7000,8500,10500,13500];
+const PSY_CN=0.1253;   // calage 1 sone @ 1 kHz/40 dB (modèle avec étalement)
+function psyBarkOf(f){ for(let z=0;z<24;z++) if(f<=PSY_BARK_HI[z]) return z; return 23; }
+/* ===== Sonie ISO 532-1 (tabulée, méthode Zwicker/Fastl DIN 45631) =====
+   Port fidèle du cœur MOSQITO/ISO (validé à la précision machine).
+   Entrée : 28 niveaux de tiers d'octave 25 Hz–12,5 kHz (dB SPL). Sortie : N (sone) + sonie spécifique. */
+const ISO_F28=[25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500];
+const ISO_RAP=[45,55,65,71,80,90,100,120];
+const ISO_DLL=[[-32,-24,-16,-10,-5,0,-7,-3,0,-2,0],[-29,-22,-15,-10,-4,0,-7,-2,0,-2,0],[-27,-19,-14,-9,-4,0,-6,-2,0,-2,0],[-25,-17,-12,-9,-3,0,-5,-2,0,-2,0],[-23,-16,-11,-7,-3,0,-4,-1,0,-1,0],[-20,-14,-10,-6,-3,0,-4,-1,0,-1,0],[-18,-12,-9,-6,-2,0,-3,-1,0,-1,0],[-15,-10,-8,-4,-2,0,-3,-1,0,-1,0]];
+const ISO_LTQ=[30,18,12,8,7,6,5,4,3,3,3,3,3,3,3,3,3,3,3,3];
+const ISO_A0=[0,0,0,0,0,0,0,0,0,0,-0.5,-1.6,-3.2,-5.4,-5.6,-4,-1.5,2,5,12];
+const ISO_DDF=[0,0,0.5,0.9,1.2,1.6,2.3,2.8,3,2,0,-1.4,-2,-1.9,-1,0.5,3,4,4.3,4];
+const ISO_DCB=[-0.25,-0.6,-0.8,-0.8,-0.5,0,0.5,1.1,1.5,1.7,1.8,1.8,1.7,1.6,1.4,1.2,0.8,0.5,0,-0.5];
+const ISO_ZUP=[0.9,1.8,2.8,3.5,4.4,5.4,6.6,7.9,9.2,10.6,12.3,13.8,15.2,16.7,18.1,19.3,20.6,21.8,22.7,23.6,24];
+const ISO_RNS=[21.5,18,15.1,11.5,9,6.1,4.4,3.1,2.13,1.36,0.82,0.42,0.30,0.22,0.15,0.10,0.035,0];
+const ISO_USL=[[13,8.2,6.3,5.5,5.5,5.5,5.5,5.5],[9,7.5,6,5.1,4.5,4.5,4.5,4.5],[7.8,6.7,5.6,4.9,4.4,3.9,3.9,3.9],[6.2,5.4,4.6,4.0,3.5,3.2,3.2,3.2],[4.5,3.8,3.6,3.2,2.9,2.7,2.7,2.7],[3.7,3.0,2.8,2.35,2.2,2.2,2.2,2.2],[2.9,2.3,2.1,1.9,1.8,1.7,1.7,1.7],[2.4,1.7,1.5,1.35,1.3,1.3,1.3,1.3],[1.95,1.45,1.3,1.15,1.1,1.1,1.1,1.1],[1.5,1.2,0.94,0.86,0.82,0.82,0.82,0.82],[0.72,0.67,0.64,0.63,0.62,0.62,0.62,0.62],[0.59,0.53,0.51,0.50,0.42,0.42,0.42,0.42],[0.40,0.33,0.26,0.24,0.24,0.22,0.22,0.22],[0.27,0.21,0.20,0.18,0.17,0.17,0.17,0.17],[0.16,0.15,0.14,0.12,0.11,0.11,0.11,0.11],[0.12,0.11,0.10,0.08,0.08,0.08,0.08,0.08],[0.09,0.08,0.07,0.06,0.06,0.06,0.06,0.05],[0.06,0.05,0.03,0.02,0.02,0.02,0.02,0.02]];
+function isoMainLoudness(spec,field){        // spec: 28 dB -> nm[21] (sonie de cœur par bande critique)
+  const ti=new Array(11);
+  for(let n=0;n<11;n++){ const aux=spec[n]; let corr=ISO_DLL[0][n]; if(aux>ISO_RAP[0]-ISO_DLL[0][n])corr=0;
+    for(let r=1;r<=6;r++){ const a=aux>ISO_RAP[r-1]-ISO_DLL[r-1][n], b=aux>ISO_RAP[r]-ISO_DLL[r][n]; if(a!==b)corr=ISO_DLL[r][n]; }
+    ti[n]=Math.pow(10,(corr+aux)/10); }
+  let g0=0,g1=0,g2=0; for(let k=0;k<6;k++)g0+=ti[k]; for(let k=6;k<9;k++)g1+=ti[k]; for(let k=9;k<11;k++)g2+=ti[k];
+  const lcb=[g0>0?10*Math.log10(g0):0,g1>0?10*Math.log10(g1):0,g2>0?10*Math.log10(g2):0];
+  const s=0.25, nm=new Array(21).fill(0);
+  for(let k=0;k<20;k++){ let le=(k<3)?lcb[k]:spec[8+k]; le-=ISO_A0[k]; if(field==="diffuse")le+=ISO_DDF[k];
+    if(le>ISO_LTQ[k]){ le-=ISO_DCB[k];
+      if(le>ISO_LTQ[k]){ const mp1=0.0635*Math.pow(10,0.025*ISO_LTQ[k]); const mp2=Math.pow(1-s+s*Math.pow(10,0.1*(le-ISO_LTQ[k])),0.25)-1; let v=mp1*mp2; if(v>0)nm[k]=v; } } }
+  const korry=0.4+0.32*Math.pow(nm[0],0.2); if(korry<=1)nm[0]*=korry;
+  return nm;
+}
+function isoRnsIndex(x,eq){ let c=0; for(let j=0;j<18;j++){ if(eq?(x<=ISO_RNS[j]):(x<ISO_RNS[j]))c++; } return c===18?17:c; }
+function isoCalcSlopes(nm){                   // nm[21] -> {N, Ns(240 @0.1 Bark)}
+  const Ns=new Float64Array(240); let N=0,z1=0,n1=0,iz=0,z=0.1;
+  for(let i=0;i<21;i++){ let ig=i-1; if(ig<0)ig=0; if(ig>7)ig=7;
+    while(true){
+      if(n1<=nm[i]+1e-12){ if(n1<nm[i])n1=nm[i];
+        while(z<=ISO_ZUP[i]+1e-9 && iz<240){ Ns[iz++]=n1; z+=0.1; }
+        N+=n1*(ISO_ZUP[i]-z1); z1=ISO_ZUP[i]; break;
+      } else { const j=isoRnsIndex(n1,true); let n2=ISO_RNS[j]; if(n2<nm[i])n2=nm[i];
+        let dz=(n1-n2)/ISO_USL[j][ig], z2=z1+dz;
+        if(z2>=ISO_ZUP[i]){ z2=ISO_ZUP[i]; dz=z2-z1; n2=n1-dz*ISO_USL[j][ig]; }
+        while(z<=z2+1e-9 && iz<240){ Ns[iz++]=n1-(z-z1)*ISO_USL[j][ig]; z+=0.1; }
+        N+=dz*(n1+n2)/2; z1=z2; n1=n2; if(z1>=ISO_ZUP[i]-1e-9)break;
+      }
+    }
+  }
+  if(N<0)N=0; N = N<=16 ? Math.floor(N*1000+0.5)/1000 : Math.floor(N*100+0.5)/100;
+  return {N,Ns};
+}
+let ISO_MAP=null;
+function psyLoudness(){
+  if(!S.bands||!S.bands.length||!S.curBnd) return null;
+  if(!ISO_MAP || S._isoMapN!==S.bands.length){                 // table de correspondance tiers d'octave -> bandes ISO
+    ISO_MAP=ISO_F28.map(f=>{ let bi=-1,bd=0.12; for(let b=0;b<S.bands.length;b++){ const d=Math.abs(Math.log2(S.bands[b]/f)); if(d<bd){bd=d;bi=b;} } return bi; });
+    S._isoMapN=S.bands.length;
+  }
+  const spec=new Array(28);
+  const srcBnd=S.curBndZ||S.curBnd;   // psycho : toujours le SPL NON pondéré (Z), indépendant de la pondération d'affichage
+  for(let m=0;m<28;m++){ const bi=ISO_MAP[m], p=bi>=0?srcBnd[bi]:0; spec[m]= p>0 ? 10*Math.log10(p)+S.offset : -60; }
+  const nm=isoMainLoudness(spec,"free");
+  const {N,Ns}=isoCalcSlopes(nm);
+  const Nspec=new Float64Array(24);                            // rebin 0,1 Bark -> sonie par Bark (pour acuité/fluctuation)
+  for(let z=0;z<24;z++){ let s=0; for(let k=10*z;k<10*z+10 && k<240;k++)s+=Ns[k]; Nspec[z]=s*0.1; }
+  return {N,Nspec,Ns};
+}
+function psySharpness(Nspec){
+
+  let num=0,den=0;
+  for(let z=0;z<24;z++){ const zc=z+0.5, g=zc<15.8?1:(0.15*Math.exp(0.42*(zc-15.8))+0.85); num+=Nspec[z]*g*zc; den+=Nspec[z]; }
+  return den>0?0.11*num/den:0;
+}
+const PSY={buf:[],cur:null,mean:null,p95:null,PA:0,N5:0,span:0,
+  _sum:null,_cnt:0,_hist:null,_recalcT:0,_rT:0,_Rcur:0,_last:0,sel:-1,
+  N:0,S:0,R:0,F:0,T:0};   // N/S/R/F/T miroir de cur (compat rapport/CSV)
+const PSY_WIN={N:0.25,S:0.25,R:1.0,T:2.0,F:5.0};   // fenêtres propres à chaque indicateur (s)
+const PSY_BUFSEC=5;                                 // tampon circulaire audio/indices (s)
+function psyReset(){ PSY.buf=[]; PSY.cur=PSY.mean=PSY.p95=null; PSY.PA=0; PSY.N5=0; PSY.span=0;
+  PSY._sum=null; PSY._cnt=0; PSY._hist=null; PSY._recalcT=0; PSY._rT=0; PSY._Rcur=0; PSY._tT=0; PSY._Tcur=0; PSY._tpT=0; PSY.tnrT=0; PSY.prT=0; PSY.tones=[]; PSY.rdw=0; PSY.rdwT=0;
+  PSY.N=PSY.S=PSY.R=PSY.F=PSY.T=0; }
+const PSY_WR=f=>(f/70)*Math.exp(1-f/70);       // pondération rugosité (pic 70 Hz)
+const PSY_WF=f=>2/((f/4)+(4/f));               // pondération fluctuation (pic 4 Hz)
+/* Modèles multi-bandes (Phase 3).
+   Rugosité : Daniel & Weber — décomposition en canaux auditifs CHEVAUCHANTS (0,5 Bark,
+     demi-largeur 1 Bark), enveloppe par canal via autocorrélation spectrale, indice de
+     modulation pondéré (pic 70 Hz), COHÉRENCE inter-bandes entre canaux voisins, sommation.
+   Fluctuation : Fastl band-wise — modulation de la sonie spécifique N'(z,t) par bande de
+     Bark, moyenne de profondeur pondérée par la sonie de bande (indépendante du niveau).
+   Tonalité : Aures — détection des raies tonales (émergence > 6 dB), pondérations
+     fréquence (pic ~700 Hz) et excès de niveau, sommation quadratique. */
+const psyBarkF=f=>13*Math.atan(0.00076*f)+3.5*Math.atan((f/7500)*(f/7500));
+const PSY_RHW=1.0, PSY_RP=1.8;                 // demi-largeur canal (Bark), exposant profondeur de modulation
+const PSY_CAL_R=0.345, PSY_CAL_F=1.68, PSY_CAL_T=1.98;
+function psyModBandP(sig,fs,fLo,fHi,wfun){       // indice de modulation pondéré (Goertzel, somme quadratique)
+  const n=sig.length; if(n<8)return 0;
+  let m0=0; for(let i=0;i<n;i++)m0+=sig[i]; m0/=n; if(m0<=1e-9)return 0;
+  const df=fs/n, kLo=Math.max(1,Math.ceil(fLo/df)), kHi=Math.min(n>>1,Math.floor(fHi/df));
+  let acc=0;
+  for(let k=kLo;k<=kHi;k++){
+    const w=2*Math.PI*k/n, c=2*Math.cos(w); let s1=0,s2=0;
+    for(let i=0;i<n;i++){ const s0=sig[i]+c*s1-s2; s2=s1; s1=s0; }
+    const p=s1*s1+s2*s2-c*s1*s2, a=2*Math.sqrt(Math.max(0,p))/n*wfun(k*df); acc+=a*a;
+  }
+  return Math.sqrt(acc)/m0;
+}
+/* ---- Rugosité multi-bande (helper pur, testable) ---- */
+let PSY_rRe=null,PSY_rIm=null,PSY_rBk=null,PSY_rN=0;
+function psyRoughMB(pcm,fs){
+  let Np=1; while(Np*2<=pcm.length)Np*=2; if(Np<2048)return 0;
+  if(PSY_rN!==Np){ PSY_rRe=new Float64Array(Np); PSY_rIm=new Float64Array(Np); PSY_rBk=new Float64Array(Np>>1); PSY_rN=Np; }
+  const re=PSY_rRe, im=PSY_rIm; im.fill(0);
+  for(let i=0;i<Np;i++)re[i]=pcm[i]*(0.5-0.5*Math.cos(2*Math.PI*i/(Np-1)));   // fenêtre de Hann
+  fft(re,im);
+  const df=fs/Np, half=Np>>1;
+  const dMin=Math.max(1,Math.round(20/df)), dMax=Math.min(half-1,Math.round(300/df));
+  const barkBin=PSY_rBk; for(let k=1;k<half;k++)barkBin[k]=psyBarkF(k*df);
+  const chans=[]; const zmax=Math.min(20,psyBarkF(fs/2)); for(let zc=1.0; zc<=zmax; zc+=0.5) chans.push(zc);
+  const nc=chans.length, winC=new Array(nc), dcC=new Float64Array(nc); let dcmax=0;
+  for(let ci=0;ci<nc;ci++){ const zc=chans[ci]; let dc=0; const win=[];
+    for(let k=1;k<half;k++){ const dz=Math.abs(barkBin[k]-zc); if(dz>PSY_RHW)continue; const wg=1-dz/PSY_RHW; win.push(k); win.push(wg); dc+=(re[k]*re[k]+im[k]*im[k])*wg*wg; }
+    winC[ci]=win; dcC[ci]=dc; if(dc>dcmax)dcmax=dc; }
+  const dcThr=Math.max(1e-15,dcmax*1e-3);
+  const modv=new Array(nc), rz=new Float64Array(nc);
+  for(let ci=0;ci<nc;ci++){ const win=winC[ci], dc=dcC[ci], zc=chans[ci];
+    if(dc<dcThr||win.length<6){modv[ci]=null;continue;}
+    const mv=new Float64Array(dMax+1); let acPow=0;
+    for(let d=dMin;d<=dMax;d++){ let Cre=0,Cim=0;
+      for(let w=0;w<win.length;w+=2){ const k=win[w],wk=win[w+1], kk=k-d; if(kk<1)continue; const dz2=Math.abs(barkBin[kk]-zc); if(dz2>PSY_RHW)continue; const wkk=(1-dz2/PSY_RHW)*wk;
+        Cre+=(re[k]*re[kk]+im[k]*im[kk])*wkk; Cim+=(im[k]*re[kk]-re[k]*im[kk])*wkk; }
+      const mag=Math.sqrt(Cre*Cre+Cim*Cim); mv[d]=mag; const g=mag*PSY_WR(d*df); acPow+=g*g;
+    }
+    modv[ci]=mv; rz[ci]=Math.pow(2*Math.sqrt(acPow)/dc,PSY_RP);
+  }
+  const cc=(a,b)=>{ if(!a||!b)return 0; let s=0,na=0,nb=0; for(let d=dMin;d<=dMax;d++){s+=a[d]*b[d];na+=a[d]*a[d];nb+=b[d]*b[d];} return (na>0&&nb>0)?s/Math.sqrt(na*nb):0; };
+  let R=0;
+  for(let ci=0;ci<nc;ci++){ if(!rz[ci])continue;
+    const coh=0.5+0.5*Math.max(cc(modv[ci],modv[ci-1]||null),cc(modv[ci],modv[ci+1]||null));
+    R+=rz[ci]*coh; }
+  return R*0.5;   // densité 0,5 Bark
+}
+function psyRoughness(){
+  const an=S.psyAn||S.analyser, tap=S.psyAn?S.psyTap:S.tap;
+  if(!an||!tap)return PSY.R||0;
+  try{ an.getFloatTimeDomainData(tap); }catch(_){ return PSY.R||0; }
+  const fs=(S.ctx&&S.ctx.sampleRate)||48000;
+  return Math.max(0, PSY_CAL_R*psyRoughMB(tap,fs));
+}
+/* Rugosité D&W calibrée (SPL réel via offset), fenêtre 8192 (~170 ms). Modèle validé identique à MOSQITO. */
+function psyRoughDWval(){ const an=S.psyAn||S.analyser, tap=S.psyAn?S.psyTap:S.tap; if(!an||!tap)return 0;
+  try{ an.getFloatTimeDomainData(tap); }catch(_){ return 0; }
+  const fs=(S.ctx&&S.ctx.sampleRate)||48000, k=2e-5*Math.pow(10,S.offset/20);
+  const N=Math.min(8192, 1<<Math.floor(Math.log2(tap.length))); const seg=new Float64Array(N), off=tap.length-N;
+  for(let i=0;i<N;i++)seg[i]=tap[off+i]*k;
+  return Math.max(0, psyRoughDW(seg,fs));
+}
+function psyRoughDWnow(){ psyRoughPost(); }
+/* ---- Rugosité D&W hors thread principal (Web Worker) : évite le hitch ~80 ms ---- */
+let PSY_rw=null, PSY_rwBusy=false, PSY_rwFail=false;
+function psyRoughWorkerInit(){
+  if(PSY_rw||PSY_rwFail) return PSY_rw;
+  try{
+    const tbls='var RDW_BF='+JSON.stringify(RDW_BF)+',RDW_BZ='+JSON.stringify(RDW_BZ)+',RDW_EX='+JSON.stringify(RDW_EX)+',RDW_EY='+JSON.stringify(RDW_EY)+',RDW_GX='+JSON.stringify(RDW_GX)+',RDW_GY='+JSON.stringify(RDW_GY)+',RDW_LX='+JSON.stringify(RDW_LX)+',RDW_LY='+JSON.stringify(RDW_LY)+',RDW_HC='+JSON.stringify(RDW_HC)+';var RDW_H=null,RDW_Hn=0,RDW_gzi=null;';
+    const body=[tbls, fft.toString(), rdwInterp.toString(),
+      'var rdwBark='+rdwBark.toString(), 'var rdwUnbark='+rdwUnbark.toString(),
+      'var rdwEar='+rdwEar.toString(), 'var rdwGzi='+rdwGzi.toString(), 'var rdwLtq='+rdwLtq.toString(),
+      rdwBuildH.toString(), rdwIFFT.toString(), psyRoughDW.toString(),
+      'onmessage=function(e){var d=e.data,seg=new Float64Array(d.n);for(var i=0;i<d.n;i++)seg[i]=d.pcm[i]*d.k;var R;try{R=psyRoughDW(seg,d.fs)}catch(_){R=-1}postMessage(R)}'
+    ].join(';\n');
+    const url=URL.createObjectURL(new Blob([body],{type:'application/javascript'}));
+    PSY_rw=new Worker(url);
+    PSY_rw.onmessage=function(e){ PSY_rwBusy=false; const R=e.data; if(R>=0){ PSY._Rcur=R; PSY.rdw=R; PSY.rdwT=performance.now()/1000; } };
+    PSY_rw.onerror=function(){ PSY_rwFail=true; try{PSY_rw.terminate();}catch(_){}; PSY_rw=null; };
+  }catch(_){ PSY_rwFail=true; PSY_rw=null; }
+  return PSY_rw;
+}
+function psyRoughPost(){
+  const an=S.psyAn||S.analyser, tap=S.psyAn?S.psyTap:S.tap; if(!an||!tap)return;
+  const w=psyRoughWorkerInit();
+  if(!w){ PSY._Rcur=psyRoughDWval(); PSY.rdw=PSY._Rcur; PSY.rdwT=performance.now()/1000; return; }  // repli synchrone si Worker indispo
+  if(PSY_rwBusy) return;
+  try{ an.getFloatTimeDomainData(tap); }catch(_){ return; }
+  const fs=(S.ctx&&S.ctx.sampleRate)||48000, k=2e-5*Math.pow(10,S.offset/20);
+  const N=Math.min(8192, 1<<Math.floor(Math.log2(tap.length))), off=tap.length-N;
+  const pcm=new Float32Array(N); for(let i=0;i<N;i++)pcm[i]=tap[off+i];
+  PSY_rwBusy=true; try{ w.postMessage({pcm,n:N,k,fs}); }catch(_){ PSY_rwBusy=false; }
+}
+/* ===== Rugosité Daniel & Weber COMPLÈTE (ECMA/D&W 1997, port fidèle MOSQITO — validé identique) =====
+   47 canaux ½-Bark, excitation par IFFT, pondérations Hi(f_mod), corrélation croisée i±2, dépendance au niveau.
+   Coûteux (~70 ms) : calcul À LA DEMANDE (tap sur l'axe Rugosité), fenêtre 8192 (radix-2). */
+const RDW_BF=[0,50,100,150,200,250,300,350,400,450,510,570,630,700,770,840,920,1000,1080,1170,1270,1370,1480,1600,1720,1850,2000,2150,2320,2500,2700,2900,3150,3400,3700,4000,4400,4800,5300,5800,6400,7000,7700,8500,9500,10500,12000,13500,15500,20000];
+const RDW_BZ=(()=>{const a=[];for(let i=0;i<50;i++)a.push(i*0.5);return a;})();
+function rdwInterp(x,xp,yp){ if(x<=xp[0])return yp[0]; if(x>=xp[xp.length-1])return yp[yp.length-1]; let i=1; while(xp[i]<x)i++; const t=(x-xp[i-1])/(xp[i]-xp[i-1]); return yp[i-1]+t*(yp[i]-yp[i-1]); }
+const rdwBark=f=>rdwInterp(f,RDW_BF,RDW_BZ), rdwUnbark=z=>rdwInterp(z,RDW_BZ,RDW_BF);
+const RDW_EX=[0,10,12,13,14,15,16,16.5,17,18,18.5,19,20,21,21.5,22,22.5,23,23.5,24,25,26],RDW_EY=[0,0,1.15,2.31,3.85,5.62,6.92,7.38,6.92,4.23,2.31,0,-1.43,-2.59,-3.57,-5.19,-7.41,-11.3,-20,-40,-130,-999];
+const rdwEar=z=>rdwInterp(z,RDW_EX,RDW_EY);
+const RDW_GX=(()=>{const a=[];for(let i=0;i<25;i++)a.push(i);return a;})(),RDW_GY=[0.15,0.26,0.38,0.47,0.54,0.65,0.76,0.83,0.90,0.98,0.98,0.90,0.80,0.70,0.62,0.54,0.49,0.43,0.39,0.35,0.30,0.30,0.30,0.30,0.30];
+const rdwGzi=z=>rdwInterp(z,RDW_GX,RDW_GY);
+const RDW_LX=(()=>{const a=[];for(let i=0;i<49;i++)a.push(i*0.5);return a;})(),RDW_LY=[130,44.29,25,20,15,13.08,11.15,9.46,8.1,7.2,6.3,5.65,5,4.62,4.25,3.88,3.5,3.25,3,2.75,2.5,2.3,2.1,1.9,1.7,1.05,0.39,-0.29,-1.03,-1.76,-2.5,-3.25,-4,-3.85,-3.7,-2.6,-1.5,-0.05,1.4,2.6,3.8,4.4,5,6.25,7.5,11.25,15,31.5,48];
+const rdwLtq=z=>rdwInterp(z,RDW_LX,RDW_LY);
+const RDW_HC={H2:[[0,17,23,25,32,37,48,67,90,114,171,206,247,294,358],[0,0.8,0.95,0.975,1,0.975,0.9,0.8,0.7,0.6,0.4,0.3,0.2,0.1,0]],H5:[[0,32,43,56,69,92,120,142,165,231,277,331,397,502],[0,0.8,0.95,1,0.975,0.9,0.8,0.7,0.6,0.4,0.3,0.2,0.1,0]],H16:[[0,23.5,34,47,56,63,79,100,115,135,159,172,194,215,244,290,348,415,500,645],[0,0.4,0.6,0.8,0.9,0.95,1,0.975,0.95,0.9,0.85,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]],H21:[[0,19,44,52.5,58,75,101.5,114.5,132.5,143.5,165.5,197.5,241,290,348,415,500,645],[0,0.4,0.8,0.9,0.95,1,0.95,0.9,0.85,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]],H42:[[0,15,41,49,53,64,71,88,94,106,115,137,180,238,290,348,415,500,645],[0,0.4,0.8,0.9,0.965,0.99,1,0.95,0.9,0.85,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]]};
+let RDW_H=null,RDW_Hn=0,RDW_gzi=null;
+function rdwBuildH(n,fs){ const H=[]; for(let i=0;i<47;i++)H.push(new Float64Array(n));
+  const fill=(row,c)=>{const cx=c[0],cy=c[1],last=Math.floor(cx[cx.length-1]/fs*n);for(let j=2;j<last;j++)H[row][j]=rdwInterp(j*fs/n,cx,cy);};
+  fill(1,RDW_HC.H2);fill(4,RDW_HC.H5);fill(15,RDW_HC.H16);fill(20,RDW_HC.H21);fill(41,RDW_HC.H42);
+  H[0]=H[2]=H[3]=H[1]; for(let i=5;i<15;i++)H[i]=H[4]; for(let i=16;i<20;i++)H[i]=H[15]; for(let i=21;i<41;i++)H[i]=H[20]; for(let i=42;i<47;i++)H[i]=H[41];
+  return H; }
+function rdwIFFT(re,im){ const n=re.length; for(let i=0;i<n;i++)im[i]=-im[i]; fft(re,im); for(let i=0;i<n;i++){re[i]/=n;im[i]=-im[i]/n;} }
+function psyRoughDW(pcm,fs){
+  let N=1; while(N*2<=pcm.length)N*=2; if(N<4096)return 0; const n=N, L=N>>1;
+  if(RDW_Hn!==n){ RDW_H=rdwBuildH(n,fs); RDW_Hn=n; RDW_gzi=[]; for(let i=1;i<48;i++)RDW_gzi.push(rdwGzi(i/2)); }
+  const H=RDW_H, gzi=RDW_gzi;
+  // comp_spectrum Blackman
+  const re=new Float64Array(n),im=new Float64Array(n); let sw=0; const w=new Float64Array(N);
+  for(let i=0;i<N;i++){ w[i]=0.42-0.5*Math.cos(2*Math.PI*i/(N-1))+0.08*Math.cos(4*Math.PI*i/(N-1)); sw+=w[i]; }
+  for(let i=0;i<N;i++)re[i]=pcm[i]*w[i]/sw;
+  fft(re,im);
+  const sr=new Float64Array(L),si=new Float64Array(L); for(let k=0;k<L;k++){sr[k]=re[k]*1.42;si[k]=im[k]*1.42;}
+  // 2-sided
+  const Re=new Float64Array(n),Im=new Float64Array(n);
+  for(let k=0;k<L;k++){Re[k]=sr[k];Im[k]=si[k];} for(let k=0;k<L;k++){Re[L+k]=sr[L-1-k];Im[L+k]=si[L-1-k];}
+  const freq=new Float64Array(L),bark=new Float64Array(L); for(let k=0;k<L;k++){freq[k]=(k+1)*fs/n;bark[k]=rdwBark(freq[k]);}
+  for(let k=0;k<L;k++){const a=Math.pow(10,0.05*rdwEar(bark[k]));Re[k]*=a;Im[k]*=a;} for(let k=L;k<n;k++){Re[k]=0;Im[k]=0;}
+  const module=new Float64Array(L),specDb=new Float64Array(L); for(let k=0;k<L;k++){module[k]=Math.hypot(Re[k],Im[k]); specDb[k]=20*Math.log10((module[k]===0?2e-12:module[k])/2e-5);}
+  const thr=new Float64Array(L); for(let k=0;k<L;k++)thr[k]=rdwLtq(bark[k]);
+  const aud=[]; for(let k=0;k<L;k++)if(specDb[k]>thr[k])aud.push(k); const na=aud.length; if(!na)return 0;
+  const NCH=47, nZ=[]; for(let i=1;i<=L;i++)nZ.push(i);
+  const zb=[]; for(let i=1;i<=NCH;i++)zb.push(rdwUnbark(i/2)*n/fs);
+  const minExc=zb.map(v=>rdwInterp(v,nZ,thr));
+  const s1=-27,s2=new Float64Array(na); for(let k=0;k<na;k++)s2[k]=Math.min(-24-230/freq[aud[k]]+0.2*specDb[aud[k]],0);
+  const chLow=new Int32Array(na),chHigh=new Int32Array(na); for(let i=0;i<na;i++){chLow[i]=Math.floor(2*bark[aud[i]])-1;chHigh[i]=Math.ceil(2*bark[aud[i]])-1;}
+  const slopes=Array.from({length:na},()=>new Float64Array(NCH));
+  for(let k=0;k<na;k++){const lev=specDb[aud[k]],b=bark[aud[k]];
+    for(let j=0;j<=chLow[k];j++){const sl=s1*(b-(j+1)*0.5)+lev; if(sl>minExc[j])slopes[k][j]=Math.pow(10,0.05*sl)*2e-5;}
+    for(let j=chHigh[k];j<NCH;j++){const sl=s2[k]*((j+1)*0.5-b)+lev; if(sl>minExc[j])slopes[k][j]=Math.pow(10,0.05*sl)*2e-5;}}
+  const hBP=Array.from({length:NCH},()=>new Float64Array(n)),md=new Float64Array(NCH);
+  const er=new Float64Array(n),ei=new Float64Array(n);
+  for(let i=0;i<NCH;i++){ er.fill(0);ei.fill(0);
+    for(let j=0;j<na;j++){const ind=aud[j]; let ampl; if(chLow[j]===i||chHigh[j]===i)ampl=1; else if(chHigh[j]>i)ampl=slopes[j][i+1]/module[ind]; else ampl=slopes[j][i-1]/module[ind]; er[ind]=ampl*Re[ind]; ei[ind]=ampl*Im[ind]; }
+    const tr=er.slice(),ti=ei.slice(); rdwIFFT(tr,ti);
+    const te=new Float64Array(n); let h0=0; for(let k=0;k<n;k++){te[k]=Math.abs(n*tr[k]);h0+=te[k];} h0/=n;
+    const fr2=new Float64Array(n),fi2=new Float64Array(n); for(let k=0;k<n;k++)fr2[k]=te[k]-h0;
+    fft(fr2,fi2); for(let k=0;k<n;k++){fr2[k]*=H[i][k];fi2[k]*=H[i][k];} rdwIFFT(fr2,fi2);
+    let rms=0; for(let k=0;k<n;k++){hBP[i][k]=2*fr2[k];rms+=hBP[i][k]*hBP[i][k];} rms=Math.sqrt(rms/n);
+    md[i]=h0>0?Math.min(1,rms/h0):0;
+  }
+  const ki=new Float64Array(47), cc=(a,b)=>{let ma=0,mb=0;for(let k=0;k<n;k++){ma+=a[k];mb+=b[k];}ma/=n;mb/=n;let sa=0,sb=0,sab=0;for(let k=0;k<n;k++){const da=a[k]-ma,db=b[k]-mb;sa+=da*da;sb+=db*db;sab+=da*db;}return(sa>0&&sb>0)?sab/Math.sqrt(sa*sb):0;};
+  for(let i=0;i<45;i++)ki[i]=cc(hBP[i],hBP[i+2]);
+  const Rs=new Float64Array(47);
+  Rs[0]=gzi[0]*Math.pow(md[0]*ki[0],2); Rs[1]=gzi[1]*Math.pow(md[1]*ki[1],2);
+  for(let i=2;i<45;i++)Rs[i]=gzi[i]*Math.pow(md[i]*ki[i]*ki[i-2],2);
+  Rs[45]=gzi[45]*Math.pow(md[45]*ki[43],2); Rs[46]=gzi[46]*Math.pow(md[46]*ki[44],2);
+  let R=0; for(let i=0;i<47;i++)R+=Rs[i]; return 0.25*R;
+}
+/* ---- Fluctuation band-wise (helper pur, testable) ---- */
+function psyFluctBW(nhist,dt){
+  const frames=nhist.length; if(frames<8||!(dt>0))return 0; const fsN=1/dt;
+  const y=new Float64Array(frames); let acc=0,wsum=0;
+  for(let z=0;z<24;z++){ let mean=0; for(let f=0;f<frames;f++){ y[f]=nhist[f][z]; mean+=y[f]; } mean/=frames; if(mean<1e-4)continue;
+    acc+=psyModBandP(y,fsN,0.2,8,PSY_WF)*mean; wsum+=mean; }
+  return wsum>0?acc/wsum:0;   // moyenne de profondeur pondérée sonie -> indépendante du niveau
+}
+function psyFluct(arr){
+  const n=arr.length; if(n<8)return 0;
+  const dt=(arr[n-1].t-arr[0].t)/(n-1); if(!(dt>0))return 0;
+  if((arr[n-1].t-arr[0].t)<1.2)return 0;                                            // besoin de ~2 s pour ~4 Hz
+  const nhist=new Array(n); for(let i=0;i<n;i++) nhist[i]=arr[i].Ns||PSY_ZERO24;
+  return Math.max(0, PSY_CAL_F*psyFluctBW(nhist,dt));
+}
+/* ---- Tonalité d'Aures (helper pur, testable) ---- */
+const PSY_ZERO24=new Float64Array(24);
+function psyTonalAures(binPow,df){
+  const n=binPow.length; if(n<8||!(df>0))return 0;
+  const win=Math.max(3,Math.round(50/df));                                          // plancher local ~50 Hz
+  const w1=f=>1/(1+0.2*Math.pow(f/700+700/f,2));                                     // pondération fréquence (pic ~700 Hz)
+  let s=0;
+  for(let k=2;k<n-2;k++){ const p=binPow[k]; if(!(p>0))continue;
+    if(p<binPow[k-1]||p<binPow[k+1])continue;                                        // maximum local
+    const lo=Math.max(1,k-win), hi=Math.min(n-1,k+win); const vals=[];
+    for(let j=lo;j<=hi;j++){ if(Math.abs(j-k)>2)vals.push(binPow[j]); }
+    if(!vals.length)continue; vals.sort((a,b)=>a-b); const floor=vals[vals.length>>1]||1e-15;
+    const dL=10*Math.log10(p/Math.max(floor,1e-15)); if(dL<6)continue;               // émergence > 6 dB
+    const wi=w1(k*df)*(1-Math.exp(-dL/15)); s+=wi*wi;                                 // excès de niveau saturant
+  }
+  return PSY_CAL_T*Math.sqrt(s);
+}
+/* ===== Tonalité normative TNR / PR (ECMA-74, port fidèle MOSQITO — validé T-TNR/T-PR identiques) =====
+   Entrées : spectre fin en dB SPL + axe des fréquences. Sorties : T-TNR, T-PR globaux + raies. */
+const tnrLOG=Math.log10;
+function tnrLTH(f){let fmean,fstd,a1,a2,a3,a4,a5;
+  if(f>=20&&f<305){fmean=167.5;fstd=87.3212;a1=1.415532;a2=-2.451068;a3=1.498869;a4=-6.983224;a5=8.621226;}
+  else if(f>=305&&f<2230){fmean=1157.5;fstd=488.582;a1=0.397994;a2=-0.891839;a3=-0.815138;a4=-1.221319;a5=-7.600754;}
+  else if(f>=2230&&f<14000){fmean=7250;fstd=3033.25;a1=1.584978;a2=-2.766599;a3=-6.9061912;a4=10.138553;a5=-3.149339;}
+  else {fmean=16990;fstd=4049;a1=-5.775593;a2=-9.200034;a3=26.59115;a4=52.16712;a5=15.61552048;}
+  const x=(f-fmean)/fstd; return a1*x**4+a2*x**3+a3*x**2+a4*x+a5;
+}
+function tnrCB(f0){const d=25+75*Math.pow(1+1.4*(f0/1000)**2,0.69);
+  if(f0<500)return[f0-d/2,f0+d/2]; const f1=-d/2+Math.sqrt(d*d+4*f0*f0)/2; return[f1,f1+d];}
+function tnrLowCB(f0){const f2=tnrCB(f0)[0];let c0,c1,c2;
+  if(f0<171.4){c0=20;c1=0;c2=0;}else if(f0<=1600){c0=-149.5;c1=1.001;c2=-6.9e-5;}else{c0=6.8;c1=0.806;c2=-8.2e-6;}
+  return[c0+c1*f0+c2*f0*f0,f2];}
+function tnrUpCB(f0){const [,f1]=tnrCB(f0);let c0,c1,c2;
+  if(f0<=1600){c0=149.5;c1=1.035;c2=7.7e-5;}else{c0=3.3;c1=1.215;c2=2.16e-5;}
+  return[f1,c0+c1*f0+c2*f0*f0];}
+function tnrArgmin(fr,v){let bi=0,bd=Infinity;for(let i=0;i<fr.length;i++){const d=Math.abs(fr[i]-v);if(d<bd){bd=d;bi=i;}}return bi;}
+function tnrNthOct(low,high,N){const G=Math.pow(10,3/10);const xr=x=>1000*Math.pow(G,x/N);
+  let xmin=Math.ceil(N*Math.log(low/1000)/Math.log(G)), xmax=Math.floor(N*Math.log(high/1000)/Math.log(G));
+  const b=[];for(let x=xmin;x<=xmax;x++){const fc=xr(x);b.push([fc*Math.pow(G,-1/(2*N)),fc,fc*Math.pow(G,1/(2*N))]);}
+  if(b.length){b[0][0]=low;b[b.length-1][2]=high;}return b;}
+function tnrSmooth(freqs,specDb,noct,low,high){
+  const bands=tnrNthOct(low,high,noct); const sm=new Float64Array(freqs.length);
+  const bandDb=[];const kept=[];
+  for(const bd of bands){ const idx=[];for(let k=0;k<freqs.length;k++)if(freqs[k]>=bd[0]&&freqs[k]<=bd[2])idx.push(k);
+    if(!idx.length)continue; let s=0;for(const k of idx)s+=Math.pow(10,specDb[k]/10); bandDb.push(10*tnrLOG(s/idx.length)); kept.push(bd);}
+  for(let j=0;j<kept.length;j++){ const lo=tnrArgmin(freqs,kept[j][0]), hi=tnrArgmin(freqs,kept[j][2]); for(let k=lo;k<hi;k++)sm[k]=bandDb[j]; }
+  return sm;
+}
+function tnrPeakLvl(spec,pk){ const Li=spec[pk]; let L=spec[pk];
+  let t=pk+1; if(t!==spec.length){ let Lt=Li; while(Lt-Math.abs(spec[t])>0){ if(Li-spec[t]<10){Lt=spec[t];L=10*tnrLOG(10**(L/10)+10**(spec[t]/10));t++;if(t===spec.length){t--;Lt=-1;}}else Lt=-1; } }
+  t=pk-1; if(t!==-1){ let Lt=Li; while(Lt-Math.abs(spec[t])>0){ if(Li-spec[t]<10){Lt=spec[t];L=10*tnrLOG(10**(L/10)+10**(spec[t]/10));t--;if(t<0){t++;Lt=-1;}}else Lt=-1; } }
+  return L;
+}
+function tnrScreen(freqs,spec,low,high){
+  const sm=tnrSmooth(freqs,spec,24,low,high);
+  const maxima=[]; for(let k=1;k<spec.length-1;k++){ if(spec[k]>spec[k-1]&&spec[k]>=spec[k+1]) maxima.push(k); }
+  const cand=[]; for(const k of maxima){ if(spec[k]>sm[k]+6 && spec[k]>tnrLTH(freqs[k])+10) cand.push(k); }
+  cand.sort((a,b)=>a-b);
+  let index=cand.slice(); const tones=[];
+  while(index.length>0){ let pk=index[0]; let lo=pk,hi=pk;
+    let t=pk+1; while(t<spec.length && spec[t]>sm[t]+6){ if(spec[t]>spec[pk])pk=t; hi++; t++; }
+    t=pk-1; while(t>=0 && spec[t]>sm[t]+6){ if(spec[t]>spec[pk])pk=t; lo--; t--; }
+    const [f1,f2]=tnrCB(freqs[pk]); const cbw=f2-f1, tw=freqs[hi]-freqs[lo];
+    if(tw<cbw) tones.push(pk);
+    index=index.filter(x=>x>hi);
+  }
+  return tones;
+}
+function tnrFindHi(freqs,spec,index,nb,ind){
+  const f=freqs[ind]; const [f1,f2]=tnrCB(f);
+  const lo=tnrArgmin(freqs,f1),hi=tnrArgmin(freqs,f2);
+  let mult=index.filter(x=>x>lo&&x<hi);
+  if(mult.length>1){ mult.sort((a,b)=>spec[b]-spec[a]); const ind_p=mult[0],ind_s=mult[1];
+    for(let s=2;s<mult.length;s++){ const j=index.indexOf(mult[s]); if(j>=0){index.splice(j,1);nb--;} }
+    if(ind_p!==ind) return tnrFindHi(freqs,spec,index,nb,ind_p);
+    return [ind_p,ind_s,index,nb];
+  }
+  return [ind,null,index,nb];
+}
+function psyTnrMain(specDbFull,freqFull){
+  const idx=[];for(let k=0;k<freqFull.length;k++)if(freqFull[k]>89.1&&freqFull[k]<11200)idx.push(k);
+  const fr=idx.map(k=>freqFull[k]), spec=idx.map(k=>specDbFull[k]);
+  let peaks=tnrScreen(fr,spec,90,11200); let nb=peaks.length;
+  const tnr=[],tones=[],prom=[];
+  while(nb>0){ let ind=peaks[0],ind_p,ind_s;
+    if(peaks.length>1){ [ind_p,ind_s,peaks,nb]=tnrFindHi(fr,spec,peaks.slice(),nb,ind); } else {ind_p=ind;ind_s=null;}
+    let Lt,f1,f2;
+    if(ind_s!=null){ const fp=fr[ind_p],fsq=fr[ind_s];
+      const df_=21*Math.pow(10,1.2*Math.pow(Math.abs(tnrLOG(fp/212)),1.8));
+      if(Math.abs(fsq-fp)<df_){ const Lp=tnrPeakLvl(spec,ind_p),Ls=tnrPeakLvl(spec,ind_s); Lt=10*tnrLOG(10**(Lp/10)+10**(Ls/10));
+        [f1,f2]=tnrCB(fp); const su=peaks.indexOf(ind_s); if(su>=0){peaks.splice(su,1);nb--;} }
+      else { Lt=spec[ind_p]; [f1,f2]=tnrCB(fr[ind_p]); }
+    } else { Lt=tnrPeakLvl(spec,ind_p); [f1,f2]=tnrCB(fr[ind_p]); }
+    const lo=tnrArgmin(fr,f1),hi=tnrArgmin(fr,f2);
+    let ss=0;for(let k=lo;k<hi;k++)ss+=10**(spec[k]/10); const Ltot=10*tnrLOG(ss);
+    const dfc=f2-f1; const dft=fr[1]-fr[0]; const dftot=freqFull[hi]-freqFull[lo];
+    const Ln=10*tnrLOG(10**(Ltot/10)-10**(Lt/10))+10*tnrLOG(dfc/(dftot-dft));
+    const f=fr[ind_p], dt=Lt-Ln;
+    if(dt>0){ tones.push(f); tnr.push(dt);
+      let pr_; if(f>=89.1&&f<1000)pr_=dt>=8+8.33*tnrLOG(1000/f); else pr_=dt>=8; prom.push(pr_); }
+    const su=peaks.indexOf(ind_p); if(su>=0){peaks.splice(su,1);nb--;}
+  }
+  let acc=0;for(let i=0;i<tnr.length;i++)if(prom[i])acc+=10**(tnr[i]/10);
+  return {t:acc>0?10*tnrLOG(acc):0,freqs:tones,vals:tnr,prom};
+}
+
+
+function psyPrMain(specDbFull,freqFull){
+  const idx=[];for(let k=0;k<freqFull.length;k++)if(freqFull[k]>89.1&&freqFull[k]<11200)idx.push(k);
+  const fr=idx.map(k=>freqFull[k]), spec=idx.map(k=>specDbFull[k]);
+  let peaks=tnrScreen(fr,spec,90,11200); let nb=peaks.length;
+  const pr=[],tones=[],prom=[]; const sumdb=(lo,hi)=>{let s=0;for(let k=lo;k<hi;k++)s+=10**(spec[k]/10);return s;};
+  while(nb>0){ let ind=peaks[0];
+    if(peaks.length>1){ let _s; [ind,_s,peaks,nb]=tnrFindHi(fr,spec,peaks.slice(),nb,ind); }
+    const ft=fr[ind];
+    let [f1,f2]=tnrCB(ft); const lo=tnrArgmin(fr,f1),hi=tnrArgmin(fr,f2); let ss=sumdb(lo,hi); const Lm=ss!==0?10*tnrLOG(ss):0;
+    let [lf1,lf2]=tnrLowCB(ft); const llo=tnrArgmin(fr,lf1),lhi=tnrArgmin(fr,lf2); ss=sumdb(llo,lhi); const Ll=ss!==0?10*tnrLOG(ss):0; const dfl=lf2-lf1;
+    let [uf1,uf2]=tnrUpCB(ft); const ulo=tnrArgmin(fr,uf1),uhi=tnrArgmin(fr,uf2); ss=sumdb(ulo,uhi); const Lu=ss!==0?10*tnrLOG(ss):0;
+    let delta; if(ft<=171.4) delta=10*tnrLOG(10**(0.1*Lm))-10*tnrLOG(((100/dfl)*10**(0.1*Ll)+10**(0.1*Lu))*0.5);
+    else delta=10*tnrLOG(10**(0.1*Lm))-10*tnrLOG((10**(0.1*Ll)+10**(0.1*Lu))*0.5);
+    if(delta>0){ tones.push(ft); pr.push(delta); let p; if(ft>=89.1&&ft<=1000)p=delta>=9+10*tnrLOG(1000/ft); else p=delta>=9; prom.push(p); }
+    peaks=peaks.filter(x=>!(x>=lo&&x<=hi)); nb=peaks.length;
+  }
+  let acc=0;for(let i=0;i<pr.length;i++)if(prom[i])acc+=10**(pr[i]/10);
+  return {t:acc>0?10*tnrLOG(acc):0,freqs:tones,vals:pr,prom};
+}
+
+
+function psyTnrPr(specDb,freq){ const t=psyTnrMain(specDb,freq), p=psyPrMain(specDb,freq);
+  return {tnrT:t.t, prT:p.t, tnrTones:t.freqs, tnrVals:t.vals, tnrProm:t.prom, prTones:p.freqs, prVals:p.vals, prProm:p.prom}; }
+function psyPctile(arr,q){ if(!arr||!arr.length)return 0; const a=arr.slice().sort((x,y)=>x-y); return a[Math.min(a.length-1,Math.max(0,Math.round(q*(a.length-1))))]; }
+function psyUpdate(){
+  const now=performance.now()/1000;
+  /* --- échantillonnage rapide (~20 Hz) : indispensable pour la fluctuation (modulation 4 Hz) --- */
+  if(!PSY._last || now-PSY._last>=0.05){
+    const L=psyLoudness(); if(L){ PSY._last=now;
+      const Sh=psySharpness(L.Nspec);
+      if(!PSY._rT || now-PSY._rT>1.0){ PSY._rT=now; psyRoughPost(); }   // rugosité D&W (ECMA/MOSQITO) via Web Worker (hors thread principal), MAJ ~1 s
+      if(!PSY._tT || now-PSY._tT>0.15){ const dfb=S.binHz||((S.ctx?S.ctx.sampleRate:48000)/(S.fftN||4096)); PSY._Tcur=S.binPowD?psyTonalAures(S.binPowD,dfb):0; PSY._tT=now; }  // tonalité Aures (~7 Hz)
+      PSY.buf.push({t:now,N:L.N,S:Sh,R:Math.max(0,PSY._Rcur||0),T:Math.max(0,PSY._Tcur||0),Ns:L.Nspec});
+      while(PSY.buf.length && now-PSY.buf[0].t>PSY_BUFSEC) PSY.buf.shift();
+      PSY.span = PSY.buf.length>1 ? (now-PSY.buf[0].t) : 0;
+    }
+  }
+  if(!PSY.buf.length) return;
+  /* --- recalcul des 5 indicateurs toutes les ~150 ms, chacun sur SA fenêtre --- */
+  if(PSY._recalcT && now-PSY._recalcT<0.15) return;
+  PSY._recalcT=now;
+  const meanOver=(k,sec)=>{ const t0=now-sec; let s=0,c=0; for(let i=PSY.buf.length-1;i>=0;i--){ if(PSY.buf[i].t<t0)break; s+=PSY.buf[i][k]; c++; } return c?s/c:0; };
+  const Ncur=meanOver('N',PSY_WIN.N), Scur=meanOver('S',PSY_WIN.S), Rcur=meanOver('R',PSY_WIN.R), Tcur=meanOver('T',PSY_WIN.T);
+  const Fcur=Math.max(0,psyFluct(PSY.buf));                                   // fluctuation sur ~5 s (tampon complet)
+  /* TNR/PR normatifs (ECMA-74) — plus lourd, recalcul ~0,5 s */
+  if(S.binPowD && (!PSY._tpT || now-PSY._tpT>1.0)){ PSY._tpT=now;
+    const nb=S.binPowD.length, df=S.binHz||((S.ctx?S.ctx.sampleRate:48000)/(S.fftN||4096));
+    const specDb=new Float64Array(nb), frq=new Float64Array(nb);
+    for(let k=0;k<nb;k++){ const p=S.binPowD[k]; specDb[k]=p>0?10*Math.log10(p)+S.offset:-180; frq[k]=k*df; }
+    try{ const r=psyTnrPr(specDb,frq); PSY.tnrT=r.tnrT; PSY.prT=r.prT;
+      PSY.tones=r.tnrTones.map((ff,i)=>({f:ff,tnr:r.tnrVals[i],prom:r.tnrProm[i]})).filter(t=>t.prom).sort((a,b)=>b.tnr-a.tnr).slice(0,4);
+    }catch(_){}
+  }
+  const Ns=PSY.buf.map(s=>s.N).sort((a,b)=>b-a);
+  const N5=Ns[Math.min(Ns.length-1,Math.floor(0.05*Ns.length))]||0;
+  const wS=Scur>1.75?(Scur-1.75)*0.25*Math.log10(N5+10):0;
+  const wFR=(2.18/Math.pow(Math.max(N5,1e-3),0.4))*(0.4*Fcur+0.6*Rcur);
+  const cur={N:Ncur,S:Scur,R:Rcur,F:Fcur,T:Tcur};
+  PSY.cur=cur; PSY.N5=N5; PSY.PA=N5*(1+Math.sqrt(wS*wS+wFR*wFR));
+  PSY.N=Ncur;PSY.S=Scur;PSY.R=Rcur;PSY.F=Fcur;PSY.T=Tcur;                     // miroir (rapport/CSV)
+  /* moyenne depuis le début */
+  if(!PSY._sum){PSY._sum={N:0,S:0,R:0,F:0,T:0};PSY._cnt=0;PSY._hist={N:[],S:[],R:[],F:[],T:[]};}
+  for(const k of ['N','S','R','F','T']){ PSY._sum[k]+=cur[k]; PSY._hist[k].push(cur[k]); }
+  PSY._cnt++;
+  if(PSY._hist.N.length>40000){ for(const k of ['N','S','R','F','T']) PSY._hist[k]=PSY._hist[k].filter((_,i)=>i%2===0); }
+  PSY.mean={N:PSY._sum.N/PSY._cnt,S:PSY._sum.S/PSY._cnt,R:PSY._sum.R/PSY._cnt,F:PSY._sum.F/PSY._cnt,T:PSY._sum.T/PSY._cnt};
+  PSY.p95={N:psyPctile(PSY._hist.N,.95),S:psyPctile(PSY._hist.S,.95),R:psyPctile(PSY._hist.R,.95),F:psyPctile(PSY._hist.F,.95),T:psyPctile(PSY._hist.T,.95)};
+}
+/* Description automatique du son courant (pour l'encart de gêne) — niveau cohérent avec l'axe Sonie affiché */
+function psyDescribe(){
+  const avg=(S.psyAvg&&PSY.mean); const c=(avg?PSY.mean:PSY.cur)||{N:0,S:0,R:0,F:0,T:0};
+  const pa=PSY.PA||0, N=c.N||0;
+  const phon=40+10*Math.log2(Math.max(N,0.25));           // sone -> phon (loi de Zwicker : ×2 sone = +10 phon)
+  const lvl = N<1.5?'très faible' : N<4?'faible' : N<12?'modéré' : N<30?'fort' : 'très fort';
+  const parts=[];
+  if(c.S>=2.2)parts.push('très aigu'); else if(c.S>=1.4)parts.push('aigu'); else if(c.S<0.7)parts.push('sourd');
+  const tone=PSY.tones&&PSY.tones[0];
+  if(PSY.tnrT>=8 && tone)parts.push('tonal ('+(tone.f>=1000?(tone.f/1000).toFixed(1)+' kHz':Math.round(tone.f)+' Hz')+')');
+  else if(c.T>=1.0)parts.push('tonal');
+  if(c.R>=0.5)parts.push('rugueux'); else if(c.R>=0.2)parts.push('légèrement rugueux');
+  if(c.F>=0.6)parts.push('fluctuant'); else if(c.F>=0.3)parts.push('légèrement fluctuant');
+  const desc='Son '+lvl+' ('+N.toFixed(N<10?1:0)+' sone ≈ '+phon.toFixed(0)+' phon)'+(parts.length?', '+parts.join(', '):', neutre');
+  const paLabel = pa<15?'peu gênant' : pa<40?'modérément gênant' : 'très gênant';
+  const paColor = pa<15?'#2FBF83' : pa<40?'#FFB454' : '#EF3346';
+  return {pa,paColor,paLabel,desc};
+}
+function drawPsycho(){
+  const cv=$('psyCv'); if(!cv)return;
+  const dpr=Math.min(2,window.devicePixelRatio||1), r=cv.getBoundingClientRect();
+  if(r.width<10)return;
+  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  const w=r.width,h=r.height; g.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2+4, R=Math.min(w,h)*0.36;
+  const B=S.psyBnd||PSY_BOUNDS, avg=S.psyAvg&&PSY.mean;
+  const src=avg?PSY.mean:(PSY.cur||{N:0,S:0,R:0,F:0,T:0});
+  const meta=[['Sonie','N',B.N,'sone'],['Acuité','S',B.S,'acum'],['Rugosité','R',B.R,'asper'],['Fluctuat.','F',B.F,'vacil'],['Tonalité','T',B.T,'tu']];
+  const axes=meta.map(m=>[m[0],m[1],src[m[1]]||0,m[2],m[3]]);
+  const K=axes.length, ang=i=>(-Math.PI/2 + i*2*Math.PI/K);
+  PSY._geom={cx,cy,R,K,keys:axes.map(a=>a[1])};
+  const accent=(getComputedStyle(document.body).getPropertyValue('--ice')||'#4FC3FF').trim()||'#4FC3FF';
+  const MIN=2, span=PSY.span||0, live=((S.running&&!S.paused)||REPL.on);
+  const ready = (PSY.cur && span>=MIN) || (avg&&PSY._cnt>0);
+  const fProv = ready && !avg && (PSY.span||0) < PSY_BUFSEC;   // fluctuation : fenêtre glissante pas encore pleine (valeur provisoire)
+  if(!PSY._wired){ PSY._wired=true;
+    cv.addEventListener('pointerdown',e=>{
+      const G=PSY._geom; if(!G)return; const rc=cv.getBoundingClientRect();
+      const x=e.clientX-rc.left-G.cx, y=e.clientY-rc.top-G.cy, d=Math.hypot(x,y);
+      if(d<G.R*0.12){ PSY.sel=-1; drawPsycho(); return; }
+      let a=Math.atan2(y,x)+Math.PI/2; if(a<0)a+=2*Math.PI;
+      const i=Math.round(a/(2*Math.PI/G.K))%G.K;
+      PSY.sel=(PSY.sel===i)?-1:i; if(PSY.sel>=0 && G.keys && G.keys[PSY.sel]==='R') psyRoughDWnow(); drawPsycho();
+    });
+  }
+  g.strokeStyle='rgba(127,176,220,.18)';
+  for(let ring=1;ring<=4;ring++){ const rr=R*ring/4; g.beginPath(); for(let i=0;i<=K;i++){const a=ang(i%K), x=cx+rr*Math.cos(a), y=cy+rr*Math.sin(a); i?g.lineTo(x,y):g.moveTo(x,y);} g.stroke(); }
+  for(let i=0;i<K;i++){ const a=ang(i); g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a)); g.strokeStyle=(PSY.sel===i)?accent:'rgba(127,176,220,.18)'; g.lineWidth=(PSY.sel===i)?1.5:1; g.stroke(); }
+  g.lineWidth=1; g.textAlign='center'; g.textBaseline='middle';
+  for(let i=0;i<K;i++){ const a=ang(i), lx=cx+(R+16)*Math.cos(a), ly=cy+(R+13)*Math.sin(a), sel=(PSY.sel===i);
+    g.fillStyle=sel?accent:'rgba(200,225,250,.9)'; g.font='bold 9px sans-serif'; g.fillText(axes[i][0]+((axes[i][1]==='F'&&fProv)?' …':''),lx,ly-4);
+    if(ready){ g.fillStyle=sel?'rgba(230,245,255,.95)':'rgba(150,180,210,.75)'; g.font='8px sans-serif'; g.fillText(axes[i][2].toFixed(axes[i][3]<=2?2:1)+' '+axes[i][4],lx,ly+5); } }
+  if(ready){
+    const pts=axes.map((ax,i)=>{ const v=Math.max(0,Math.min(1,ax[2]/ax[3])), a=ang(i); return [cx+R*v*Math.cos(a), cy+R*v*Math.sin(a)]; });
+    g.beginPath(); pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.closePath();
+    g.fillStyle='rgba(79,195,255,.18)'; g.strokeStyle=accent; g.lineWidth=2; g.fill(); g.stroke();
+    g.fillStyle=accent; pts.forEach((p,i)=>{ const rad=(PSY.sel===i)?4.5:2.6; g.beginPath(); g.arc(p[0],p[1],rad,0,7);
+      if(axes[i][1]==='F'&&fProv){ g.lineWidth=1.5; g.strokeStyle=accent; g.stroke(); g.lineWidth=2; } else { g.fill(); } });
+    if(PSY.sel>=0){ const p=pts[PSY.sel]; g.strokeStyle='#fff'; g.lineWidth=1.5; g.beginPath(); g.arc(p[0],p[1],6,0,7); g.stroke(); }
+    /* P95 (peak-hold) : tic ambre par axe */
+    if(PSY.p95){ g.strokeStyle='#FFB454'; g.lineWidth=2;
+      for(let i=0;i<K;i++){ const pv=PSY.p95[axes[i][1]]||0, v=Math.max(0,Math.min(1,pv/axes[i][3])); if(v<=0.001)continue;
+        const a=ang(i), rr=R*v, px=cx+rr*Math.cos(a), py=cy+rr*Math.sin(a), tx=-Math.sin(a)*4.5, ty=Math.cos(a)*4.5;
+        if(axes[i][1]==='F'&&fProv)g.setLineDash([2,2]);
+        g.beginPath(); g.moveTo(px-tx,py-ty); g.lineTo(px+tx,py+ty); g.stroke(); g.setLineDash([]); }
+      g.lineWidth=1; }
+  }
+  g.textAlign='center'; g.textBaseline='middle';
+  if(ready){ const pa=PSY.PA||0, paC=pa<15?'#2FBF83':pa<40?'#FFB454':'#EF3346';
+    g.fillStyle=paC; g.font='bold 15px sans-serif'; g.fillText(pa.toFixed(0),cx,cy-3);
+    g.fillStyle='rgba(180,205,230,.8)'; g.font='7px sans-serif'; g.fillText('PA (gêne)',cx,cy+9); }
+  if(live && !ready){
+    g.fillStyle='rgba(255,180,84,.95)'; g.font='bold 10px sans-serif'; g.fillText('mesure en cours…',cx,cy-4);
+    g.fillStyle='rgba(255,180,84,.85)'; g.font='8px sans-serif'; g.fillText(span.toFixed(1)+' / '+MIN.toFixed(1)+' s',cx,cy+8);
+    g.strokeStyle='rgba(255,180,84,.55)'; g.lineWidth=2; g.beginPath();
+    g.arc(cx,cy,R+7,-Math.PI/2,-Math.PI/2+2*Math.PI*Math.min(1,span/MIN)); g.stroke(); g.lineWidth=1;
+  }
+  if(ready && PSY.sel>=0){ const ax=axes[PSY.sel], k=ax[1], bnd=ax[3], u=ax[4], dec=bnd<=2?2:1;
+    const names={N:'Sonie N',S:'Acuité S',R:'Rugosité R',F:'Fluctuation F',T:'Tonalité T'};
+    const winTxt={N:'250 ms',S:'250 ms',R:'1 s',F:'5 s',T:'2 s'};
+    const cval=(PSY.cur&&PSY.cur[k])||0, mval=(PSY.mean&&PSY.mean[k])||0, pval=(PSY.p95&&PSY.p95[k])||0;
+    const nrm=Math.max(0,Math.min(1,cval/bnd));
+    const isT=(k==='T'), isR=(k==='R'), isF=(k==='F'), bh=(isT||isR||(isF&&fProv))?58:40;
+    const bx=8, by=h-bh-6, bw=w-16;
+    g.fillStyle='rgba(0,20,45,.75)'; g.strokeStyle=accent; g.lineWidth=1;
+    if(g.roundRect){g.beginPath();g.roundRect(bx,by,bw,bh,7);g.fill();g.stroke();}else{g.fillRect(bx,by,bw,bh);g.strokeRect(bx,by,bw,bh);}
+    g.textAlign='left'; g.textBaseline='middle';
+    g.fillStyle=accent; g.font='bold 11px sans-serif'; g.fillText((names[k]||k)+'  ('+winTxt[k]+')', bx+10, by+11);
+    g.fillStyle='rgba(230,245,255,.95)'; g.font='10px sans-serif';
+    g.fillText('actuel '+cval.toFixed(dec)+' '+u+'   ·   moy '+mval.toFixed(dec)+'   ·   P95 '+pval.toFixed(dec), bx+10, by+27);
+    g.textAlign='right'; g.fillStyle='#fff'; g.font='bold 13px sans-serif'; g.fillText(Math.round(nrm*100)+' %', bx+bw-10, by+11);
+    if(isT){ g.textAlign='left'; g.fillStyle='rgba(180,215,255,.9)'; g.font='9px sans-serif';
+      const t1=(PSY.tnrT>0)?('TNR '+PSY.tnrT.toFixed(1)+' dB · PR '+PSY.prT.toFixed(1)+' dB (ECMA-74)'):'ECMA-74 : aucune raie proéminente';
+      const top=(PSY.tones&&PSY.tones[0])?('   raie '+(PSY.tones[0].f>=1000?(PSY.tones[0].f/1000).toFixed(2)+' k':Math.round(PSY.tones[0].f))+'Hz +'+PSY.tones[0].tnr.toFixed(0)+'dB'):'';
+      g.fillText(t1+top, bx+10, by+45); }
+    if(isR){ g.textAlign='left'; g.fillStyle='rgba(180,215,255,.9)'; g.font='9px sans-serif';
+      g.fillText('modèle Daniel & Weber complet (MOSQITO) · fenêtre 170 ms · MAJ ~1 s', bx+10, by+45); }
+    if(isF && fProv){ g.textAlign='left'; g.fillStyle='rgba(255,180,84,.92)'; g.font='9px sans-serif';
+      g.fillText('fenêtre glissante en cours : '+(PSY.span||0).toFixed(1)+' / 5 s — valeur provisoire', bx+10, by+45); }
+  } else if(ready && S.psyDesc){
+    const d=psyDescribe();
+    const bx=8, bh=44, by=h-bh-6, bw=w-16;
+    g.fillStyle='rgba(0,20,45,.82)'; g.strokeStyle=d.paColor; g.lineWidth=1;
+    if(g.roundRect){g.beginPath();g.roundRect(bx,by,bw,bh,7);g.fill();g.stroke();}else{g.fillRect(bx,by,bw,bh);g.strokeRect(bx,by,bw,bh);}
+    g.textAlign='left'; g.textBaseline='middle';
+    g.fillStyle=d.paColor; g.font='bold 12px sans-serif'; g.fillText('Gêne PA '+d.pa.toFixed(0)+'  ·  '+d.paLabel, bx+10, by+13);
+    g.fillStyle='rgba(210,230,250,.95)'; g.font='10px sans-serif'; g.fillText(d.desc, bx+10, by+31);
+  } else if(ready){
+    g.textAlign='center'; g.fillStyle='rgba(150,180,210,.55)'; g.font='8px sans-serif'; g.fillText('touchez un axe · « SON » = gêne + description', cx, h-9);
+  }
+}
+
 function drawActive(force){
   updScaleLbl();
+  if(((S.running&&!S.paused)||REPL.on) && !(S.warmT>0)) psyUpdate();   // alimente la toile (jamais pendant l'init micro)
   if(S.screen==='spec')drawSpectrum();
   else if(S.screen==='sgram')drawSgram();
   else if(S.screen==='hist')drawHistory();
+  else if(S.screen==='psy')drawPsycho();
 }
 
 /* ===== Gestes : pincer = zoom fréquence, glisser = déplacer, tap = curseur, double-tap = reset ===== */
@@ -4246,9 +5048,10 @@ function ui(){
     ? 'SPECTRE · '+(S.mode==='toct'?"1/3 OCT":S.mode==='oct'?'OCTAVE':'BANDE FINE')+' · '+S.weight
     : S.screen==='sgram' ? 'SPECTROGRAMME · '+S.weight
     : S.screen==='hist' ? 'ÉVOLUTION · L'+S.weight+S.time+' + L'+S.weight+'eq'
-    : S.screen==='menu' ? 'MODE EXPERT · TRAITEMENT DU SIGNAL'
+    : S.screen==='psy' ? 'PSYCHOACOUSTIQUE · TOILE (fenêtre '+(S.psyWin||4)+' s)'
+    : S.screen==='menu' ? 'RÉGLAGES AVANCÉS · TRAITEMENT DU SIGNAL'
     : S.screen==='cal' ? 'CALIBRATION · RÉFÉRENCE 0 dBFS' : 'VALEURS DE LA MESURE';
-  $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='menu'?'Expert':'Valeurs';
+  $('kScreenV').textContent=S.screen==='spec'?'Spectre':S.screen==='sgram'?'Spectrog.':S.screen==='hist'?'Évolution':S.screen==='psy'?'Psycho':S.screen==='menu'?'Avancés':'Valeurs';
   $('kMode').classList.toggle('locked',S.screen!=='spec');   // ANALYSE n'a de sens que sur le spectre
   /* lignes du mode expert */
   $('mSg3dSmooth').querySelector('b').textContent=['Standard','Lisse','Très lisse'][Math.max(0,Math.min(2,S.sg3dSmooth|0))];
@@ -4262,12 +5065,16 @@ function ui(){
   $('mOverlap').querySelector('b').textContent=Math.round(S.overlap*100)+' %';
   $('mSgSpeed').querySelector('b').textContent=Math.round(1000/S.colMs)+' col/s';
   $('mPeakInterp').querySelector('b').textContent=S.peakInterp?'Oui':'Non';
+  $('mSpecCI').querySelector('b').textContent=S.specCI?'Oui':'Non';
+  $('mAvgTau').querySelector('b').textContent=(S.avgTau===0?'Leq (linéaire)':S.avgTau===-1?'Peak hold (max)':S.avgTau===0.125?'Fast 125 ms':S.avgTau===1?'Slow 1 s':('τ '+S.avgTau+' s'));
   $('emgBtn').classList.toggle('on',S.emgOn);
   $('emgBtn').style.display=S.mode==='fft'?'block':'none';
   $('vibBtn').style.display='none';   // module VIB retiré de l'interface (code conservé, réactivable)
   $('avgBtn').style.display='block';   // INST⇄MOY : tous modes de spectre, tout à droite
   $('avgBtn').classList.toggle('on',S.specAvg);
   $('avgBtn').classList.toggle('dis',!(S.eqT>0));   // pas de moyenne tant qu'aucune mesure
+  $('psyAvgBtn').classList.toggle('on',S.psyAvg); $('psyAvgBtn').classList.toggle('dis',!(PSY._cnt>0));
+  $('psyDescBtn').classList.toggle('on',S.psyDesc); $('psyDescBtn').classList.toggle('dis',!(PSY._cnt>0));
   $('lsnBtn').classList.toggle('on',LSN.on);
   $('lsnBtn').style.display=S.sg3d?'none':'flex';
   $('mEmgThr').querySelector('b').textContent=(S.emgThr||10)+' dB';
@@ -4275,19 +5082,22 @@ function ui(){
   $('mToctSrc').querySelector('b').textContent=S.toctSrc==='iir'?'Filtres IEC 61260':'Synthèse FFT';
   $('mLvlSrc').querySelector('b').textContent=S.lvlSrc==='fft'?'Dérivé FFT':'Temporel IIR';
   $('mHP').querySelector('b').textContent=S.hpFc>0?(S.hpFc+' Hz'):'Off';
+  $('mSampleRate').querySelector('b').textContent = S.reqFs?((S.reqFs/1000)+' kHz'):('Auto'+(S.ctx?(' ('+Math.round(S.ctx.sampleRate/1000)+'k)'):''));
   $('mLP').querySelector('b').textContent=S.lpFc>0?((S.lpFc/1000)+' kHz'):'Off';
   $('mTheme').querySelector('b').textContent=(THEMES.find(t=>t[0]===S.theme)||THEMES[0])[1];
+  $('mBacklight').querySelector('b').textContent=S.backlight?'On':'Off';
   $('mLsnSlope').querySelector('b').textContent=(S.lsnSlope||24)+' dB/oct';
-  { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=String(S.lsnGain||0); }
+  { const se=$('lsnGainSel'); if(se && document.activeElement!==se) se.value=S.lsnAuto?'auto':String(S.lsnGain||0); }
 
   updScaleLbl();
-  $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Expert';
+  $('kMenuV').textContent=S.screen==='menu'?'Fermer':'Avancés';
   $('kWV').textContent=S.weight;
   $('kTV').textContent=TIME_LBL[S.time];
   $('kModeV').textContent=S.mode==='toct'?'1/3 oct':S.mode==='oct'?'1/1 oct':'FFT';
   $('kDurV').textContent=durLabel(S.duration);
-  const offd=Math.abs(S.offset-130.0)>=0.05;
-  $('kCalV').textContent=(S.corr==='off'?(offd?'Offset':'Off'):S.corr==='generic'?(offd?'Auto+off':'Auto'):(offd?'Profil+off':'Profil'))+' · '+S.offset.toFixed(1);
+  const off=Math.round(S.offset*10)/10, offStr=(off%1===0?off.toFixed(0):off.toFixed(1));
+  const dot=S.corr==='off'?'#8aa0b8':S.corr==='generic'?'#4FC3FF':'#2FBF83';   // gris=désactivé · bleu=défaut · vert=profil
+  $('kCalV').innerHTML='<span style="color:'+dot+'">●</span> '+offStr+' dB';
   const badge=$('modeBadge');
   if(REPL.on){ badge.textContent=REPL.playing?'REPLAY':'REPLAY · PAUSE'; badge.className=REPL.playing?'badge replay':'badge'; }
   else if(S.running&&!S.paused&&S.warmT>0){badge.textContent='INIT MICRO…';badge.className='badge';}
@@ -4297,21 +5107,30 @@ function ui(){
   document.body.classList.toggle('rec-on', S.running&&!S.paused&&!REPL.on&&!(S.warmT>0));
   document.body.classList.toggle('rec-paused', S.running&&S.paused&&!REPL.on);
   if(S.running&&!REPL.on){$('replBar').classList.remove('on'); REPL.buf=null; REPL.meta=null; REPL.frames=null;}   // mesure micro : barre masquée, mémoire libérée
-  ['paneSpec','paneSgram','paneHist','paneVal','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
-  $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
+  ['paneSpec','paneSgram','paneHist','paneVal','panePsy','paneMenu','paneCal'].forEach(id=>$(id).classList.remove('on'));
+  $(S.screen==='spec'?'paneSpec':S.screen==='sgram'?'paneSgram':S.screen==='hist'?'paneHist':S.screen==='psy'?'panePsy':S.screen==='menu'?'paneMenu':S.screen==='cal'?'paneCal':'paneVal').classList.add('on');
   $('bottomStrip').style.visibility = S.screen==='val' ? 'hidden' : 'visible';   // redondant sur Valeurs
   savePrefs();
 }
 
 /* ================= Touches ================= */
 /* ÉCRAN : cycle des affichages. Le MODE EXPERT a désormais sa touche dédiée (MENU) */
+function goScreen(s){ S.screen=s; if(s!=='sgram')S.sgCursor=null; if(s!=='hist')S.histCursor=null; ui(); requestAnimationFrame(()=>{sizeAll();}); }
 $('kScreen').addEventListener('click',()=>{
-  if(S.screen==='menu'||S.screen==='cal'){S.screen=S.prevScreen||'spec';}     // sortie du menu : écran précédent
-  else S.screen=S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':'spec';
-  if(S.screen!=='sgram')S.sgCursor=null;
-  if(S.screen!=='hist')S.histCursor=null;
-  ui();requestAnimationFrame(()=>{sizeAll();});
+  if(S._longScreen){ S._longScreen=false; return; }                           // appui long déjà traité
+  if(S.screen==='menu'||S.screen==='cal'){goScreen(S.prevScreen||'spec');return;}
+  goScreen(S.screen==='spec'?'sgram':S.screen==='sgram'?'hist':S.screen==='hist'?'val':S.screen==='val'?'psy':'spec');
 });
+/* appui long sur ÉCRAN → choix direct de la vue */
+(()=>{ const el=$('kScreen'); let t=null;
+  const start=()=>{ t=setTimeout(()=>{ S._longScreen=true; $('screenPop').classList.add('on'); },500); };
+  const cancel=()=>{ if(t){clearTimeout(t);t=null;} };
+  el.addEventListener('pointerdown',start); el.addEventListener('pointerup',cancel);
+  el.addEventListener('pointerleave',cancel); el.addEventListener('pointercancel',cancel);
+})();
+$('scpClose').onclick=()=>$('screenPop').classList.remove('on');
+$('screenPop').addEventListener('click',e=>{ if(e.target.id==='screenPop')$('screenPop').classList.remove('on'); });
+$('screenPop').querySelectorAll('.ppopt').forEach(b=>{ b.onclick=()=>{ goScreen(b.getAttribute('data-scr')); $('screenPop').classList.remove('on'); }; });
 /* MENU : bascule du mode expert */
 $('kMenu').addEventListener('click',()=>{
   if(S.screen==='menu'){S.screen=S.prevScreen||'spec';}
@@ -4340,7 +5159,7 @@ function applyPreset(key){
 $('mPreset').onclick=()=>{ $('presetPop').classList.add('on'); };
 $('ppClose').onclick=()=>$('presetPop').classList.remove('on');
 $('presetPop').addEventListener('click',e=>{ if(e.target.id==='presetPop')$('presetPop').classList.remove('on'); });
-document.querySelectorAll('.ppopt').forEach(btn=>{
+$('presetPop').querySelectorAll('.ppopt').forEach(btn=>{
   btn.onclick=()=>{ applyPreset(btn.getAttribute('data-preset')); $('presetPop').classList.remove('on'); };
 });
 $('sg3dBtn').onclick=()=>{
@@ -4400,16 +5219,20 @@ $('mSgSpeed').onclick=()=>{
   ui();
 };
 $('mPeakInterp').onclick=()=>{S.peakInterp=!S.peakInterp;ui();drawActive();};
+$('mSpecCI').onclick=()=>{S.specCI=!S.specCI;ui();drawActive();};
+$('mAvgTau').onclick=()=>{ const seq=[0,0.125,1,5,-1]; let k=seq.indexOf(S.avgTau); if(k<0)k=0; S.avgTau=seq[(k+1)%seq.length]; S._emaSeed=false; savePrefs(); ui(); drawActive(); };
 $('emgBtn').onclick=()=>{S.emgOn=!S.emgOn;ui();if(S.emgOn)flashBtn($('emgBtn'));else unflashBtn($('emgBtn'));drawActive();};
 $('vibBtn').onclick=()=>{vibToggle();};
 $('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); if(S.specAvg)flashBtn($('avgBtn')); else unflashBtn($('avgBtn')); if(S.screen==='spec')drawSpectrum(); };
+$('psyAvgBtn').onclick=()=>{ S.psyAvg=!S.psyAvg; savePrefs(); ui(); if(S.psyAvg)flashBtn($('psyAvgBtn')); else unflashBtn($('psyAvgBtn')); if(S.screen==='psy')drawActive(); };
+$('psyDescBtn').onclick=()=>{ S.psyDesc=!S.psyDesc; savePrefs(); ui(); if(S.psyDesc)flashBtn($('psyDescBtn')); else unflashBtn($('psyDescBtn')); if(S.screen==='psy')drawActive(); };
 $('lsnBtn').onclick=()=>{lsnToggle(); if($('lsnBtn').classList.contains('on'))flashBtn($('lsnBtn'));else unflashBtn($('lsnBtn'));};
 $('mEmgThr').onclick=()=>{ const opts=[6,8,10,12,15]; S.emgThr=opts[(opts.indexOf(S.emgThr||10)+1)%opts.length]; ui();drawActive(); };
 const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['oled','OLED noir'],['neon','Néon'],['gameboy','Game Boy'],['matrix','Matrice']];
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
-                   'peakInterp','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
+                   'peakInterp','specCI','avgTau','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','lsnGain','lsnAuto','backlight','psyWin','psyAvg','psyBnd','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
                    'trigDelay','trigLevel','offset','corr','corrName','emgThr','specFrames','specSmooth','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
@@ -4425,6 +5248,12 @@ function loadPrefs(){
     for(const k of PREF_FIELDS) if(o[k]!==undefined) S[k]=o[k];
     // migration : ancien réglage de thème isolé
     const t=localStorage.getItem('sono_theme'); if(t&&o.theme===undefined) S.theme=t;
+    /* migration 2.1.9 : nouvelles bornes psycho + fenêtre FFT par défaut (une seule fois) */
+    if(!localStorage.getItem('sono_mig219')){
+      const b=S.psyBnd; if(b&&((b.N===40&&b.S===4&&b.R===1&&b.F===1&&b.T===1)||(b.N===100&&b.S===5&&b.R===5&&b.F===3&&b.T===2))) S.psyBnd={N:40,S:4,R:2,F:2,T:1.5};  // recale les anciens défauts vers des bornes réalistes
+      if(S.fftN===16384) S.fftN=4096;
+      localStorage.setItem('sono_mig219','1');
+    }
   }catch(e){}
   if(!THEMES.some(x=>x[0]===S.theme)) S.theme='oled';
 }
@@ -4436,6 +5265,7 @@ function applyTheme(){
   document.body.classList.remove('th-acier','th-clair','th-oled','th-neon','th-gameboy','th-matrix');
   SG._3dKey='';
   if(S.theme!=='marine')document.body.classList.add('th-'+S.theme);
+  document.body.classList.toggle('backlit', !!S.backlight);
   // le fond de la page (html) reprend le métal brossé de la robe du thème : continuité en bas (PWA)
   try{
     const face2=getComputedStyle(document.body).getPropertyValue('--face2').trim();
@@ -4449,20 +5279,20 @@ function applyTheme(){
    choisie → navigation simple. Le regroupement se fait par ordre des sections (h3), identique
    dans les 3 langues ; les intitulés des onglets sont traduits. */
 const HELP_GROUPS={
-  fr:['Prise en main','Mesure & indices','Analyse spectre','Réglages & export'],
-  en:['Getting started','Measure & indices','Spectrum analysis','Settings & export'],
-  es:['Inicio','Medición e índices','Análisis espectral','Ajustes y export']
+  fr:['Prise en main','Mesure & indices','Analyse spectre','Réglages & export','Glossaire'],
+  en:['Getting started','Measure & indices','Spectrum analysis','Settings & export','Glossary'],
+  es:['Inicio','Medición e índices','Análisis espectral','Ajustes y export','Glosario']
 };
 /* groupe de chaque section, dans l'ordre du document :
    0 Démarrer,1 Écrans,2 Réglages rapides,3 Gestes,4 Indices,5 Déclenchement,6 Calibration,
    7 Tiers d'octave,8 Export,9 Émergence,10 Vue 3D,11 Type de spectre,12 Thèmes,13 Préférences,
    14 Hors ligne,15 Précision,16 Traitement du signal (avancé) */
-const HELP_GROUP_OF=[0,0,0,0, 1,1,1, 2, 3, 1, 2, 2, 3, 3, 3, 0, 2];
+const HELP_GROUP_OF=[0,0,0,0, 1,1,1, 2, 3, 1, 2, 2, 3, 3, 3, 0, 2, 1];
 function groupHelp(){
   const hb=document.querySelector('.helpbody'); if(!hb)return;
   let idx=-1, grp=0;
   for(const el of hb.children){
-    if(el.tagName==='H3'){ idx++; grp=(HELP_GROUP_OF[idx]!=null?HELP_GROUP_OF[idx]:0); }
+    if(el.tagName==='H3'){ idx++; grp=(el.classList.contains('gloss')?4:(HELP_GROUP_OF[idx]!=null?HELP_GROUP_OF[idx]:0)); }
     el.dataset.grp=grp;
   }
 }
@@ -4491,13 +5321,20 @@ $('mTheme').onclick=()=>{
   S.theme=THEMES[(i+1)%THEMES.length][0];
   applyTheme(); ui();
 };
+$('mBacklight').onclick=()=>{ S.backlight=!S.backlight; document.body.classList.toggle('backlit',!!S.backlight); savePrefs(); ui(); };
 $('mSg3dSmooth').onclick=()=>{ S.sg3dSmooth=((S.sg3dSmooth|0)+1)%3; SG._3dKey=''; if(window.V3)window.V3.sig=''; savePrefs(); ui(); if(S.sg3d)drawSgram(); };
 /* moyennage temporel du spectre : 1 (live) → 2 → 4 → 8 trames */
 $('mSpecFrames').onclick=()=>{ const seq=[1,2,4,8]; let i=seq.indexOf(S.specFrames|0); S.specFrames=seq[(i+1)%seq.length]; savePrefs(); ui(); if(REPL.on)renderReplayFrame(REPL.i); else drawActive(); };
 /* lissage fréquentiel (bande fine) : Off → 1/6 → 1/12 → 1/24 oct */
 $('mSpecSmooth').onclick=()=>{ const seq=[0,6,12,24]; let i=seq.indexOf(S.specSmooth|0); S.specSmooth=seq[(i+1)%seq.length]; savePrefs(); ui(); if(REPL.on)renderReplayFrame(REPL.i); else drawActive(); };
 $('mLsnSlope').onclick=()=>{ const O=[24,48,96]; S.lsnSlope=O[(O.indexOf(S.lsnSlope||24)+1)%O.length]; lsnRebuild(); ui(); savePrefs(); };
-$('lsnGainSel').onchange=(e)=>{ S.lsnGain=+e.target.value||0; lsnSetGain(); savePrefs(); };
+$('lsnGainSel').onchange=(e)=>{
+  const v=e.target.value, wasAuto=S.lsnAuto;
+  if(v==='auto') S.lsnAuto=true; else { S.lsnAuto=false; S.lsnGain=+v||0; }
+  if(S.lsnAuto!==wasAuto) lsnRebuild();   // ajoute/retire le limiteur
+  else lsnSetGain();
+  savePrefs(); ui();
+};
 async function applyMicChoice(sel){
   S.micId=sel.value||''; savePrefs();
   const want=sel.selectedOptions[0]?sel.selectedOptions[0].textContent:'';
@@ -4539,6 +5376,26 @@ $('mLP').onclick=()=>{
   const opts=[0,20000,22000]; S.lpFc=opts[(opts.indexOf(S.lpFc)+1)%opts.length];
   if(S.analyser)configureAnalyser(); savePrefs(); ui(); drawActive();
 };
+/* fréquence d'échantillonnage : Auto (défaut appareil) → 24 → 12 → 8 kHz. Un fs plus bas
+   abaisse le Nyquist mais affine le bas du spectre (résolution) et allège le CPU. */
+async function applySampleRate(){
+  if(!S.ctx){ ui(); return; }                       // pas encore de contexte : appliqué au prochain démarrage
+  try{ await S.ctx.close(); }catch(_){}
+  S.ctx=makeCtx();
+  try{ if(S.outId&&S.ctx.setSinkId) await S.ctx.setSinkId(S.outId); }catch(_){}
+  S.analyser=S.ctx.createAnalyser();
+  if(S.micWanted){ try{ await acquireMic(); }catch(_){ setMicStat('off'); } }
+  configureAnalyser(); S.lastT=0; drawActive(); ui();
+  const got=S.ctx?Math.round(S.ctx.sampleRate):0;
+  if(S.reqFs && got && Math.abs(got-S.reqFs)>50) toast('Appareil : '+(got/1000)+' kHz (réglage non appliqué)');
+  else toast('Échantillonnage : '+(got/1000)+' kHz');
+}
+$('mSampleRate').onclick=async()=>{
+  if(S.running || (typeof REPL!=='undefined'&&REPL.on))return;   // ni en mesure ni en replay (le contexte est utilisé)
+  const opts=[0,24000,12000,8000]; S.reqFs=opts[(opts.indexOf(S.reqFs)+1)%opts.length];
+  savePrefs(); ui();
+  await applySampleRate();
+};
 /* ===== Popover ÉCHELLES / DYNAMIQUE (affichage seul, réglable en temps réel) ===== */
 const DB_PRESETS=[['Auto',null],['20–110',[20,110]],['30–90',[30,90]],['40–80',[40,80]]];
 const F_PRESETS=[['Pleine bande',null],['20–200',[20,200]],['20–1k',[20,1000]],['1k–10k',[1000,10000]]];
@@ -4549,16 +5406,34 @@ function histBoundsFull(){
 }
 function renderDynPop(){
   const scr=S.screen;
-  const isSpec=(scr==='spec'), isSgram=(scr==='sgram'), isHist=(scr==='hist');
+  const isSpec=(scr==='spec'), isSgram=(scr==='sgram'), isHist=(scr==='hist'), isPsy=(scr==='psy');
   /* titre + visibilité des sections selon l'écran */
-  $('dpTitle').childNodes[0].nodeValue = 'ÉCHELLES · '+(isSgram?'SPECTROGRAMME ':isHist?'ÉVOLUTION ':'SPECTRE ');
+  $('dpTitle').childNodes[0].nodeValue = 'ÉCHELLES · '+(isSgram?'SPECTROGRAMME ':isHist?'ÉVOLUTION ':isPsy?'PSYCHO ':'SPECTRE ');
   $('dpSecTime').style.display   = (isSgram||isHist)?'block':'none';
   $('dpSecDb').style.display     = (isSpec||isHist)?'block':'none';
   $('dpSecColor').style.display  = isSgram?'block':'none';
   $('dpSecFreq').style.display   = (isSpec||isSgram)?'block':'none';
   $('dpSecInterp').style.display = isSgram?'flex':'none';
+  $('dpSecPsy').style.display    = isPsy?'block':'none';
   $('dpFLbl').textContent = isSgram?'FRÉQUENCE (Y)':'FRÉQUENCE (X)';
   { const fb=$('dpFscale'); if(fb){ fb.textContent=S.fscale==='log'?'LOG':'LIN'; fb.classList.toggle('on',S.fscale==='log'); } }
+  /* ---- bornes psychoacoustiques (normalisation de la toile) ---- */
+  if(isPsy){
+    if(!S.psyBnd)S.psyBnd={N:40,S:4,R:2,F:2,T:1.5};
+    const rows=[['N','Sonie','sone',5,10,200],['S','Acuité','acum',0.5,1,10],['R','Rugosité','asper',0.5,0.5,10],['F','Fluctuation','vacil',0.5,0.5,6],['T','Tonalité','tu',0.5,0.5,4]];
+    const box=$('dpPsyRows'); box.innerHTML='';
+    for(const [k,lbl,unit,step,mn,mx] of rows){
+      const row=document.createElement('div'); row.className='cp-fine'; row.style.marginTop='4px';
+      const nm=document.createElement('span'); nm.className='cp-mini'; nm.style.width='96px'; nm.style.textAlign='left'; nm.textContent=lbl;
+      const bm=document.createElement('button'); bm.textContent='−';
+      const val=document.createElement('span'); val.className='cp-val'; val.textContent=(+S.psyBnd[k]).toFixed(step<1?1:0)+' '+unit;
+      const bp=document.createElement('button'); bp.textContent='+';
+      const clamp=v=>Math.max(mn,Math.min(mx,Math.round(v/step)*step));
+      bm.onclick=()=>{ S.psyBnd[k]=clamp((+S.psyBnd[k])-step); savePrefs(); if(S.screen==='psy')drawActive(); renderDynPop(); };
+      bp.onclick=()=>{ S.psyBnd[k]=clamp((+S.psyBnd[k])+step); savePrefs(); if(S.screen==='psy')drawActive(); renderDynPop(); };
+      row.append(nm,bm,val,bp); box.appendChild(row);
+    }
+  }
 
   /* ---- presets dB (Y) : spectre / évolution ---- */
   if(isSpec||isHist){
@@ -4656,6 +5531,7 @@ $('kDyn').addEventListener('pointerdown',()=>{
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>$('kDyn').addEventListener(ev,()=>clearTimeout(dynT)));
 $('kDyn').addEventListener('click',()=>{ if(dynLong){dynLong=false;return;} openDynPop(); });
 $('dpClose').onclick=()=>$('dynPop').classList.remove('on');
+$('dpPsyReset').onclick=()=>{ S.psyBnd={N:40,S:4,R:2,F:2,T:1.5}; savePrefs(); if(S.screen==='psy')drawActive(); renderDynPop(); };
 $('dynPop').addEventListener('click',e=>{if(e.target.id==='dynPop')$('dynPop').classList.remove('on');});
 function dbStep(which,d){
   if(which==='min'){S.dbMin=Math.max(-20,Math.min(S.dbMax-10,S.dbMin+d));}
@@ -4711,8 +5587,8 @@ $('dpFMin').addEventListener('change',applyFreqInput);
 $('dpFMax').addEventListener('change',applyFreqInput);
 $('dpInterp').onclick=()=>{S.sgInterp=!S.sgInterp;SG.vSeq=-1;SG.vViewKey='';drawActive();renderDynPop();};
 $('dpFscale').onclick=()=>{ S.fscale=S.fscale==='log'?'lin':'log'; SG.init=false; resetView(); savePrefs(); ui(); renderDynPop(); };
-$('mCalib').onclick=()=>{S.screen='cal';ui();requestAnimationFrame(renderCal);};
-$('calClose').onclick=()=>{S.screen='menu';ui();};
+/* l'onglet « Calibration » du menu ouvre directement l'écran de calibration (voir setMenuCat) */
+$('calClose').onclick=()=>{S.screen=(S.prevScreen&&S.prevScreen!=='menu'&&S.prevScreen!=='cal')?S.prevScreen:'spec';ui();};   // Terminé : retour direct à l'écran de mesure
 
 /* ===== Profils (localStorage) ===== */
 const LS_KEY='cetim_sono_profiles';
@@ -4792,7 +5668,7 @@ function showMicInfo(){
 }
 function renderCal(){
   showMicInfo(); populateMicList();
-  $('calDev').textContent='Appareil détecté : '+({iphone:'iPhone',ipad:'iPad',android:'Android',desktop:'Ordinateur'}[S.device]||S.device);
+  $('calDev').textContent='Appareil détecté : '+devLabel();
   $('cGenV').textContent=S.corr==='generic'?'actif ✓':'activer';
   $('cProfV').textContent=S.corr==='profile'?(S.corrName||'chargé'):(S.profiles.length?S.profiles.length+' dispo.':'aucun');
   const ov=$('offView'); if(ov)ov.textContent='Offset actuel : '+S.offset.toFixed(1)+' dB';
@@ -4808,44 +5684,50 @@ function drawCurve(){
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   const w=r.width,h=r.height,padL=22,padB=12;
   g.fillStyle=THEME.bg;g.fillRect(0,0,w,h);
-  // le graphe montre UNIQUEMENT la FORME de correction (0 dB à 1 kHz). L'offset (référence
-  // 0 dBFS, scalaire) est indépendant et n'apparaît pas ici — il ne déforme pas la courbe.
-  const curve = activeCorrCurve();     // recalée 0 dB à 1 kHz (cohérent avec compGain et le filtre temporel)
-  $('curveTitle').textContent = S.corr==='profile'?('Profil : '+(S.corrName||'—'))
-                              : S.corr==='generic'?('Générique '+S.device)
-                              : 'Sans courbe';
+  /* Le graphe montre le GAIN TOTAL rapporté au dBFS de BASE de l'appareil (0 dB = base, iPhone 130 dBFS) :
+     gain(f) = (offset - base) + forme fréquentielle (profil/défaut, 0 dB à 1 kHz).
+     -> offset 128 (base 130) : tout descend de 2 dB ; correction désactivée : ligne PLATE à (offset-base). */
+  const BASE=130;                        // dBFS de base (iPhone) — le "0" du graphe
+  const dev=S.offset-BASE;               // déviation de calibration vs base
+  const curve = activeCorrCurve();       // forme (profil/défaut), 0 dB à 1 kHz, ou null si désactivé
+  const shapeAt=f=>curve?interpCurve(curve,f):0;
+  const dispAt=f=>dev+shapeAt(f);        // gain total affiché
+  const devName=devLabel();
+  $('curveTitle').textContent = S.corr==='profile'?('Profil perso : '+(S.corrName||'—'))
+                              : S.corr==='generic'?('Défaut '+devName+(S.device==='desktop'?' (plate)':''))
+                              : 'Désactivé (plat)';
   const fmin=20,fmax=20000;
   const x2=f=>padL+(Math.log(f/fmin)/Math.log(fmax/fmin))*(w-padL-4);
-  // bornes dB dynamiques d'après la forme seule
-  let gmin=-3,gmax=3;
-  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){if(v<gmin)gmin=v;if(v>gmax)gmax=v;}}
+  // bornes dB dynamiques d'après le gain TOTAL (dev + forme), en incluant 0 (base) et dev
+  let gmin=Math.min(0,dev)-1,gmax=Math.max(0,dev)+1;
+  if(curve){const gg=curve.g||curve.gain_dB;for(const v of gg){const t=dev+v;if(t<gmin)gmin=t;if(t>gmax)gmax=t;}}
   gmin=Math.floor((gmin-1)/2)*2; gmax=Math.ceil((gmax+1)/2)*2;
   const y2=v=>(1-(v-gmin)/(gmax-gmin))*(h-padB-2)+2;
   // grille + libellés
   g.strokeStyle=THEME.grid;g.fillStyle=THEME.axis;g.font='7px Arial';g.lineWidth=1;
   g.textAlign='right';
   for(let v=gmin;v<=gmax;v+= (gmax-gmin)>12?4:2){const y=y2(v);g.beginPath();g.moveTo(padL,y);g.lineTo(w-2,y);g.stroke();g.fillText((v>0?'+':'')+v,padL-2,y+2.5);}
-  // ligne 0 dB accentuée (= médium, référence de la forme)
+  // ligne 0 dB = dBFS de BASE (référence absolue de l'appareil)
   g.strokeStyle='rgba(127,216,255,.35)';g.beginPath();g.moveTo(padL,y2(0));g.lineTo(w-2,y2(0));g.stroke();
   g.textAlign='center';g.fillStyle=THEME.axis;g.font='7px Arial';
   for(const f of [31.5,125,500,2000,8000]){g.fillText(f>=1000?(f/1000)+'k':f,x2(f),h-3);}
-  if(!curve){g.fillStyle=THEME.axis;g.font='9px Arial';g.fillText('— correction désactivée —',w/2,h/2);$('curveRange').textContent=gmin+'…+'+gmax+' dB';return;}
-  // courbe de correction (forme fréquentielle, 0 dB à 1 kHz)
+  // ligne de GAIN TOTAL (dev + forme) — tracée même sans courbe (plate à dev)
   g.beginPath();g.strokeStyle='#4FC3FF';g.lineWidth=1.6;
   let st=false;
   for(let px=padL;px<=w-2;px+=2){
     const f=fmin*Math.pow(fmax/fmin,(px-padL)/(w-padL-4));
-    const y=y2(interpCurve(curve,f));
+    const y=y2(dispAt(f));
     st?g.lineTo(px,y):g.moveTo(px,y);st=true;
   }
   g.stroke();
-  // points de mesure du profil
-  {
+  // points de mesure du profil (décalés de la déviation de calibration)
+  if(curve){
     const fc=curve.fc, gg=curve.g||curve.gain_dB;
     g.fillStyle='#7FE9B8';
-    for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(gg[i]),2.2,0,7);g.fill();}}
+    for(let i=0;i<fc.length;i++){if(fc[i]>=fmin&&fc[i]<=fmax){g.beginPath();g.arc(x2(fc[i]),y2(dev+gg[i]),2.2,0,7);g.fill();}}
   }
-  $('curveRange').textContent=gmin+'…+'+gmax+' dB';
+  // légende : le 0 = base dBFS, et l'offset courant (déviation)
+  $('curveRange').textContent='0 = '+BASE+' dBFS ('+devName+') · offset '+S.offset.toFixed(1)+(Math.abs(dev)>=0.05?(' → '+(dev>0?'+':'')+dev.toFixed(1)+' dB'):'');
 }
 function renderSweep(){
   const grid=$('sweepGrid'); grid.innerHTML='';
@@ -4955,13 +5837,28 @@ $('calDo1k').onclick=()=>{
 
 /* effacements — flash de confirmation sur la ligne touchée */
 function flashDone(el){const b=el.querySelector('b'),o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,700);}
-$('mClrSgram').onclick=function(){clearSgram();flashDone(this);};
-$('mClrHist').onclick=function(){clearHist();flashDone(this);};
-$('mClrPeak').onclick=function(){clearPeak();flashDone(this);};
-$('mClrAll').onclick=function(){clearSgram();resetMeasure();flashDone(this);};
 $('mResetPrefs').onclick=function(){
   if(confirm("Réinitialiser tous les paramètres (thème, pondération, échelles, calibration…) aux valeurs par défaut ? L'application va redémarrer.")) resetPrefs();
 };
+
+/* ===== onglets du menu expert (filtrage par catégorie) ===== */
+function setMenuCat(cat){
+  if(cat==='calib'){ S.screen='cal'; ui(); requestAnimationFrame(renderCal); return; }   // ouvre directement l'écran de calibration (garde l'onglet de filtre courant)
+  document.querySelectorAll('#mTabs .mtab').forEach(t=>t.classList.toggle('on',t.dataset.cat===cat));
+  document.querySelectorAll('#paneMenu .mrow, #paneMenu .mnote, #paneMenu .mcredit').forEach(el=>{
+    if(el.dataset.cat) el.style.display = (el.dataset.cat===cat) ? '' : 'none';
+  });
+  S.menuCat=cat;
+  const m=document.querySelector('#paneMenu .menu'); if(m)m.scrollTop=0;
+}
+document.querySelectorAll('#mTabs .mtab').forEach(t=>t.onclick=()=>setMenuCat(t.dataset.cat));
+setMenuCat('signal');   // catégorie par défaut à l'ouverture
+
+/* réinitialiser max / min / peak-hold / LCpeak en tapant l'afficheur correspondant */
+['vMax','vMin','vLCpk'].forEach(id=>{
+  const el=$(id), cell=el&&el.closest('.cell');
+  if(cell) cell.onclick=()=>{ clearPeak(); toast('Max / min / peak réinitialisés'); };
+});
 
 $('kW').onclick=()=>{S.weight=S.weight==='A'?'C':S.weight==='C'?'Z':'A';ui();if(REPL.on)renderReplayFrame(REPL.i);else drawActive();};
 $('kT').onclick=()=>{S.time=TIME_ORDER[(TIME_ORDER.indexOf(S.time)+1)%TIME_ORDER.length];ui();if(REPL.on)renderReplayFrame(REPL.i);else drawActive();};
@@ -5014,7 +5911,7 @@ function cpShowMic(){
 }
 function renderCalPop(){
   cpShowMic(); populateMicList();
-  $('cpCorr').textContent=S.corr==='off'?'Off':S.corr==='generic'?'Auto':'Profil';
+  $('cpCorr').textContent=S.corr==='off'?'Désactivé':S.corr==='generic'?('Défaut '+devLabel()):'Profil perso';
   $('cpOff').textContent=S.offset.toFixed(1)+' dB';
   const g=$('cpPresets');g.innerHTML='';
   for(const v of OFFSET_PRESETS){
@@ -5052,6 +5949,7 @@ function setLocks(){
   $('kDur').classList.toggle('locked',mic||REPL.on);   // durée sans objet en replay
   $('mLvlSrc').classList.toggle('locked',mic);          // méthode des niveaux figée pendant la mesure
   $('mHP').classList.toggle('locked',mic); $('mLP').classList.toggle('locked',mic);
+  $('mSampleRate').classList.toggle('locked',mic);
 }
 
 /* icônes transport universelles */
@@ -5217,10 +6115,48 @@ function expSpectrum(band){
   const names=[],L=[]; for(let b=0;b<th.length;b++){ names.push(th[b]); L.push(lvl(en[b]/S.eqT)); }
   return {names,L};
 }
+/* ===== Bloc psychoacoustique pour l'export (CSV + rapport) ===== */
+function psyStats(){ if(!PSY||!PSY._cnt||!PSY.mean)return null;
+  const g=(o,k)=>(o&&o[k]!=null)?o[k]:0;
+  return { rows:[
+      ['Sonie N','sone',1,g(PSY.cur,'N'),g(PSY.mean,'N'),g(PSY.p95,'N')],
+      ['Acuité S','acum',2,g(PSY.cur,'S'),g(PSY.mean,'S'),g(PSY.p95,'S')],
+      ['Rugosité R','asper',2,g(PSY.cur,'R'),g(PSY.mean,'R'),g(PSY.p95,'R')],
+      ['Fluctuation F','vacil',2,g(PSY.cur,'F'),g(PSY.mean,'F'),g(PSY.p95,'F')],
+      ['Tonalité T','tu',2,g(PSY.cur,'T'),g(PSY.mean,'T'),g(PSY.p95,'T')] ],
+    PA:PSY.PA||0, N5:PSY.N5||0, tnrT:PSY.tnrT||0, prT:PSY.prT||0, tones:(PSY.tones||[]).slice(0,4) };
+}
+function psyCsvBlock(){ const p=psyStats(); if(!p)return '';
+  let s='\nINDICATEURS PSYCHOACOUSTIQUES (fenetre glissante)\nIndicateur;Unite;Actuel;Moyenne;P95\n';
+  for(const r of p.rows){ const d=r[2]; s+=r[0]+';'+r[1]+';'+r[3].toFixed(d)+';'+r[4].toFixed(d)+';'+r[5].toFixed(d)+'\n'; }
+  s+='Gene psychoacoustique PA;-;'+p.PA.toFixed(1)+';;\n';
+  s+='N5 (sonie, percentile 5%);sone;'+p.N5.toFixed(1)+';;\n';
+  s+='\nTONALITE NORMATIVE (ECMA-74)\nT-TNR global [dB];'+p.tnrT.toFixed(1)+';T-PR global [dB];'+p.prT.toFixed(1)+'\n';
+  if(p.tones.length){ s+='Raies proeminentes;f [Hz];TNR [dB]\n'; for(const t of p.tones)s+=';'+Math.round(t.f)+';'+t.tnr.toFixed(1)+'\n'; }
+  else s+='Raies proeminentes;aucune\n';
+  s+='\nNOTE;Grandeurs psychoacoustiques indicatives non certifiees (micro smartphone non metrologique).\n';
+  s+='NOTE;Correction frequentielle du micro appliquee a sonie/acuite/fluctuation/tonalite (spectre) ; rugosite calculee sur le signal temporel (correction non appliquee mais peu sensible).\n';
+  s+='NOTE;Sonie/acuite dependent de la calibration absolue et de la reponse micro ; rugosite/fluctuation/tonalite (rapports) plus robustes. Sonie stationnaire (N5 approche).\n';
+  return s;
+}
+function psyReportBlock(){ const p=psyStats(); if(!p)return '';
+  let rows=''; for(const r of p.rows){ const d=r[2]; rows+='<tr><td><b>'+r[0]+'</b> <span class="u">'+r[1]+'</span></td><td>'+r[3].toFixed(d)+'</td><td>'+r[4].toFixed(d)+'</td><td>'+r[5].toFixed(d)+'</td></tr>'; }
+  let tones=''; if(p.tones.length){ tones=p.tones.map(t=>fmtF(t.f)+' Hz ('+t.tnr.toFixed(1)+' dB)').join(', '); } else tones='aucune raie proéminente';
+  return '<div class="rep-sec rep-avoid">Indicateurs psychoacoustiques</div>'+
+    '<table class="rep-psy rep-avoid"><thead><tr><th>Indicateur</th><th>Actuel</th><th>Moyenne</th><th>P95</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div class="rep-grid rep-avoid" style="margin-top:6px">'+
+      '<div><span>Gêne psychoacoustique PA</span><b>'+p.PA.toFixed(1)+'</b></div>'+
+      '<div><span>N5 (sonie, P5)</span><b>'+p.N5.toFixed(1)+' sone</b></div>'+
+      '<div><span>Tonalité T-TNR (ECMA-74)</span><b>'+p.tnrT.toFixed(1)+' dB</b></div>'+
+      '<div><span>Tonalité T-PR (ECMA-74)</span><b>'+p.prT.toFixed(1)+' dB</b></div>'+
+      '<div style="grid-column:1/3"><span>Raies proéminentes</span><b style="text-align:right;max-width:70%">'+tones+'</b></div>'+
+    '</div>'+
+    '<div style="font-size:8px;color:#7a8398;margin-top:3px;line-height:1.35">Sonie ISO 532-1 · Acuité DIN 45692 · Rugosité Daniel &amp; Weber · Fluctuation Fastl · Tonalité Aures (t.u.) &amp; ECMA-74 (TNR/PR), validés vs MOSQITO. <b>Grandeurs indicatives, non certifiées</b> : micro de smartphone non métrologique. La <b>correction fréquentielle du micro</b> (si un profil est actif) est appliquée à la sonie, l&#39;acuité, la fluctuation et la tonalité (calcul spectral) ; la rugosité est calculée sur le signal temporel (correction fréquentielle non appliquée, mais peu sensible car basée sur la profondeur de modulation). Sonie et acuité dépendent de la calibration absolue (offset) et de la réponse du micro ; rugosité, fluctuation et tonalité (rapports) sont plus robustes. Sonie en régime stationnaire (N5 approché).</div>';
+}
 function buildCsv(){
   let csv='SONOMETRE CETIM - export\n';
   csv+='Date;'+new Date().toLocaleString('fr-FR')+';Duree [s];'+(S.eqT>0?S.eqT.toFixed(1):'0')+'\n';
-  csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('auto '+S.device):(S.corrName||'profil'))+'\n';
+  csv+='Ponderation;'+S.weight+';Temps;'+TIME_LBL[S.time]+';Offset dB;'+S.offset+';Correction;'+(S.corr==='off'?'aucune':S.corr==='generic'?('defaut '+devLabel()):(S.corrName||'profil'))+'\n';
   const _tr=S.stream&&S.stream.getAudioTracks&&S.stream.getAudioTracks()[0];
   const _mic=_tr&&_tr.label?_tr.label:'micro';
   const _rate=(S.ctx&&S.ctx.sampleRate)?Math.round(S.ctx.sampleRate)+' Hz':'?';
@@ -5235,6 +6171,7 @@ function buildCsv(){
   const _sp=expSpectrum();
   csv+='SPECTRE Leq (ponderation '+S.weight+' - '+(_sp.names.length&&S.expBand==='oct'?'octave':'tiers d octave')+' - '+(S.toctSrc==='iir'?'filtres IEC 61260':'synthese FFT')+')\nfc [Hz];Leq [dB]\n';
   for(let b=0;b<_sp.names.length;b++)csv+=_sp.names[b]+';'+fmt(_sp.L[b])+'\n';
+  csv+=psyCsvBlock();
   csv+='\nHISTORIQUE (10 Hz)\nt [s];L'+S.weight+S.time+' [dB];L'+S.weight+'eq [dB]\n';
   for(const pt of S.hist)csv+=pt.t.toFixed(1)+';'+pt.L.toFixed(1)+';'+pt.Leq.toFixed(1)+'\n';
   return csv;
@@ -5318,6 +6255,12 @@ const REPORT_CSS=
   '.rep-spec{columns:3;column-gap:16px;font-size:9.5px;margin-top:2px}'+
   '.rep-spec>div{display:flex;justify-content:space-between;break-inside:avoid;border-bottom:1px dotted #e5e9f0;padding:1px 0}'+
   '.rep-note{white-space:pre-wrap;font-size:10.5px;border:1px solid #dde3ec;border-radius:5px;padding:7px;min-height:32px}'+
+  '.rep-psy{width:100%;border-collapse:collapse;font-size:10px;margin-top:3px}'+
+  '.rep-psy th,.rep-psy td{border:1px solid #dde3ec;padding:3px 7px;text-align:right}'+
+  '.rep-psy th{background:#eef2f8;color:#001E50;font-size:8.5px;letter-spacing:.03em;text-transform:uppercase}'+
+  '.rep-psy td:first-child,.rep-psy th:first-child{text-align:left}'+
+  '.rep-psy td:first-child b{color:#001E50}'+
+  '.rep-psy .u{color:#889;font-size:8.5px}'+
   '.rep-foot{margin-top:14px;font-size:8.5px;color:#7a8398;border-top:1px solid #cfd8e6;padding-top:5px}'+
   '@media screen and (max-width:600px){#report{padding:16px 14px}.rep-h{gap:10px}.rep-logo svg{height:22px}.rep-bar{min-height:24px}.rep-t1{font-size:12.5px;letter-spacing:.05em}.rep-t2{font-size:9.5px}.rep-htxt{flex-basis:0}.rep-meta{flex-basis:100%;order:3;margin:8px 0 0;text-align:left;font-size:9.5px;display:flex;flex-wrap:wrap;gap:2px 16px}.rep-meta>div{white-space:nowrap}.rep-meta .rl{margin-right:5px}}'+
   '@media print{@page{size:A4;margin:12mm}html,body{background:#fff}.noprint{display:none}#report{margin:0;max-width:none;box-shadow:none;padding:0}.rep-avoid{break-inside:avoid}.rep-fig{break-before:page;break-inside:avoid}.rep-fig .rep-img{max-height:225mm;object-fit:contain}}';
@@ -5398,6 +6341,7 @@ function buildReportHTML(figs){
   '</div>'+
   figs.map(f=>f&&f.img?'<div class="rep-fig"><div class="rep-sec">'+f.title+'</div><img class="rep-img" src="'+f.img+'"></div>':'').join('')+
   (spec?'<div class="rep-sec">Spectre par '+(S.expBand==='oct'?'octave':'tiers d\'octave')+' (Leq '+S.weight+')</div><div class="rep-spec">'+spec+'</div>':'')+
+  psyReportBlock()+
   '<div class="rep-sec">Commentaire</div><div class="rep-note">'+(note||'—')+'</div>'+
   '<div class="rep-foot">Généré par le sonomètre CETIM · thibautgras.github.io/sonometre — '+now+'.<br>'+
     'Mesure indicative à titre d\'orientation : le microphone d\'un smartphone n\'est pas un capteur métrologique (réponse non garantie, notamment &lt; 50 Hz et en niveau absolu). '+
@@ -5438,6 +6382,11 @@ function renderExpNote(){
                                 : 'Partage non disponible sur ce navigateur : les boutons Partager téléchargeront le fichier.';
 }
 $('epReport').onclick=()=>generateReport();
+$('epLoadWav').onclick=()=>{
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.wav,.m4a,.mp3,.aif,.aiff,.flac,.caf,audio/*';
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(f) replayLoadFile(f); };
+  inp.click();
+};
 $('epCsvShare').onclick=()=>shareOrDownload(csvBlob(),'sonometre_'+stamp()+'.csv','Mesure sonomètre CETIM');
 /* ===== V2 : capture audio — toggle et exports WAV ===== */
 $('arecTgl').onchange=e=>{
@@ -5625,6 +6574,7 @@ const TR={
  'MENU':{en:'MENU',es:'MENÚ'},'EXPORT':{en:'EXPORT',es:'EXPORTAR'},'MESURE':{en:'MEASURE',es:'MEDIDA'},'ÉCHELLES':{en:'SCALES',es:'ESCALAS'},
  'Spectre':{en:'Spectrum',es:'Espectro'},'Spectrog.':{en:'Spectrog.',es:'Espectrog.'},'Évolution':{en:'History',es:'Evolución'},'Valeurs':{en:'Values',es:'Valores'},
  'Réinit':{en:'Reset',es:'Reinic.'},'Partager':{en:'Share',es:'Compartir'},'Expert':{en:'Expert',es:'Experto'},'Fermer':{en:'Close',es:'Cerrar'},
+ 'RÉGLAGES':{en:'SETTINGS',es:'AJUSTES'},'Avancés':{en:'Advanced',es:'Avanzados'},'Chargement':{en:'Load',es:'Carga'},
  'Auto':{en:'Auto',es:'Auto'},'Manuel':{en:'Manual',es:'Manual'},
  'Lissage / perf. 3D':{en:'3D smoothing / perf.',es:'Suavizado / rend. 3D'},
  'Fluide':{en:'Fluid',es:'Fluido'},'Standard':{en:'Standard',es:'Estándar'},'Lisse':{en:'Smooth',es:'Suave'},'Très lisse':{en:'Very smooth',es:'Muy suave'},
@@ -5643,6 +6593,9 @@ const TR={
  'Rendu 3D spectrogramme':{en:'3D spectrogram render',es:'Render 3D espectrograma'},
  'Pente filtre écoute ♪':{en:'Listen filter slope ♪',es:'Pendiente filtro escucha ♪'},
  'Thème de façade':{en:'Faceplate theme',es:'Tema de fachada'},
+ "Fréquence d'échantillonnage":{en:'Sample rate',es:'Frecuencia de muestreo'},
+ 'Rétroéclairage':{en:'Backlight',es:'Retroiluminación'},
+ 'Fenêtre psycho (toile)':{en:'Psycho window (radar)',es:'Ventana psico (radar)'},
  'Calibration / réf. pleine échelle (0 dBFS)':{en:'Calibration / full-scale ref. (0 dBFS)',es:'Calibración / ref. fondo de escala (0 dBFS)'},
  'Mode générique auto':{en:'Generic auto mode',es:'Modo genérico auto'},
  'Profil chargé':{en:'Loaded profile',es:'Perfil cargado'},
@@ -5656,7 +6609,7 @@ const TR={
  'Clair labo':{en:'Light lab',es:'Lab claro'},'OLED noir':{en:'OLED black',es:'OLED negro'},'Matrice':{en:'Matrix',es:'Matriz'},
  /* popovers */
  'AIDE & GUIDE':{en:'HELP & GUIDE',es:'AYUDA Y GUÍA'},
- 'EXPORTER / PARTAGER':{en:'EXPORT / SHARE',es:'EXPORTAR / COMPARTIR'},
+ 'EXPORT / CHARGEMENT':{en:'EXPORT / LOAD',es:'EXPORTAR / CARGAR'},
  'Partager le CSV':{en:'Share CSV',es:'Compartir CSV'},
  'Télécharger le CSV':{en:'Download CSV',es:'Descargar CSV'},
  "Partager l'image du graphe":{en:'Share graph image',es:'Compartir imagen del gráfico'},
@@ -5670,7 +6623,7 @@ const TR={
  'ÉVOLUTION':{en:'HISTORY',es:'EVOLUCIÓN'},'VALEURS':{en:'VALUES',es:'VALORES'},
  "TIERS D'OCTAVE":{en:'1/3 OCTAVE',es:'TERCIO DE OCTAVA'},'BANDES FINES':{en:'NARROWBAND',es:'BANDA FINA'},
  'OCTAVE':{en:'OCTAVE',es:'OCTAVA'},'POND. ':{en:'WEIGHT ',es:'POND. '},
- 'MODE EXPERT · TRAITEMENT DU SIGNAL':{en:'EXPERT MODE · SIGNAL PROCESSING',es:'MODO EXPERTO · PROCESADO DE SEÑAL'},
+ 'RÉGLAGES AVANCÉS · TRAITEMENT DU SIGNAL':{en:'ADVANCED SETTINGS · SIGNAL PROCESSING',es:'AJUSTES AVANZADOS · PROCESADO DE SEÑAL'},
  'CALIBRATION':{en:'CALIBRATION',es:'CALIBRACIÓN'},
  'Synthèse FFT':{en:'FFT synthesis',es:'Síntesis FFT'},
  'Temporel IIR':{en:'Time-domain IIR',es:'Temporal IIR'},
@@ -5732,6 +6685,24 @@ function translatePass(){
   safe(()=>document.querySelectorAll('.mrow span').forEach(trEl));
   safe(()=>document.querySelectorAll('.mrow b').forEach(trDyn));
   safe(()=>document.querySelectorAll('.exp-item b,.exp-item span').forEach(trEl));
+  /* onglets + notes du menu expert : table dédiée (n'alimente pas le moteur de tokens) */
+  safe(()=>{
+    const UITR={
+      'Signal':{en:'Signal',es:'Señal'},
+      'Affichage':{en:'Display',es:'Pantalla'},
+      'Calibration':{en:'Calibration',es:'Calibración'},
+      'Système':{en:'System',es:'Sistema'},
+      "Remet tous les réglages aux valeurs par défaut. Astuce : réinitialiser max/min/peak-hold se fait en tapant directement l'afficheur max/min.":
+        {en:'Resets all settings to defaults. Tip: reset max/min/peak-hold by tapping the max/min readout directly.',
+         es:'Restablece todos los ajustes. Consejo: reinicia máx/mín/peak-hold tocando directamente el indicador máx/mín.'},
+      'FFT calculée en interne · recalage RMS Parseval actif · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s.':
+        {en:'FFT computed internally · Parseval RMS rescaling active · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s.',
+         es:'FFT calculada internamente · reescalado RMS Parseval activo · Fast τ=125 ms · Slow τ=1 s · V-Slow τ=10 s.'}
+    };
+    const trUI=el=>{ if(!el)return; if(el.dataset.fr===undefined)el.dataset.fr=el.textContent; const fr=el.dataset.fr,e=UITR[fr]; el.textContent=(I18.lang==='fr'||!e)?fr:(e[I18.lang]||fr); };
+    document.querySelectorAll('#mTabs .mtab').forEach(trUI);
+    document.querySelectorAll('#paneMenu .mnote').forEach(trUI);
+  });
   safe(()=>trTokens($('gTitle')));
   const safe2=f=>{try{f();}catch(e){}};
   const st=$('modeBadge');
@@ -5810,6 +6781,31 @@ const HELP_EN=`
 <p><b>Band limiting.</b> Two adjustable filters (Expert menu) bound the analysed band: a <b>high-pass</b> (Off / 3 / 10 / 20 Hz, default 10 Hz) rejecting DC, wind and infrasound, and a <b>low-pass</b> (Off / 20 / 22 kHz, default 22 kHz). Butterworth biquads (2nd order, −3 dB at cutoff) applied upstream of weighting: levels, Leq and spectrum are bounded consistently. Mainly useful for <b>LZeq</b> (unweighted), otherwise inflated by out-of-band energy.</p>
 <p><b>Selector (diagnostic).</b> Expert menu ▸ <b>Real-time levels</b>: <i>Time-domain IIR</i> (recommended default — A/C via biquads, exact time response) or <i>FFT-derived</i> (levels smoothed from the spectrum, for bench comparison). FFT-derived reintroduces window latency and does not use the time-domain correction filter; use it only to compare. Locked during a measurement.</p>
 <p><b>Validation.</b> Processing is checked offline against analytic and normative references (IEC 61672-1, IEC 61260-1, Parseval); A/C weightings meet <b>class 1</b> from 16 Hz to 12.5 kHz. The correction filter has its own test routine (fidelity, real gain on tones, energy coherence, stability).</p>
+<h3 class="gloss">Glossary — quantities &amp; criteria</h3>
+<p><b>Acoustic quantities.</b></p>
+<ul>
+<li><b>dB(A) / dB(C)</b> — frequency weightings. A ≈ ear sensitivity at moderate levels (cuts lows); C ≈ nearly flat (peaks, low frequencies).</li>
+<li><b>L<sub>AF</sub> / L<sub>AS</sub></b> (dB) — A-weighted level with <b>Fast</b> (125 ms) or <b>Slow</b> (1 s) time constant.</li>
+<li><b>L<sub>eq</sub></b> (dB) — equivalent continuous level (energy average): L<sub>eq</sub> = 10·log<sub>10</sub>( (1/T)·∫ p²(t)/p<sub>0</sub>² dt ), p<sub>0</sub> = 20 µPa.</li>
+<li><b>L<sub>Cpeak</sub></b> (dB) — C-weighted peak, measured in the time domain.</li>
+<li><b>Emergence</b> (dB) — level difference between a component (line or band) and the surrounding background noise.</li>
+<li><b>Bark (z)</b> — critical-band rate scale (0–24 Bark ≈ 20 Hz–15.5 kHz); basis of the psychoacoustic models.</li>
+</ul>
+<p><b>Psychoacoustic quantities.</b></p>
+<ul>
+<li><b>Loudness N</b> (sone) — perceived loudness (ISO 532-1). Ref.: 1 sone = 1 kHz tone at 40 dB SPL. Link to phon: N = 2<sup>(L<sub>N</sub>−40)/10</sup>; conversely L<sub>N</sub> = 40 + 10·log<sub>2</sub>N (for L<sub>N</sub> ≥ 40 phon). Doubling the sones = "twice as loud".</li>
+<li><b>Loudness level</b> (phon) — level scale: X phon = as loud as a 1 kHz tone at X dB SPL. <b>+10 phon ⇔ ×2 sone</b>.</li>
+<li><b>N<sub>5</sub></b> (sone) — loudness exceeded 5 % of the time ("peaks"); feeds the PA annoyance.</li>
+<li><b>Sharpness S</b> (acum) — treble/bass balance, high-frequency content (DIN 45692). Ref.: 1 acum = narrowband noise (1 Bark) at 1 kHz, 60 dB. Weighted centroid of specific loudness: S = 0.11 · [ Σ<sub>z</sub> N′(z)·g(z)·z ] / [ Σ<sub>z</sub> N′(z) ], N′(z) = specific loudness, g(z) ≈ 1 up to ~16 Bark then rising.</li>
+<li><b>Roughness R</b> (asper) — sensation of fast amplitude modulations (~15–300 Hz, max near 70 Hz), Daniel &amp; Weber model. Ref.: 1 asper = 1 kHz carrier, 100 % AM at f<sub>mod</sub> = 70 Hz, 60 dB. R = 0.25 · Σ<sub>i</sub> g(z<sub>i</sub>)·( m<sub>i</sub> · k<sub>i−2</sub> · k<sub>i+2</sub> )², m<sub>i</sub> = envelope modulation depth of channel i, k = inter-channel cross-correlations.</li>
+<li><b>Fluctuation strength F</b> (vacil) — sensation of slow modulations (max at f<sub>mod</sub> = 4 Hz), Fastl model. Ref.: 1 vacil = 1 kHz, 100 % AM at 4 Hz, 60 dB. F = 0.008 · [ Σ (ΔL/dB) ] / [ (f<sub>mod</sub>/4 Hz) + (4 Hz/f<sub>mod</sub>) ].</li>
+<li><b>Tonality T</b> (t.u.) — perceived prominence of tonal components (Aures model): weights level excess, bandwidth and frequency of each line (peak sensitivity ~700 Hz).</li>
+<li><b>TNR</b> (dB) — Tone-to-Noise Ratio (ECMA-74): TNR = L<sub>t</sub> − L<sub>n</sub>, tone level minus masking-noise level in its critical band. <b>Prominent</b> if TNR ≥ 8 dB (above 1 kHz; higher threshold at low frequencies).</li>
+<li><b>PR</b> (dB) — Prominence Ratio (ECMA-74): PR = L<sub>m</sub> − 10·log<sub>10</sub>[ ½ (10<sup>L<sub>l</sub>/10</sup> + 10<sup>L<sub>u</sub>/10</sup>) ], level of the tone's critical band (m) vs adjacent lower (l) and upper (u) bands. Prominent if PR ≥ 9 dB.</li>
+<li><b>Annoyance PA</b> — Psychoacoustic Annoyance (Zwicker): PA = N<sub>5</sub> · ( 1 + √( w<sub>S</sub>² + w<sub>FR</sub>² ) ), w<sub>S</sub> = sharpness term, w<sub>FR</sub> = roughness + fluctuation term. Unitless (global indicator).</li>
+</ul>
+<p style="font-size:11px"><b>Computation windows.</b> Loudness and sharpness 250 ms · roughness ~170 ms (updated ~1×/s) · tonality 2 s (TNR/PR ~1 s) · fluctuation strength 5 s (rolling, full after 5 s).</p>
+<p style="font-size:10px;color:#7a8398">Formulas are given in simplified form (the implementation follows the cited standards/models, validated against MOSQITO). See the <b>Psychoacoustics</b> section for usage caveats on a smartphone microphone.</p>
 <div class="helpfoot">CETIM · Sound level meter — built-in help<br>Author: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 const HELP_ES=`
 <h3>Primeros pasos</h3>
@@ -5860,6 +6856,31 @@ const HELP_ES=`
 <p><b>Limitación de banda.</b> Dos filtros ajustables (menú experto) acotan la banda analizada: un <b>paso alto</b> (Off / 3 / 10 / 20 Hz, predet. 10 Hz) que descarta continua, viento e infrasonido, y un <b>paso bajo</b> (Off / 20 / 22 kHz, predet. 22 kHz). Biquads Butterworth (2º orden, −3 dB en el corte), aplicados antes de las ponderaciones: niveles, Leq y espectro se acotan de forma coherente. Útil sobre todo para el <b>LZeq</b> (sin ponderar).</p>
 <p><b>Selector (diagnóstico).</b> Menú experto ▸ <b>Niveles en tiempo real</b>: <i>Temporal IIR</i> (predeterminado recomendado — A/C con biquads, respuesta temporal exacta) o <i>Derivado FFT</i> (niveles suavizados desde el espectro, para comparar). El modo Derivado FFT reintroduce latencia de ventana y no usa el filtro de corrección temporal; úsalo solo para comparar. Bloqueado durante una medida.</p>
 <p><b>Validación.</b> El tratamiento se verifica sin conexión contra referencias analíticas y normativas (IEC 61672-1, IEC 61260-1, Parseval); las ponderaciones A/C cumplen <b>clase 1</b> de 16 Hz a 12,5 kHz. El filtro de corrección tiene su propia rutina de test.</p>
+<h3 class="gloss">Glosario — magnitudes y criterios</h3>
+<p><b>Magnitudes acústicas.</b></p>
+<ul>
+<li><b>dB(A) / dB(C)</b> — ponderaciones frecuenciales. A ≈ sensibilidad del oído a niveles moderados (atenúa los graves); C ≈ casi plana (picos, bajas frecuencias).</li>
+<li><b>L<sub>AF</sub> / L<sub>AS</sub></b> (dB) — nivel ponderado A con constante de tiempo <b>Fast</b> (125 ms) o <b>Slow</b> (1 s).</li>
+<li><b>L<sub>eq</sub></b> (dB) — nivel continuo equivalente (media de energía): L<sub>eq</sub> = 10·log<sub>10</sub>( (1/T)·∫ p²(t)/p<sub>0</sub>² dt ), p<sub>0</sub> = 20 µPa.</li>
+<li><b>L<sub>Cpeak</sub></b> (dB) — pico ponderado C, medido en el dominio temporal.</li>
+<li><b>Emergencia</b> (dB) — diferencia de nivel entre una componente (raya o banda) y el ruido de fondo vecino.</li>
+<li><b>Bark (z)</b> — escala de bandas críticas (0–24 Bark ≈ 20 Hz–15,5 kHz); base de los modelos psicoacústicos.</li>
+</ul>
+<p><b>Magnitudes psicoacústicas.</b></p>
+<ul>
+<li><b>Sonoridad N</b> (sone) — fuerza sonora percibida (ISO 532-1). Ref.: 1 sone = tono de 1 kHz a 40 dB SPL. Relación con el fon: N = 2<sup>(L<sub>N</sub>−40)/10</sup>; a la inversa L<sub>N</sub> = 40 + 10·log<sub>2</sub>N (para L<sub>N</sub> ≥ 40 fon). Duplicar los sones = "el doble de fuerte".</li>
+<li><b>Nivel de sonoridad</b> (fon) — escala de nivel: X fon = tan fuerte como un tono de 1 kHz a X dB SPL. <b>+10 fon ⇔ ×2 sone</b>.</li>
+<li><b>N<sub>5</sub></b> (sone) — sonoridad superada el 5 % del tiempo ("picos"); alimenta la molestia PA.</li>
+<li><b>Agudeza S</b> (acum) — balance agudos/graves (DIN 45692). Ref.: 1 acum = ruido de banda estrecha (1 Bark) a 1 kHz, 60 dB. Baricentro ponderado de la sonoridad específica: S = 0,11 · [ Σ<sub>z</sub> N′(z)·g(z)·z ] / [ Σ<sub>z</sub> N′(z) ], N′(z) = sonoridad específica, g(z) ≈ 1 hasta ~16 Bark y luego creciente.</li>
+<li><b>Aspereza R</b> (asper) — sensación de las modulaciones rápidas de amplitud (~15–300 Hz, máx. cerca de 70 Hz), modelo de Daniel &amp; Weber. Ref.: 1 asper = portadora 1 kHz, 100 % AM a f<sub>mod</sub> = 70 Hz, 60 dB. R = 0,25 · Σ<sub>i</sub> g(z<sub>i</sub>)·( m<sub>i</sub> · k<sub>i−2</sub> · k<sub>i+2</sub> )², m<sub>i</sub> = profundidad de modulación de la envolvente del canal i, k = correlaciones cruzadas entre canales.</li>
+<li><b>Fluctuación F</b> (vacil) — sensación de las modulaciones lentas (máx. a f<sub>mod</sub> = 4 Hz), modelo de Fastl. Ref.: 1 vacil = 1 kHz, 100 % AM a 4 Hz, 60 dB. F = 0,008 · [ Σ (ΔL/dB) ] / [ (f<sub>mod</sub>/4 Hz) + (4 Hz/f<sub>mod</sub>) ].</li>
+<li><b>Tonalidad T</b> (t.u.) — prominencia percibida de las componentes tonales (modelo de Aures): pondera el exceso de nivel, el ancho de banda y la frecuencia de cada raya (sensibilidad máx. ~700 Hz).</li>
+<li><b>TNR</b> (dB) — Tone-to-Noise Ratio (ECMA-74): TNR = L<sub>t</sub> − L<sub>n</sub>, nivel de la raya menos el del ruido enmascarante en su banda crítica. <b>Prominente</b> si TNR ≥ 8 dB (por encima de 1 kHz; umbral mayor en bajas frecuencias).</li>
+<li><b>PR</b> (dB) — Prominence Ratio (ECMA-74): PR = L<sub>m</sub> − 10·log<sub>10</sub>[ ½ (10<sup>L<sub>l</sub>/10</sup> + 10<sup>L<sub>u</sub>/10</sup>) ], nivel de la banda crítica de la raya (m) frente a las bandas adyacentes inferior (l) y superior (u). Prominente si PR ≥ 9 dB.</li>
+<li><b>Molestia PA</b> — Psychoacoustic Annoyance (Zwicker): PA = N<sub>5</sub> · ( 1 + √( w<sub>S</sub>² + w<sub>FR</sub>² ) ), w<sub>S</sub> = término de agudeza, w<sub>FR</sub> = término de aspereza + fluctuación. Sin unidad (indicador global).</li>
+</ul>
+<p style="font-size:11px"><b>Ventanas de cálculo.</b> Sonoridad y agudeza 250 ms · aspereza ~170 ms (actualizada ~1×/s) · tonalidad 2 s (TNR/PR ~1 s) · fluctuación 5 s (deslizante, completa tras 5 s).</p>
+<p style="font-size:10px;color:#7a8398">Las fórmulas se dan en forma simplificada (la implementación sigue las normas/modelos citados, validada frente a MOSQITO). Véase la sección <b>Psicoacústica</b> para las reservas de uso con micrófono de smartphone.</p>
 <div class="helpfoot">CETIM · Sonómetro — ayuda integrada<br>Autor: Thibaut Gras · 2026 · thibaut.gras@cetim.fr</div>`;
 if(I18.lang!=='fr')setLang(I18.lang); else translatePass();
 
