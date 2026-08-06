@@ -139,6 +139,8 @@ Deux chaînes parallèles à partir du même signal micro :
 
 ## 8. Journal des versions (V2)
 
+- **2.3.3-beta** : Aide — précise que la détection d'émergence sur la **bande fine** (icône ÉMG) suit **ISO 1996-2** (bande critique de Bark), même seuil d'alerte que le tableau de valeurs.
+
 - **2.3.2-beta** : **Encart Tonalité : explication de la non-proéminence**. Quand ECMA-74 ne déclare aucune raie proéminente mais qu'un candidat existe (screening passé), la ligne affiche désormais « ECMA-74 : <f> sous le seuil (TNR<seuil dB) » au lieu du simple « aucune raie proéminente ». psyUpdate capture le meilleur candidat sous-seuil (PSY.tnrCand = {f,tnr,thr}) avec son seuil de proéminence dépendant de la fréquence (8+8.33·log10(1000/f) <1kHz, sinon 8). Réconcilie l'émergence bande fine (seuil fixe emgThr 10 dB) et le TNR/PR (seuil relevé en BF : ~11.8 dB @ 352 Hz). Une seule ligne, pas d'encombrement. Reset via psyReset.
 
 - **PROMOTION → PRODUCTION 2.3.0** : la beta (2.2.31-beta) est promue en **production racine** (thibautgras.github.io/sonometre/) sous le numéro **2.3.0** (fin du gel en 2.0.89). `main/index.html` = contenu beta en 2.3.0 ; `sw.js` racine recalé `CACHE='sono-2.3.0-7e60055a'` (purge de l'ancien cache 2.0.89, re-téléchargement). La logique d'enregistrement SW est déjà path-aware (`if(!location.pathname.includes('/beta/'))`) : elle enregistre le SW à la racine et ne purge que sous /beta/, donc sûre en prod. **Canal beta conservé** : `beta/index.html` bumpé en **2.3.1-beta** pour les nouvelles fonctionnalités. `.nojekyll` en place → build Pages statique.
