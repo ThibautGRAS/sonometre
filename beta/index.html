@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.3.1-beta</div>
+  <div class="splashver" id="splashVer">2.3.2-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4075,7 +4075,7 @@ const PSY={buf:[],cur:null,mean:null,p95:null,PA:0,N5:0,span:0,
   N:0,S:0,R:0,F:0,T:0};   // N/S/R/F/T miroir de cur (compat rapport/CSV)
 const PSY_WIN={N:0.25,S:0.25,R:1.0,T:2.0,F:5.0};   // fenêtres propres à chaque indicateur (s)
 const PSY_BUFSEC=5;                                 // tampon circulaire audio/indices (s)
-function psyReset(){ PSY.buf=[]; PSY.cur=PSY.mean=PSY.p95=null; PSY.PA=0; PSY.N5=0; PSY.span=0;
+function psyReset(){ PSY.buf=[]; PSY.cur=PSY.mean=PSY.p95=null; PSY.PA=0; PSY.N5=0; PSY.span=0; PSY.tnrCand=null; PSY.tones=[];
   PSY._sum=null; PSY._cnt=0; PSY._hist=null; PSY._recalcT=0; PSY._rT=0; PSY._Rcur=0; PSY._tT=0; PSY._Tcur=0; PSY._tpT=0; PSY.tnrT=0; PSY.prT=0; PSY.tones=[]; PSY.rdw=0; PSY.rdwT=0;
   PSY.N=PSY.S=PSY.R=PSY.F=PSY.T=0; }
 const PSY_WR=f=>(f/70)*Math.exp(1-f/70);       // pondération rugosité (pic 70 Hz)
@@ -4424,6 +4424,9 @@ function psyUpdate(){
     for(let k=0;k<nb;k++){ const p=S.binPowD[k]; specDb[k]=p>0?10*Math.log10(p)+S.offset:-180; frq[k]=k*df; }
     try{ const r=psyTnrPr(specDb,frq); PSY.tnrT=r.tnrT; PSY.prT=r.prT;
       PSY.tones=r.tnrTones.map((ff,i)=>({f:ff,tnr:r.tnrVals[i],prom:r.tnrProm[i]})).filter(t=>t.prom).sort((a,b)=>b.tnr-a.tnr).slice(0,4);
+      let bestC=null; for(let i=0;i<r.tnrTones.length;i++){ if(!bestC||r.tnrVals[i]>bestC.tnr) bestC={f:r.tnrTones[i],tnr:r.tnrVals[i]}; }
+      if(bestC){ const fc=bestC.f; bestC.thr=(fc>=89.1&&fc<1000)?8+8.33*Math.log10(1000/fc):8; }
+      PSY.tnrCand=bestC;   // meilleur candidat (même sous le seuil) -> explique une non-proéminence
     }catch(_){}
   }
   const Ns=PSY.buf.map(s=>s.N).sort((a,b)=>b-a);
@@ -4534,7 +4537,8 @@ function drawPsycho(){
     g.fillText('actuel '+cval.toFixed(dec)+' '+u+'   ·   moy '+mval.toFixed(dec)+'   ·   P95 '+pval.toFixed(dec), bx+10, by+27);
     g.textAlign='right'; g.fillStyle='#fff'; g.font='bold 13px sans-serif'; g.fillText(Math.round(nrm*100)+' %', bx+bw-10, by+11);
     if(isT){ g.textAlign='left'; g.fillStyle='rgba(180,215,255,.9)'; g.font='9px sans-serif';
-      const t1=(PSY.tnrT>0)?('TNR '+PSY.tnrT.toFixed(1)+' dB · PR '+PSY.prT.toFixed(1)+' dB (ECMA-74)'):'ECMA-74 : aucune raie proéminente';
+      const t1=(PSY.tnrT>0)?('TNR '+PSY.tnrT.toFixed(1)+' dB · PR '+PSY.prT.toFixed(1)+' dB (ECMA-74)')
+              :(PSY.tnrCand?('ECMA-74 : '+(PSY.tnrCand.f>=1000?(PSY.tnrCand.f/1000).toFixed(2)+' kHz':Math.round(PSY.tnrCand.f)+' Hz')+' sous le seuil ('+PSY.tnrCand.tnr.toFixed(1)+'<'+PSY.tnrCand.thr.toFixed(1)+' dB)'):'ECMA-74 : aucune raie proéminente');
       const top=(PSY.tones&&PSY.tones[0])?('   raie '+(PSY.tones[0].f>=1000?(PSY.tones[0].f/1000).toFixed(2)+' k':Math.round(PSY.tones[0].f))+'Hz +'+PSY.tones[0].tnr.toFixed(0)+'dB'):'';
       g.fillText(t1+top, bx+10, by+45); }
     if(isR){ g.textAlign='left'; g.fillStyle='rgba(180,215,255,.9)'; g.font='9px sans-serif';
