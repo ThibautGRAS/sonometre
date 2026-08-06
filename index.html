@@ -134,7 +134,7 @@ if('serviceWorker' in navigator){
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
   .hdricons{display:flex;align-items:center;gap:12px;flex:0 0 auto}
-  #latBadge{font-family:var(--mono,monospace);font-size:10px;color:rgba(150,180,210,.55);letter-spacing:.02em;white-space:nowrap}
+  #latBadge{font-family:var(--mono,monospace);font-size:10px;color:rgba(150,180,210,.55);letter-spacing:.02em;white-space:nowrap;display:inline-block;width:38px;text-align:right;flex:0 0 auto}
   #latBadge.warn{color:#FFB454}
   #latBadge.bad{color:#EF3346}
   .helpbtn{width:24px;height:24px;margin-left:2px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);opacity:.55;font-family:var(--font);font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
@@ -280,7 +280,7 @@ if('serviceWorker' in navigator){
   .sg3dbtn{position:absolute;top:6px;right:8px;z-index:6;width:40px;height:22px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:rgba(10,31,66,.72);border:1px solid rgba(79,195,255,.45);color:#BFE3FF;font-family:var(--font);font-weight:700;font-size:10px;letter-spacing:.04em;border-radius:7px;cursor:pointer}
   .sg3dbtn:active{background:rgba(79,195,255,.3)}
   .sg3dbtn.on{background:#FFA92E;color:#2A1400;border-color:#FFD08A;box-shadow:0 0 12px rgba(255,169,46,.85), inset 0 0 6px rgba(255,220,150,.6);text-shadow:none;font-weight:800}
-  #avgBtn.on, #psyAvgBtn.on, #psyDescBtn.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY actif = vert */
+  #avgBtn.on, #psyAvgBtn.on, #psyDescBtn.on, #machAI.on, #machMoy.on{background:#2FD98A;color:#04140C;border-color:#9CFFC7;box-shadow:0 0 12px rgba(47,217,138,.9), inset 0 0 6px rgba(156,255,199,.6)}   /* MOY/IA actif = vert */
   #vibBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
   #avgBtn.dis, #psyAvgBtn.dis, #psyDescBtn.dis{opacity:.35}
   #lsnBtn.on{background:rgba(79,224,138,.22);border-color:rgba(79,224,138,.6);color:#CFF5DC}
@@ -591,7 +591,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.3.11-beta</div>
+  <div class="splashver" id="splashVer">2.3.12-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -651,7 +651,7 @@ if('serviceWorker' in navigator){
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="panePsy"><canvas id="psyCv"></canvas><button class="sg3dbtn" id="psyAvgBtn">MOY</button><button class="sg3dbtn" id="psyDescBtn" style="right:54px">SON</button></div>
-      <div class="gpane" id="paneMach"><canvas id="machCv"></canvas><button class="sg3dbtn" id="machType" style="left:10px;right:auto;white-space:nowrap;min-width:0;padding:5px 10px">Auto</button><button class="sg3dbtn" id="machAI" style="left:10px;right:auto;top:44px">IA</button><button class="sg3dbtn" id="machHalf" style="right:52px">÷2</button><button class="sg3dbtn" id="machDbl">×2</button></div>
+      <div class="gpane" id="paneMach"><canvas id="machCv"></canvas><button class="sg3dbtn" id="machType" style="left:10px;right:auto;white-space:nowrap;min-width:0;padding:5px 10px">Auto</button><button class="sg3dbtn" id="machAI" style="left:10px;right:auto;top:44px">IA</button><button class="sg3dbtn" id="machMoy" style="top:44px">MOY</button><button class="sg3dbtn" id="machHalf" style="right:52px">÷2</button><button class="sg3dbtn" id="machDbl">×2</button></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
           <div class="cell hero"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
@@ -998,7 +998,7 @@ if('serviceWorker' in navigator){
       <p>Deux méthodes commutables dans le menu expert. <b>Synthèse FFT</b> : rapide, somme d'énergie des raies. <b>Filtres IEC 61260</b> : banc de filtres Butterworth par bande, plus fidèle au gabarit normalisé (surtout en basses fréquences), coût de calcul un peu plus élevé.</p>
 
       <h3>Machine / Régime (démo)</h3>
-      <p>L'écran <b>Machine</b> estime le régime de rotation (tr/min) d'une machine tournante <b>sans tachymètre</b>, à partir du peigne harmonique du bruit capté (moteur, ventilateur, machine électrique…). Bouton <b>Type</b> : Auto, Voiture, Bus/Camion, Train, Avion, Ventilateur, Moteur élec., Générique — en <b>Auto</b>, l'app teste plusieurs modèles physiques et garde le meilleur ; les autres verrouillent l'hypothèse choisie. <b>÷2 / ×2</b> corrige manuellement une confusion d'octave. Pour un moteur à combustion, plusieurs cylindrées sont testées (allumage à l'ordre 1,5 / 2 / 3 / 4) et le résultat le plus probable est affiché (« ≈ N cyl. ») ; pour un ventilateur, le nombre de pales est déduit de l'ordre dominant, avec une légère préférence pour un nombre <b>impair ≥ 3</b> en cas d'ambiguïté (un choix fréquent en aérodynamique pour limiter le couplage harmonique — un vrai ventilateur a rarement 1 ou 2 pales). Les ratios d'ordre <b>E2×/E1×</b> et <b>E0,5×/E1×</b> sont affichés ; un <b>E0,5×/E1× élevé</b> signale des ratés ou un balourd. <b>Calcul actif uniquement sur cet écran</b> : aucun coût en arrière-plan lorsqu'un autre écran est affiché. Indicatif, non certifié.</p>
+      <p>L'écran <b>Machine</b> estime le régime de rotation (tr/min) d'une machine tournante <b>sans tachymètre</b>, à partir du peigne harmonique du bruit capté (moteur, ventilateur, machine électrique…). Bouton <b>Type</b> : Auto, Voiture, Bus/Camion, Train, Avion, Ventilateur, Moteur élec., Générique — en <b>Auto</b>, l'app teste plusieurs modèles physiques et garde le meilleur ; les autres verrouillent l'hypothèse choisie. <b>÷2 / ×2</b> corrige manuellement une confusion d'octave. Pour un moteur à combustion, plusieurs cylindrées sont testées (allumage à l'ordre 1,5 / 2 / 3 / 4) et le résultat le plus probable est affiché (« ≈ N cyl. ») ; pour un ventilateur, le nombre de pales est déduit de l'ordre dominant, avec une légère préférence pour un nombre <b>impair ≥ 3</b> en cas d'ambiguïté (un choix fréquent en aérodynamique pour limiter le couplage harmonique — un vrai ventilateur a rarement 1 ou 2 pales). Les ratios d'ordre <b>E2×/E1×</b> et <b>E0,5×/E1×</b> sont affichés ; un <b>E0,5×/E1× élevé</b> signale des ratés ou un balourd. Bouton <b>MOY</b> (surbrillance verte quand actif) : moyenne le spectre utilisé pour l'analyse (exponentielle, τ≈4 s) — à activer quand le régime est <b>stationnaire</b> (ralenti, croisière stable), pour lisser le bruit et stabiliser le diagnostic ; à laisser désactivé pendant une accélération, sous peine de brouiller les ordres. Ces boutons (Type, ÷2/×2, IA, MOY) n'apparaissent que sur la vue <b>Régime</b> ; la vue <b>Détection</b> n'affiche aucun bouton de réglage, l'IA y tourne seule automatiquement. <b>Calcul actif uniquement sur cet écran</b> : aucun coût en arrière-plan lorsqu'un autre écran est affiché. Indicatif, non certifié.</p>
       <p><b>Détection IA</b> (bouton <b>IA</b> ; touche <b>ANALYSE</b> pour basculer Régime ⇄ Détection). Un modèle <b>YAMNet</b> (521 classes AudioSet) tourne <i>dans le navigateur</i> pour reconnaître la nature du son — véhicule, moteur, mais aussi voix, musique, oiseau… Premier appui : téléchargement (~16 Mo, une fois, puis en cache). En mode Auto, le type identifié par l'IA (Voiture / Bus / Train / Avion / Ventilateur / Moteur élec.) pilote directement le modèle physique utilisé pour le régime. Les scores sont <b>lissés (~3 s)</b> pour éviter les sautes d'un instant à l'autre. Un <b>appui long</b> sur IA affiche le détail brut (top 5 des classes détectées, pour comprendre ce que le modèle entend). Indicatif, non certifié.</p>
       <p><b>Latence</b> (petit indicateur discret en haut, à côté de l'aide, visible sur tous les écrans) : temps réel de calcul d'un cycle complet (audio + analyse + dessin), lissé sur ~1 s. Il n'existe pas d'API fiable de « charge CPU » dans un navigateur (encore moins sur Safari iOS) ; ce chiffre est le proxy honnête et actionnable — s'il grimpe durablement (orange puis rouge), c'est le signe qu'un écran ou un réglage pèse trop pour l'appareil utilisé.</p>
 
@@ -1146,7 +1146,7 @@ const S = {
   elapsed:0, lastT:0, hist:[], histLast:0, peakHold:0,
   fview:{min:20,max:20000}, cursor:null, sgCursor:null, tview:{x0:0,x1:1}, histView:null, histCursor:null,
   fscale:'log', fftN:4096, colMs:50, dbAuto:true, dbMin:20, dbMax:110, sgInterp:true, sgAuto:false, sgMin:0, sgMax:90, sg3dPitch:0,
-  win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, specCI:false, avgTau:0, machType:'auto', machView:'rpm', expBand:'toct', recAudio:false,
+  win:'blackman', overlap:0.5, peakInterp:true, emgOn:false, emgThr:10, specAvg:false, specCI:false, avgTau:0, machType:'auto', machView:'rpm', machMoy:false, expBand:'toct', recAudio:false,
   lcPeak:-Infinity, lcBq:null, lcLastCt:0,
   toctSrc:'iir', lvlSrc:'iir', hpFc:10, lpFc:22000, blGain:null, reqFs:0, iirBank:null, theme:'oled', backlight:false, psyWin:4, psyAvg:false, psyDesc:false, psyBnd:{N:40,S:4,R:2,F:2,T:1.5}, sg3dSmooth:1, lsnSlope:24, lsnGain:12, lsnAuto:false, micId:'', outId:'',            // LCpeak (crête pondérée C, domaine temporel)
   trigDelay:0, trigLevel:null, delayT:0, trigWait:false,  // déclenchement (différé + seuil)
@@ -2802,7 +2802,7 @@ function latTick(ms){
   S._latUiT = now;
   const el=$('latBadge'); if(!el) return;
   const v=S._lat;
-  el.textContent = v.toFixed(v<10?1:0)+' ms';
+  el.textContent = Math.round(v)+' ms';   // toujours un entier (jamais de virgule) : largeur fixe, ne décale plus le bouton '?'
   el.classList.toggle('warn', v>=30 && v<60);
   el.classList.toggle('bad', v>=60);
 }
@@ -4704,10 +4704,17 @@ function machEval(W,band,m,nyq){
   return {fr:bfr, ratio, hits, quality: ratio*(1+0.6*fireSup)*(hits>=3?1:hits/3)*o1};
 }
 function machAnalyze(){
-  const spec=S.binPowD, df=S.binHz;
+  let spec=S.binPowD; const df=S.binHz;
   if(!spec || !df || !(S.running||REPL.on)){ MACH.conf=0; return; }
-  const nyq=(S.ctx?S.ctx.sampleRate:48000)/2;
   const now=performance.now();
+  if(S.machMoy){                                                    // moyenne (EMA, τ≈4 s) : stabilise le diagnostic si le régime est STATIONNAIRE
+    const dtReal=Math.min(0.5,(now-(MACH._movT||now))/1000); MACH._movT=now;
+    if(!MACH._avgSpec||MACH._avgSpec.length!==spec.length) MACH._avgSpec=Float32Array.from(spec);
+    const tau=4, a=Math.min(1,dtReal/tau);
+    for(let i=0;i<spec.length;i++) MACH._avgSpec[i]+=(spec[i]-MACH._avgSpec[i])*a;
+    spec=MACH._avgSpec;
+  }
+  const nyq=(S.ctx?S.ctx.sampleRate:48000)/2;
   if(now-(MACH._t||0) >= 200 || !MACH.rotRaw){
     MACH._t=now;
     const pAt=f=>{ const x=f/df, i=Math.floor(x); if(i<1||i+1>=spec.length)return 0; const a=x-i; return spec[i]*(1-a)+spec[i+1]*a; };
@@ -5368,6 +5375,11 @@ function ui(){
   $('avgBtn').classList.toggle('dis',!(S.eqT>0));   // pas de moyenne tant qu'aucune mesure
   $('psyAvgBtn').classList.toggle('on',S.psyAvg); $('psyAvgBtn').classList.toggle('dis',!(PSY._cnt>0));
   if($('machType'))$('machType').textContent=(MACH_TYPES[S.machType]||{}).label||'Auto';
+  { const rpmView=(S.machView!=='detect');
+    ['machType','machHalf','machDbl','machAI','machMoy'].forEach(id=>{ const e=$(id); if(e)e.style.display=rpmView?'':'none'; });   // Détection : aucun bouton (l'IA y tourne déjà seule) ; Régime : tout visible
+    if($('machAI'))$('machAI').classList.toggle('on', !!MACHAI.want);
+    if($('machMoy'))$('machMoy').classList.toggle('on', !!S.machMoy);
+  }
   $('psyDescBtn').classList.toggle('on',S.psyDesc); $('psyDescBtn').classList.toggle('dis',!(PSY._cnt>0));
   $('lsnBtn').classList.toggle('on',LSN.on);
   $('lsnBtn').style.display=S.sg3d?'none':'flex';
@@ -5522,6 +5534,7 @@ $('vibBtn').onclick=()=>{vibToggle();};
 $('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); if(S.specAvg)flashBtn($('avgBtn')); else unflashBtn($('avgBtn')); if(S.screen==='spec')drawSpectrum(); };
 $('psyAvgBtn').onclick=()=>{ S.psyAvg=!S.psyAvg; savePrefs(); ui(); if(S.psyAvg)flashBtn($('psyAvgBtn')); else unflashBtn($('psyAvgBtn')); if(S.screen==='psy')drawActive(); };
 $('machType').onclick=()=>{ const ks=Object.keys(MACH_TYPES); S.machType=ks[(ks.indexOf(S.machType)+1)%ks.length]; savePrefs(); ui(); if(S.screen==='mach')drawActive(); };
+$('machMoy').onclick=()=>{ S.machMoy=!S.machMoy; if(S.machMoy){ MACH._avgSpec=null; MACH._movT=0; } savePrefs(); ui(); if(S.screen==='mach')drawActive(); };
 $('machAI').onclick=()=>{ if(MACHAI._long){ MACHAI._long=false; return; } MACHAI.want=!MACHAI.want; if(MACHAI.want){ flashBtn($('machAI')); machAiLoad(); } else unflashBtn($('machAI')); };
 (()=>{ const el=$('machAI'); let t=null;
   const start=()=>{ t=setTimeout(()=>{ MACHAI._long=true; MACHAI.debug=!MACHAI.debug; toast(MACHAI.debug?'IA : top-5 brut affiché (debug)':'IA : debug masqué'); if(!MACHAI.ready&&MACHAI.debug){MACHAI.want=true; machAiLoad();} if(S.screen==='mach')drawActive(); },500); };
@@ -5537,7 +5550,7 @@ const THEMES=[['marine','Marine'],['acier','Acier'],['clair','Clair labo'],['ole
 /* ===== préférences persistantes ===== */
 const PREFS_KEY='sono_prefs';
 const PREF_FIELDS=['theme','weight','time','mode','duration','fscale','fftN','win','overlap',
-                   'peakInterp','specCI','avgTau','machType','machView','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','lsnGain','lsnAuto','backlight','psyWin','psyAvg','psyBnd','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
+                   'peakInterp','specCI','avgTau','machType','machView','machMoy','sgInterp','toctSrc','lvlSrc','hpFc','lpFc','reqFs','lsnGain','lsnAuto','backlight','psyWin','psyAvg','psyBnd','dbAuto','dbMin','dbMax','sgAuto','sgMin','sgMax',
                    'trigDelay','trigLevel','offset','corr','corrName','emgThr','specFrames','specSmooth','expBand','recAudio','sg3dSmooth','lsnSlope','lsnGain','micId','outId'];
 let _prefsReady=false;
 function savePrefs(){
