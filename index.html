@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -585,7 +588,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.3.9-beta</div>
+  <div class="splashver" id="splashVer">2.3.10-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -4584,8 +4587,10 @@ function machGuess(f0, rpm, ratio){
 
 /* ===================== MACHINE + IA (YAMNet, option A) =====================
    Classification du type par YAMNet (AudioSet 521 classes) exécuté DANS le navigateur :
-   runtime tfjs-tflite (CDN, chargé à la demande) + modèle models/yamnet.tflite servi par le
-   dépôt (même origine). Opt-in via le bouton IA (≈6 Mo au premier usage, puis cache). */
+   @tensorflow/tfjs (CDN, une seule dépendance) + GraphModel officiel models/yamnet_tfjs/
+   (model.json + 4 fragments, servi par le dépôt, même origine). tfjs-tflite abandonné :
+   paquet npm sans binaires .wasm inclus + variante threadée exigeant des en-têtes COOP/COEP
+   absents sur GitHub Pages. Opt-in via le bouton IA (~16 Mo au premier usage, puis cache). */
 const MACHAI={want:false,ready:false,loading:false,err:'',model:null,ring:null,ringW:0,ringFs:48000,
   sc:null,          // scores lissés (EMA) 521 classes
   label:'',conf:0,grp:'',_t:0,_busy:false};
