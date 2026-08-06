@@ -585,7 +585,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.3.6-beta</div>
+  <div class="splashver" id="splashVer">2.3.7-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -644,7 +644,7 @@ if('serviceWorker' in navigator){
       <div class="gpane" id="paneSgram"><canvas id="sgramCv"></canvas><button class="sg3dbtn" id="sg3dBtn">3D</button><button class="sg3dbtn" id="lsnBtn">🔊</button></div>
       <div class="gpane" id="paneHist"><canvas id="histCv"></canvas></div>
       <div class="gpane" id="panePsy"><canvas id="psyCv"></canvas><button class="sg3dbtn" id="psyAvgBtn">MOY</button><button class="sg3dbtn" id="psyDescBtn" style="right:54px">SON</button></div>
-      <div class="gpane" id="paneMach"><canvas id="machCv"></canvas><button class="sg3dbtn" id="machType" style="left:10px;right:auto;white-space:nowrap;min-width:0;padding:5px 10px">Auto</button><button class="sg3dbtn" id="machHalf" style="right:52px">÷2</button><button class="sg3dbtn" id="machDbl">×2</button></div>
+      <div class="gpane" id="paneMach"><canvas id="machCv"></canvas><button class="sg3dbtn" id="machType" style="left:10px;right:auto;white-space:nowrap;min-width:0;padding:5px 10px">Auto</button><button class="sg3dbtn" id="machAI" style="left:10px;right:auto;top:44px">IA</button><button class="sg3dbtn" id="machHalf" style="right:52px">÷2</button><button class="sg3dbtn" id="machDbl">×2</button></div>
       <div class="gpane" id="paneVal">
         <div class="valtable" id="valPage0">
           <div class="cell hero"><div class="k">LAeq</div><div class="v" id="vLAeq">--.-</div></div>
@@ -4582,15 +4582,82 @@ function machGuess(f0, rpm, ratio){
   return 'machine tournante';
 }
 
+/* ===================== MACHINE + IA (YAMNet, option A) =====================
+   Classification du type par YAMNet (AudioSet 521 classes) exécuté DANS le navigateur :
+   runtime tfjs-tflite (CDN, chargé à la demande) + modèle models/yamnet.tflite servi par le
+   dépôt (même origine). Opt-in via le bouton IA (≈6 Mo au premier usage, puis cache). */
+const MACHAI={want:false,ready:false,loading:false,err:'',model:null,ring:null,ringW:0,ringFs:48000,
+  sc:null,          // scores lissés (EMA) 521 classes
+  label:'',conf:0,grp:'',_t:0,_busy:false};
+const MACHAI_GRP={  // indices AudioSet -> groupes de l'app
+  voiture:[294,300,301,308,309,320,347], bus:[310,311,312,315], train:[322,323,326,327,328],
+  avion:[329,330,331,332,333,334], ventilo:[406,407], elec:[363,371,376,418,419],
+  engine:[337,338,342,343,344,345,346]};
+function machAiScript(u){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=u; s.onload=res; s.onerror=()=>rej(new Error('script '+u)); document.head.appendChild(s); }); }
+async function machAiLoad(){
+  if(MACHAI.ready||MACHAI.loading)return; MACHAI.loading=true; MACHAI.err='';
+  try{
+    toast('IA : chargement du runtime + modèle (~6 Mo, une fois)…');
+    if(!window.tf) await machAiScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
+    if(!window.tflite) await machAiScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/tf-tflite.min.js');
+    tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/');
+    const base=location.pathname.includes('/beta/')?'../models/':'models/';
+    MACHAI.model=await tflite.loadTFLiteModel(base+'yamnet.tflite');
+    MACHAI.sc=new Float32Array(521); MACHAI.ready=true;
+    toast('IA prête : classification du type en continu.');
+  }catch(e){ MACHAI.err='IA indisponible : '+(e&&e.message||e); toast(MACHAI.err); MACHAI.want=false; }
+  MACHAI.loading=false; ui();
+}
+function machAiRingPush(){                       // accumule le tap psy (341 ms) dans un ring de 1,2 s
+  const an=S.psyAn||S.analyser, tap=S.psyAn?S.psyTap:S.tap; if(!an||!tap)return;
+  try{ an.getFloatTimeDomainData(tap); }catch(_){ return; }
+  const fs=(S.ctx&&S.ctx.sampleRate)||48000;
+  const need=Math.round(fs*1.2);
+  if(!MACHAI.ring||MACHAI.ring.length!==need){ MACHAI.ring=new Float32Array(need); MACHAI.ringW=0; MACHAI.ringFs=fs; }
+  for(let i=0;i<tap.length;i++){ MACHAI.ring[MACHAI.ringW]=tap[i]; MACHAI.ringW=(MACHAI.ringW+1)%need; }
+}
+async function machAiInfer(){
+  if(!MACHAI.ready||MACHAI._busy||!(S.running||REPL.on))return;
+  const now=performance.now(); if(now-(MACHAI._t||0)<900)return; MACHAI._t=now; MACHAI._busy=true;
+  try{
+    machAiRingPush();
+    const fs=MACHAI.ringFs, n=MACHAI.ring.length, out=new Float32Array(15600), ratio=fs/16000;
+    const start=MACHAI.ringW;                                   // plus vieil échantillon
+    const span=Math.min(n, Math.round(15600*ratio));
+    for(let i=0;i<15600;i++){ const x=(n-span)+i*ratio; const j=Math.floor(x), a=x-j;
+      const i0=(start+j)%n, i1=(start+j+1)%n; out[i]=MACHAI.ring[i0]*(1-a)+MACHAI.ring[i1]*a; }
+    let mx=0; for(let i=0;i<15600;i++){ const v=Math.abs(out[i]); if(v>mx)mx=v; }
+    if(mx>1e-6){ const g=0.5/mx; for(let i=0;i<15600;i++)out[i]*=g; }   // normalisation douce
+    const inp=tf.tensor(out,[15600]);
+    const res=MACHAI.model.predict(inp); const s=await res.data();
+    inp.dispose(); if(res.dispose)res.dispose();
+    const a=0.35;                                                    // LISSAGE des scores (EMA ~3 s)
+    for(let i=0;i<521;i++) MACHAI.sc[i]+= (s[i]-MACHAI.sc[i])*a;
+    let bg='' ,bv=0, engineBoost=0;
+    for(const idx of MACHAI_GRP.engine) engineBoost=Math.max(engineBoost,MACHAI.sc[idx]);
+    for(const g of ['voiture','bus','train','avion','ventilo','elec']){
+      let v=0; for(const idx of MACHAI_GRP[g]) v=Math.max(v,MACHAI.sc[idx]);
+      if((g==='voiture'||g==='bus')&&engineBoost>0.1) v+=0.3*engineBoost;   // un moteur entendu renforce véhicule
+      if(v>bv){bv=v;bg=g;}
+    }
+    if(bv>=0.10){ MACHAI.grp=bg; MACHAI.conf=Math.min(1,bv); MACHAI.label=(MACH_TYPES[bg]||{}).label||bg; }
+    else { MACHAI.grp=''; MACHAI.conf=bv; MACHAI.label=''; }
+  }catch(e){ if(!MACHAI.err){MACHAI.err=String(e&&e.message||e);} }
+  MACHAI._busy=false;
+}
 function machBand(key){ return ({voiture:[600,6500],bus:[450,2600],train:[150,3000],avion:[600,5000],ventilo:[300,3600],elec:[600,3600],generique:[300,6500]})[key]||[300,6500]; }
 function machEval(W,band,m,nyq){
   const flo=band[0]/60, fhi=band[1]/60, step=Math.max(0.1,(fhi-flo)/900);
   let bfr=0,bsc=0; const scs=[];
   for(let fr=flo;fr<=fhi;fr+=step){ let s=0,ok=0; const oMax=Math.min(16,Math.floor(nyq/fr));
-    for(let o=1;o<=oMax;o++){ let Wt=1/Math.sqrt(o); if(m&&o%m===0)Wt*=2.2; s+=Wt*W.wAt(o*fr); ok++; }
+    const stepO=m&&(m!==Math.round(m))?0.5:1;                       // demi-ordres seulement si allumage demi-entier (3 cyl)
+    for(let o=stepO;o<=oMax;o+=stepO){ const onM=m&&Math.abs(o/m-Math.round(o/m))<1e-6;
+      let Wt=((o===Math.round(o)||onM)?1:0.35)/Math.sqrt(o);
+      if(onM)Wt*=2.2; s+=Wt*W.wAt(o*fr); ok++; }
     if(ok>=4){ scs.push(s); if(s>bsc){bsc=s;bfr=fr;} } }
   scs.sort((x,y)=>x-y); const med=scs[scs.length>>1]||1e-9, ratio=bsc/(med+1e-12);
-  let hits=0; for(let o=1;o<=8;o++) if(W.isPeak(o*bfr)) hits++;
+  let hits=0; const seen={}; for(let o=1;o<=8;o++){ if(W.isPeak(o*bfr)){hits++;seen[o]=1;} }
+  if(m&&m!==Math.round(m)) for(let j=1;j<=5;j++){ const o=j*m; if(!seen[o]&&o<=8&&W.isPeak(o*bfr)) hits++; }   // multiples de l'allumage (3 cyl)
   let fire=0,fn=0; if(m){for(const o of [m,2*m,3*m]){fn++; if(W.isPeak(o*bfr))fire++;}}
   const fireSup=m?fire/fn:0, o1=W.isPeak(bfr)?1.3:0.65;
   return {fr:bfr, ratio, hits, quality: ratio*(1+0.6*fireSup)*(hits>=3?1:hits/3)*o1};
@@ -4608,17 +4675,30 @@ function machAnalyze(){
     const fl=MACH._fl, floorAt=f=>fl[Math.max(0,Math.min(nb-1,Math.floor((f/df)/B)))]||1e-12;
     const W={ pAt, wAt:f=>pAt(f)/(floorAt(f)+1e-12), isPeak:f=>pAt(f)/(floorAt(f)+1e-12)>4 };
     MACH._W=W;
-    let key=S.machType, chosen;
-    if(key==='auto'){ let bq=-1; for(const k of ['voiture','bus','elec']){ const T=MACH_TYPES[k]; const m=(T.param?T.param/2:0);
-        const r=machEval(W,machBand(k),m,nyq); if(r.quality>bq){bq=r.quality; chosen=r; key=k;} } }
-    else { const T=MACH_TYPES[key]||{}; const m=(T.kind==='engine'&&T.param)?T.param/2:0; chosen=machEval(W,machBand(key),m,nyq); }
+    /* sélection conjointe (type, ordre d'allumage m, régime) : pour un moteur on essaie
+       plusieurs cylindrées et on garde le peigne qui colle le mieux -> régime + « ≈ N cyl » cohérents */
+    const evalEngine=(k,ms)=>{ let best=null,bm=0; for(const m2 of ms){ const r=machEval(W,machBand(k),m2,nyq);
+        if(!best||r.quality>best.quality){best=r;bm=m2;} } return {r:best,m:bm}; };
+    let key=S.machType, chosen, mSel=0;
+    if(key==='auto'){
+      if(MACHAI.ready && MACHAI.grp){ key=MACHAI.grp; }
+      else { let bq=-1,bk='voiture',bc=null,bmm=0;
+        for(const k of ['voiture','bus','elec']){ const T=MACH_TYPES[k];
+          if(T.kind==='engine'){ const e=evalEngine(k,[1.5,2,3]); if(e.r.quality>bq){bq=e.r.quality;bk=k;bc=e.r;bmm=e.m;} }
+          else { const r=machEval(W,machBand(k),0,nyq); if(r.quality>bq){bq=r.quality;bk=k;bc=r;bmm=0;} } }
+        key=bk; chosen=bc; mSel=bmm; }
+    }
+    if(!chosen){ const T=MACH_TYPES[key]||{};
+      if(T.kind==='engine'){ const ms = key==='bus'?[2,3,4]:[1.5,2,3]; const e=evalEngine(key,ms); chosen=e.r; mSel=e.m; }
+      else chosen=machEval(W,machBand(key),0,nyq); }
+    MACH.cylEst=mSel?Math.round(2*mSel):0;                             // 3/4/6/8 cylindres
     let rotf=chosen.fr;
     const Tk=MACH_TYPES[key]||{};
     if(Tk.kind==='fan'){ let fc=0; const i0=Math.max(2,Math.floor((machBand(key)[0]/60)/df)), i1=Math.min(spec.length-2,Math.floor(2000/df));
       for(let i=i0;i<=i1;i++){ const wi=spec[i]/(floorAt(i*df)+1e-12); if(wi>6 && spec[i]>spec[i-1] && spec[i]>=spec[i+1]){ fc=i*df; break; } }   // rotation = plus BASSE raie tonale
       if(fc) rotf=fc; }
     MACH._key=key; MACH.rotRaw=rotf; MACH._ratio=chosen.ratio; MACH._hits=chosen.hits;
-    MACH.conf=Math.max(0,Math.min(1, Math.log10(1+chosen.ratio)/2.4 * (chosen.hits>=3?1:chosen.hits/3)));
+    MACH.conf=Math.max(0,Math.min(1, Math.log10(1+chosen.ratio)/2.2 * (chosen.hits>=3?1:chosen.hits/3)));
   }
   const rot=(MACH.rotRaw||0)*Math.pow(2, MACH.oct||0);
   const key=MACH._key||S.machType, T=MACH_TYPES[key]||{};
@@ -4626,9 +4706,10 @@ function machAnalyze(){
   const W=MACH._W, pA=W?W.pAt:(()=>0);
   let dm=1,dv=0; const oMax=Math.min(20,Math.floor(nyq/Math.max(1,rot))); for(let k=1;k<=oMax;k++){ const v=pA(k*rot); if(v>dv){dv=v;dm=k;} } MACH.dom=dm;
   MACH.firing=(T.kind==='engine'&&T.param)? rot*T.param/2 : (T.kind==='fan')? dm*rot : 0;
+  MACH.bladeEst=(T.kind==='fan')? dm : 0;   // pales supposées = ordre dominant (BPF/rotation)
   const E1=Math.max(1e-12,pA(rot)); MACH.r2=pA(2*rot)/E1; MACH.rHalf=pA(0.5*rot)/E1;
   MACH.guess=(MACH_TYPES[key]||{}).label||'—';
-  const need=(T.kind==='fan')?2:3; MACH._ok = (MACH.conf>=0.28 && (MACH._hits||0)>=need && rot>0);
+  const need=(T.kind==='fan')?2:3; MACH._ok = (MACH.conf>=0.26 && (MACH._hits||0)>=need && rot>0);
   if(MACH._ok) MACH.rpmShow = MACH.rpmShow ? MACH.rpmShow+(MACH.rpm-MACH.rpmShow)*0.3 : MACH.rpm;
 }
 
@@ -4649,6 +4730,7 @@ function drawMach(){
     g.fillStyle='#fff'; g.font='bold 46px sans-serif'; g.fillText(rpm.toLocaleString('fr-FR'), w/2, 46);
     g.fillStyle=acc; g.font='13px sans-serif'; g.fillText('tr/min', w/2, 68);
     let sub='rotation '+MACH.rot.toFixed(1)+' Hz  ·  ordre dom. '+MACH.dom;
+    if(MACH.cylEst)sub+='  ·  ≈ '+MACH.cylEst+' cyl.'; else if(MACH.bladeEst)sub+='  ·  ≈ '+MACH.bladeEst+' pales';
     if(MACH.firing>0) sub += (T.kind==='engine'? '  ·  explosions '+MACH.firing.toFixed(1)+' Hz' : '  ·  BPF '+MACH.firing.toFixed(0)+' Hz');
     g.fillStyle='rgba(210,230,250,.92)'; g.font='11px sans-serif'; g.fillText(sub, w/2, 88);
     const cc = MACH.conf>0.5?'#2FBF83':MACH.conf>0.32?'#FFB454':'#EF3346';
@@ -4659,7 +4741,9 @@ function drawMach(){
     g.fillStyle='rgba(255,180,84,.95)'; g.font='bold 17px sans-serif'; g.fillText('Régime indéterminé', w/2, 46);
     g.fillStyle='rgba(180,200,220,.75)'; g.font='11px sans-serif'; g.fillText('approche une source tournante (moteur, ventilateur…)', w/2, 70);
   }
-  if(S.machType==='auto' && ok && MACH.guess){ g.fillStyle='rgba(150,205,150,.9)'; g.font='10px sans-serif'; g.fillText('type détecté ≈ '+MACH.guess, w/2, ((MACH.rHalf||0)>0.6?132:120)); }
+  if(S.machType==='auto' && ok && MACH.guess){ g.fillStyle='rgba(150,205,150,.9)'; g.font='10px sans-serif'; g.fillText('type détecté ≈ '+MACH.guess+(MACHAI.ready&&MACHAI.grp?' (IA '+Math.round(MACHAI.conf*100)+' %)':''), w/2, ((MACH.rHalf||0)>0.6?132:120)); }
+  else if(MACHAI.want){ g.fillStyle=MACHAI.ready?'rgba(150,205,150,.85)':'rgba(255,180,84,.85)'; g.font='10px sans-serif';
+    g.fillText(MACHAI.ready?(MACHAI.label?('IA : '+MACHAI.label+' '+Math.round(MACHAI.conf*100)+' %'):'IA : écoute…'):(MACHAI.loading?'IA : chargement…':(MACHAI.err||'IA')), w/2, ((MACH.rHalf||0)>0.6?132:120)); }
   const spec=S.binPowD, df=S.binHz;
   const gx0=42, gx1=w-10, gy0=146, gy1=h-16;
   const fmin=20, fmax=Math.min(2000,(S.ctx?S.ctx.sampleRate:48000)/2);
@@ -4688,7 +4772,7 @@ function drawActive(force){
   else if(S.screen==='sgram')drawSgram();
   else if(S.screen==='hist')drawHistory();
   else if(S.screen==='psy')drawPsycho();
-  else if(S.screen==='mach'){ machAnalyze(); drawMach(); }
+  else if(S.screen==='mach'){ if(MACHAI.want&&MACHAI.ready)machAiInfer(); machAnalyze(); drawMach(); }
 }
 
 /* ===== Gestes : pincer = zoom fréquence, glisser = déplacer, tap = curseur, double-tap = reset ===== */
@@ -5356,6 +5440,7 @@ $('vibBtn').onclick=()=>{vibToggle();};
 $('avgBtn').onclick=()=>{ S.specAvg=!S.specAvg; ui(); if(S.specAvg)flashBtn($('avgBtn')); else unflashBtn($('avgBtn')); if(S.screen==='spec')drawSpectrum(); };
 $('psyAvgBtn').onclick=()=>{ S.psyAvg=!S.psyAvg; savePrefs(); ui(); if(S.psyAvg)flashBtn($('psyAvgBtn')); else unflashBtn($('psyAvgBtn')); if(S.screen==='psy')drawActive(); };
 $('machType').onclick=()=>{ const ks=Object.keys(MACH_TYPES); S.machType=ks[(ks.indexOf(S.machType)+1)%ks.length]; savePrefs(); ui(); if(S.screen==='mach')drawActive(); };
+$('machAI').onclick=()=>{ MACHAI.want=!MACHAI.want; if(MACHAI.want){ flashBtn($('machAI')); machAiLoad(); } else unflashBtn($('machAI')); };
 $('machHalf').onclick=()=>{ MACH.oct=(MACH.oct||0)-1; MACH.rpmShow=0; if(S.screen==='mach')drawActive(); };
 $('machDbl').onclick =()=>{ MACH.oct=(MACH.oct||0)+1; MACH.rpmShow=0; if(S.screen==='mach')drawActive(); };
 $('psyDescBtn').onclick=()=>{ S.psyDesc=!S.psyDesc; savePrefs(); ui(); if(S.psyDesc)flashBtn($('psyDescBtn')); else unflashBtn($('psyDescBtn')); if(S.screen==='psy')drawActive(); };
