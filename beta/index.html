@@ -591,7 +591,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.3.14-beta</div>
+  <div class="splashver" id="splashVer">2.3.15-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -1000,7 +1000,7 @@ if('serviceWorker' in navigator){
       <h3>Machine / Régime (démo)</h3>
       <p>L'écran <b>Machine</b> estime le régime de rotation (tr/min) d'une machine tournante <b>sans tachymètre</b>, à partir du peigne harmonique du bruit capté (moteur, ventilateur, machine électrique…). Bouton <b>Type</b> : Auto, Voiture, Bus/Camion, Train, Avion, Ventilateur, Moteur élec., Générique — en <b>Auto</b>, l'app teste plusieurs modèles physiques et garde le meilleur ; les autres verrouillent l'hypothèse choisie. <b>÷2 / ×2</b> corrige manuellement une confusion d'octave. Pour un moteur à combustion, plusieurs cylindrées sont testées (allumage à l'ordre 1,5 / 2 / 3 / 4) et le résultat le plus probable est affiché (« ≈ N cyl. ») ; pour un ventilateur, le nombre de pales est déduit de l'ordre dominant, avec une légère préférence pour un nombre <b>impair ≥ 3</b> en cas d'ambiguïté (un choix fréquent en aérodynamique pour limiter le couplage harmonique — un vrai ventilateur a rarement 1 ou 2 pales). Les ratios d'ordre <b>E2×/E1×</b> et <b>E0,5×/E1×</b> sont affichés ; un <b>E0,5×/E1× élevé</b> signale des ratés ou un balourd. Bouton <b>MOY</b> (surbrillance verte quand actif) : moyenne le spectre utilisé pour l'analyse (exponentielle, τ≈4 s) — à activer quand le régime est <b>stationnaire</b> (ralenti, croisière stable), pour lisser le bruit et stabiliser le diagnostic ; à laisser désactivé pendant une accélération, sous peine de brouiller les ordres. Ces boutons (Type, ÷2/×2, IA, MOY) n'apparaissent que sur la vue <b>Régime</b> ; la vue <b>Détection</b> n'affiche aucun bouton de réglage, l'IA y tourne seule automatiquement. <b>Calcul actif uniquement sur cet écran</b> : aucun coût en arrière-plan lorsqu'un autre écran est affiché. Indicatif, non certifié.</p>
       <p><b>Détection IA</b> (bouton <b>IA</b> ; touche <b>ANALYSE</b> pour basculer Régime ⇄ Détection). Un modèle <b>YAMNet</b> (521 classes AudioSet) tourne <i>dans le navigateur</i> pour reconnaître la nature du son — véhicule, moteur, mais aussi voix, musique, oiseau… Premier appui : téléchargement (~16 Mo, une fois, puis en cache). En mode Auto, le type identifié par l'IA (Voiture / Bus / Train / Avion / Ventilateur / Moteur élec.) pilote directement le modèle physique utilisé pour le régime. Les scores sont <b>lissés (~3 s)</b> pour éviter les sautes d'un instant à l'autre. Un <b>appui long</b> sur IA affiche le détail brut (top 5 des classes détectées, pour comprendre ce que le modèle entend). Indicatif, non certifié.</p>
-      <p><b>Latence</b> (petit indicateur discret en haut, à côté de l'aide, visible sur tous les écrans) : temps réel de calcul d'un cycle complet (audio + analyse + dessin), lissé sur ~1 s. Il n'existe pas d'API fiable de « charge CPU » dans un navigateur (encore moins sur Safari iOS) ; ce chiffre est le proxy honnête et actionnable — s'il grimpe durablement (orange puis rouge), c'est le signe qu'un écran ou un réglage pèse trop pour l'appareil utilisé.</p>
+      <p><b>Latence</b> (petit indicateur discret en haut, à côté de l'aide, visible sur tous les écrans) : temps réel de calcul d'un cycle complet (audio + analyse + dessin), lissé sur ~1 s. Il n'existe pas d'API fiable de « charge CPU » dans un navigateur (encore moins sur Safari iOS) ; ce chiffre est le proxy honnête et actionnable. Il est comparé au <b>hop réel du signal</b> (fenêtre FFT × (1−recouvrement) / fréquence d'échantillonnage) — le temps audio réellement nouveau apporté par chaque cycle d'analyse — et non au rythme d'affichage : orange dès 70 % de ce budget consommé (marge de sécurité qui se resserre, mais pas encore de retard), rouge à 100 % et au-delà (on rate carrément une fenêtre entière d'information neuve).</p>
 
       <h3>Export</h3>
       <p>Touche <b>Partager</b> : ouvre le menu Export. <b>Rapport (PDF)</b> génère un document A4 complet (conditions d'acquisition, indices, spectre par tiers d'octave, graphe et commentaire) via l'impression iOS — choisir « Enregistrer en PDF » dans la feuille d'impression. Les champs <i>site, opérateur, référence, commentaire</i> sont facultatifs et mémorisés. Sinon, export en <b>CSV</b> (métadonnées + micro + indices + spectre + historique) ou en <b>image PNG</b> titrée du graphe affiché. <b>Charger un fichier audio (WAV…)</b> : décode un fichier externe (WAV, M4A, MP3, AIFF ; stéréo mixée en mono) et l'analyse en <b>relecture</b> complète (spectres, spectrogramme, indices, curseurs). La <b>calibration micro ne s'applique pas</b> à un fichier étranger : les niveaux sont <b>relatifs</b>, avec la convention <b>0 dBFS = 120 dB</b> (retrancher 120 pour obtenir les dBFS ; si la référence pleine échelle de la chaîne d'origine est connue, la régler dans Calibration pendant la relecture pour retrouver les niveaux absolus). La correction fréquentielle du micro devrait être réglée sur Off ; la calibration de l'appareil est restaurée en quittant la relecture. Les écarts (émergences, Δ entre bandes) restent, eux, exacts.</p>
@@ -2574,12 +2574,7 @@ function loop(ts){
   S.raf=requestAnimationFrame(loop);
   const _lt0=performance.now();                 // chrono latence (temps réel de calcul du cycle)
   if(!S.lastT){S.lastT=ts;return;}
-  const _rawDt=ts-S.lastT;                       // intervalle RÉEL entre frames (non écrêté) : le vrai « budget » de calcul disponible
-  const dt=Math.min(0.2,_rawDt/1000); S.lastT=ts;
-  if(_rawDt>0.1 && _rawDt<200){                  // budget observé = le MEILLEUR intervalle récent (rythme natif de l'écran, ≈16,7 ms @60Hz, ≈8,3 ms @120Hz…)
-    if(!S._frameBudget || _rawDt<S._frameBudget) S._frameBudget=_rawDt;             // capture immédiate si plus rapide qu'avant
-    else S._frameBudget += (_rawDt-S._frameBudget)*0.002;                          // dérive très lente vers le haut (ex. l'appareil change vraiment de rythme) — jamais inflaté par un simple ralentissement passager
-  }
+  const dt=Math.min(0.2,(ts-S.lastT)/1000); S.lastT=ts;
   if(S.paused&&!S._previewRing)return;       // le scrub replay prévisualise même en pause
   /* filet de sécurité : si on est censé mesurer mais que le micro n'est plus vivant
      (arrière-plan, écran verrouillé, appel…), on met en pause au lieu d'intégrer du vide.
@@ -2800,18 +2795,27 @@ function loop(ts){
 /* Latence : temps réel de traitement d'un cycle complet (audio + calcul + dessin), lissé (EMA ~1 s).
    Visible sur TOUS les écrans (ligne dédiée sous le header) — pas de vraie "charge CPU" exposée par
    le navigateur (surtout pas sur Safari iOS), donc on affiche ce proxy honnête et actionnable.
-   Seuils RELATIFS au budget réel observé (intervalle entre frames, ≈16,7 ms @60Hz, ≈8,3 ms @120Hz…) :
-   orange à partir de 50% du budget consommé, rouge à partir de 90% (on est en train de rater des frames). */
+   Référence = le HOP RÉEL du signal (fenêtre FFT × (1−recouvrement) / fs) : le temps audio réellement
+   NOUVEAU apporté par chaque cycle d'analyse — pas le rythme d'affichage (rAF), qui mesure la fluidité
+   visuelle, pas si on suit le signal. Lecture via AnalyserNode.getFloatTimeDomainData = un instantané
+   (pull), pas une file d'attente : le tampon audio se remplit sur l'horloge matérielle indépendamment
+   de la vitesse de notre JS — si on est lent, on échantillonne juste moins souvent (jamais de retard qui
+   s'accumule sur ce chemin). Mais si notre calcul dépasse le hop, on rate des fenêtres d'info : c'est LE
+   signal de retard réel pour un instrument de mesure. Orange dès 70% du hop consommé (marge qui se
+   resserre, mais pas encore de retard), rouge à 100% et au-delà (dépassement réel : une fenêtre entière
+   d'information neuve est ratée). */
 function latTick(ms){
   S._lat = (S._lat==null) ? ms : S._lat + (ms - S._lat)*0.12;
   const now=performance.now();
   if(now-(S._latUiT||0) < 250) return;           // rafraîchit l'affichage ~4 Hz, pas à chaque frame
   S._latUiT = now;
   const el=$('latBadge'); if(!el) return;
-  const v=S._lat, budget=S._frameBudget||16.7, ratio=v/budget;
+  const fs=(S.ctx&&S.ctx.sampleRate)||48000;
+  const hopMs=1000*((S.fftN||4096)*(1-(S.overlap||0)))/fs;   // temps audio réellement nouveau par cycle (Welch)
+  const v=S._lat, ratio=v/hopMs;
   el.textContent = Math.round(v)+' ms';   // toujours un entier (jamais de virgule) : largeur fixe, ne décale plus le bouton '?'
-  el.classList.toggle('warn', ratio>=0.5 && ratio<0.9);
-  el.classList.toggle('bad', ratio>=0.9);
+  el.classList.toggle('warn', ratio>=0.7 && ratio<1.0);   // marge de sécurité qui se resserre (ex. 15/20 ms = 75% : pas encore de retard, mais on s'en approche)
+  el.classList.toggle('bad', ratio>=1.0);                  // dépassement réel du hop : on rate une fenêtre entière d'info neuve
 }
 
 /* ================= Chiffres ================= */
