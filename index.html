@@ -134,7 +134,7 @@ if('serviceWorker' in navigator){
   .led{width:7px;height:7px;border-radius:50%;background:#31446e;display:inline-block;flex:0 0 auto}
   .micstat{position:relative;width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
   .hdricons{display:flex;align-items:center;gap:12px;flex:0 0 auto}
-  #latBadge{position:absolute;right:82px;top:8px;font-family:var(--mono,monospace);font-size:10px;color:rgba(150,180,210,.55);letter-spacing:.02em;white-space:nowrap;width:34px;text-align:right;pointer-events:none}   /* hors du flux flex : ne peut plus décaler ? / micro, quel que soit son contenu */
+  #latBadge{text-align:center;font-family:var(--mono,monospace);font-size:10px;color:rgba(150,180,210,.55);letter-spacing:.02em;white-space:nowrap;margin:-4px 0 4px;pointer-events:none}   /* ligne dédiée sous le header : ne peut plus jamais collisionner avec ? / micro */
   #latBadge.warn{color:#FFB454}
   #latBadge.bad{color:#EF3346}
   .helpbtn{width:24px;height:24px;margin-left:2px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);opacity:.55;font-family:var(--font);font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
@@ -591,7 +591,7 @@ if('serviceWorker' in navigator){
   </svg>
   <div class="splashword">SONOMÈTRE</div>
   <div class="splashbar"><span></span></div>
-  <div class="splashver" id="splashVer">2.3.13-beta</div>
+  <div class="splashver" id="splashVer">2.3.14-beta</div>
 </div>
 
   <div class="screw tl"></div><div class="screw tr"></div>
@@ -614,7 +614,6 @@ if('serviceWorker' in navigator){
       <span class="wordmark">Sonomètre</span>
     </div>
     <span class="hdricons">
-      <span id="latBadge" title="Latence de calcul (temps réel de traitement par cycle)">-- ms</span>
       <button class="helpbtn" id="hHelp" title="Aide" aria-label="Aide">?</button>
       <span class="micstat off" id="micStat" title="Micro">
         <svg viewBox="0 0 24 24" class="micic"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3" fill="none" stroke-width="2"/></svg>
@@ -622,6 +621,7 @@ if('serviceWorker' in navigator){
       </span>
     </span>
   </header>
+  <div id="latBadge" title="Latence de calcul (temps réel de traitement par cycle)">-- ms</div>
 
   <div class="miccap"><i></i></div>
 
@@ -2574,7 +2574,12 @@ function loop(ts){
   S.raf=requestAnimationFrame(loop);
   const _lt0=performance.now();                 // chrono latence (temps réel de calcul du cycle)
   if(!S.lastT){S.lastT=ts;return;}
-  const dt=Math.min(0.2,(ts-S.lastT)/1000); S.lastT=ts;
+  const _rawDt=ts-S.lastT;                       // intervalle RÉEL entre frames (non écrêté) : le vrai « budget » de calcul disponible
+  const dt=Math.min(0.2,_rawDt/1000); S.lastT=ts;
+  if(_rawDt>0.1 && _rawDt<200){                  // budget observé = le MEILLEUR intervalle récent (rythme natif de l'écran, ≈16,7 ms @60Hz, ≈8,3 ms @120Hz…)
+    if(!S._frameBudget || _rawDt<S._frameBudget) S._frameBudget=_rawDt;             // capture immédiate si plus rapide qu'avant
+    else S._frameBudget += (_rawDt-S._frameBudget)*0.002;                          // dérive très lente vers le haut (ex. l'appareil change vraiment de rythme) — jamais inflaté par un simple ralentissement passager
+  }
   if(S.paused&&!S._previewRing)return;       // le scrub replay prévisualise même en pause
   /* filet de sécurité : si on est censé mesurer mais que le micro n'est plus vivant
      (arrière-plan, écran verrouillé, appel…), on met en pause au lieu d'intégrer du vide.
@@ -2793,18 +2798,20 @@ function loop(ts){
   latTick(performance.now()-_lt0);
 }
 /* Latence : temps réel de traitement d'un cycle complet (audio + calcul + dessin), lissé (EMA ~1 s).
-   Visible sur TOUS les écrans (bandeau du haut), pas seulement Machine — pas de vraie "charge CPU"
-   exposée par le navigateur (surtout pas sur Safari iOS), donc on affiche ce proxy honnête et actionnable. */
+   Visible sur TOUS les écrans (ligne dédiée sous le header) — pas de vraie "charge CPU" exposée par
+   le navigateur (surtout pas sur Safari iOS), donc on affiche ce proxy honnête et actionnable.
+   Seuils RELATIFS au budget réel observé (intervalle entre frames, ≈16,7 ms @60Hz, ≈8,3 ms @120Hz…) :
+   orange à partir de 50% du budget consommé, rouge à partir de 90% (on est en train de rater des frames). */
 function latTick(ms){
   S._lat = (S._lat==null) ? ms : S._lat + (ms - S._lat)*0.12;
   const now=performance.now();
   if(now-(S._latUiT||0) < 250) return;           // rafraîchit l'affichage ~4 Hz, pas à chaque frame
   S._latUiT = now;
   const el=$('latBadge'); if(!el) return;
-  const v=S._lat;
+  const v=S._lat, budget=S._frameBudget||16.7, ratio=v/budget;
   el.textContent = Math.round(v)+' ms';   // toujours un entier (jamais de virgule) : largeur fixe, ne décale plus le bouton '?'
-  el.classList.toggle('warn', v>=30 && v<60);
-  el.classList.toggle('bad', v>=60);
+  el.classList.toggle('warn', ratio>=0.5 && ratio<0.9);
+  el.classList.toggle('bad', ratio>=0.9);
 }
 
 /* ================= Chiffres ================= */
